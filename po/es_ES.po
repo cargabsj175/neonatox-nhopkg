@@ -1,0 +1,1186 @@
+# Spanish translation for nhopkg
+# Copyright (c) 2009 Rosetta Contributors and Canonical Ltd 2009
+# This file is distributed under the same license as the nhopkg package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2009.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nhopkg\n"
+"Report-Msgid-Bugs-To: projectnhoax@gmail.com\n"
+"POT-Creation-Date: 2009-04-07 17:03+0200\n"
+"PO-Revision-Date: 2009-04-22 17:25+0000\n"
+"Last-Translator: Jaime Gil <jaimegildesagredo@gmail.com>\n"
+"Language-Team: Spanish <es@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2009-04-24 20:36+0000\n"
+"X-Generator: Launchpad (build Unknown)\n"
+
+#: ../src/nhopkg.in:37 ../src/nhopkg.in:41
+msgid " * Unable to locate Nhopkg configuration file!"
+msgstr " * ¡Imposible localizar archivo de configuración de Nhopkg!"
+
+#: ../src/nhopkg.in:38
+msgid " - Loading default Nhopkg configuration file..."
+msgstr " - Cargando archivo de configuración de Nhopkg por defecto..."
+
+#: ../src/nhopkg.in:161
+msgid "Great Work your LFS! ;-)"
+msgstr "¡Buen trabajo su LFS! ;-)"
+
+#: ../src/nhopkg.in:163
+msgid "Nhopkg version"
+msgstr "Versión de Nhopkg"
+
+#: ../src/nhopkg.in:171
+msgid "Usage: nhopkg [command] [options] package"
+msgstr "Uso: nhopkg [comando] [opciones] paquete"
+
+#: ../src/nhopkg.in:172 ../src/nhopkg.in:180
+msgid "To see the help: nhopkg --help"
+msgstr "Para ver la ayuda: nhopkg --help"
+
+#: ../src/nhopkg.in:179
+msgid "Usage: sudo nhopkg [command] [options] package"
+msgstr "Uso: sudo nhopkg [comando] [opciones] paquete"
+
+#: ../src/nhopkg.in:188
+msgid "This program comes with ABSOLUTELY NO WARRANTY."
+msgstr "Este programa viene SIN ABSOLUTA GARANTÍA"
+
+#: ../src/nhopkg.in:189
+msgid ""
+"This is free software, and you are welcome to redistribute it under certain "
+"conditions; for details type nhopkg --license-all."
+msgstr ""
+"Ésto es software libre, y usted es bienvenido para distribuirlo bajo ciertas "
+"condiciones; para más detalles escriba nhopkg --license-all"
+
+#: ../src/nhopkg.in:197
+msgid "Examples:"
+msgstr "Ejemplos:"
+
+#: ../src/nhopkg.in:198
+#, fuzzy
+msgid " * Install binary package."
+msgstr " * Instalar paquete binario."
+
+#: ../src/nhopkg.in:200
+msgid " * Show files on package."
+msgstr " * Mostrar archivos del paquete."
+
+#: ../src/nhopkg.in:203
+msgid "Commands:"
+msgstr "Comandos:"
+
+#: ../src/nhopkg.in:204
+msgid " -i, --install\tInstalls binary package."
+msgstr " -i, --install\tInstala paquete binario."
+
+#: ../src/nhopkg.in:205
+msgid " -S, --super-install\tInstalls binary package form repository."
+msgstr " -S, --super-install\tInstala paquete binario desde repositorios."
+
+#: ../src/nhopkg.in:206
+msgid " -d, --dios\tSame as -S, --super-install."
+msgstr " -d, --dios\tIgual que -S, --super-install."
+
+#: ../src/nhopkg.in:207
+msgid " -r, --remove\tRemoves package installed by Nhopkg."
+msgstr " -r, --remove\tElimina paquetes instalados por Nhopkg."
+
+#: ../src/nhopkg.in:208
+msgid " -B, --backup\tCreates binary package from installed package."
+msgstr " -B, --backup\tCrea un paquete binario desde otro instalado."
+
+#: ../src/nhopkg.in:209
+msgid " -b, --build\tCompiles and installs source package."
+msgstr " -b, --build\tCompila e instala un paquete fuente."
+
+#: ../src/nhopkg.in:210
+msgid " -k, --check\tChecks if installed package is correct."
+msgstr " -k, --check\tComprueba si un paquete instalado es correcto."
+
+#: ../src/nhopkg.in:211
+msgid " -c, --create-source\tCreates source package from tarball."
+msgstr " -c, --create-source\tCrea un paquete fuente desde un tarball."
+
+#: ../src/nhopkg.in:212
+msgid " -A, --auto-package\tCreates automatically source package from tarball."
+msgstr ""
+" -A, --auto-package\tCrea automáticamente un paquete fuente desde un tarball."
+
+#: ../src/nhopkg.in:213
+msgid " -z, --tgz2nho\tConverts .tgz package to .nho package."
+msgstr " -z, --tgz2nho\tConvierte un paquete .tgz a uno .nho."
+
+#: ../src/nhopkg.in:214
+msgid " -g, --create-repo\tCreates software repository on selected directory."
+msgstr ""
+" -g, --create-repo\tCrea un repositorio de software en el directorio "
+"especificado."
+
+#: ../src/nhopkg.in:215
+msgid " -U, --update\tUpdate repository database."
+msgstr " -U, --update\tActualiza la base de datos del repositorio."
+
+#: ../src/nhopkg.in:216
+msgid " -e, --clean\tRemove cached data."
+msgstr " -e, --clean\tLimpia la cache."
+
+#: ../src/nhopkg.in:217
+msgid " -s, --search\tSearch for package and its details."
+msgstr " -s, --search\tBusca un paquete y sus detalles."
+
+#: ../src/nhopkg.in:218
+msgid " -t, --list-repo\tLists packages on repository and their details."
+msgstr " -t, --list-repo\tLista los paquetes en el repositorio y sus detalles."
+
+#: ../src/nhopkg.in:219
+msgid " -l, --list\tLists installed packages."
+msgstr " -l, --list\tLista los paquetes instalados."
+
+#: ../src/nhopkg.in:220
+msgid " -n, --info\tShows package details."
+msgstr " -n, --info\tMuestra los detalles de un paquete."
+
+#: ../src/nhopkg.in:221
+msgid " -w, --show\tShows package files."
+msgstr " -w, --show\tMuestra los archivos de un paquete."
+
+#: ../src/nhopkg.in:222
+msgid " -u, --update-db\tUpdate Nhopkg database."
+msgstr " -u, --update-db\tActualiza la base de datos de Nhopkg."
+
+#: ../src/nhopkg.in:223
+msgid " --license\tShows Nhopkg license."
+msgstr " --license\tMuestra la licencia de Nhopkg."
+
+#: ../src/nhopkg.in:224
+msgid " --license-all\tShows complete Nhopkg license."
+msgstr " --license-all\tMuestra la licencia completa de Nhopkg."
+
+#: ../src/nhopkg.in:225
+msgid " --version\tShows Nhopkg version."
+msgstr " --version\tMuestra la versión de Nhopkg."
+
+#: ../src/nhopkg.in:226
+msgid " -h, --help\tShows Nhopkg help pages."
+msgstr " -h, --help\tMuestra la ayuda de nhopkg."
+
+#: ../src/nhopkg.in:228
+msgid "Options:"
+msgstr "Opciones:"
+
+#: ../src/nhopkg.in:229
+msgid " -R, --recursive\tNhopkg works recursively."
+msgstr " -R, --recursive\tNhopkg trabaja de forma recursiva."
+
+#: ../src/nhopkg.in:230
+msgid " --root\tSets install root."
+msgstr " --root\tSelecciona el directorio de instalación."
+
+#: ../src/nhopkg.in:231
+msgid " --no-check-deps\tDon't check dependencies."
+msgstr " --no-check-deps\tNo comprueba dependencias."
+
+#: ../src/nhopkg.in:232
+msgid " --no-check-arch\tDon't check architecture."
+msgstr " --no-check-arch\tNo comprueba la arquitectura."
+
+#: ../src/nhopkg.in:233
+msgid " --no-check-md5\tDon't check MD5 Sum."
+msgstr " --no-check-md5\tNo comprueba la suma MD5."
+
+#: ../src/nhopkg.in:234
+msgid " --force-check-deps\tForce check dependencies."
+msgstr " --force-check-deps\tFuerza la comprobación de dependencias."
+
+#: ../src/nhopkg.in:235
+msgid " --force-check-arch\tForce check architecture."
+msgstr " --force-check-arch\tFuerza la comprobación de la arquitectura."
+
+#: ../src/nhopkg.in:236
+msgid " --force-check-md5\tForce check MD5 Sum."
+msgstr " --force-check-md5\tFuerza la comprobación de la suma MD5."
+
+#: ../src/nhopkg.in:237
+msgid " --purge\tRemove inverse dependencies of package."
+msgstr " --purge\tElimina las dependencias inversas del paquete."
+
+#: ../src/nhopkg.in:238
+msgid " -o, --output\tWrite an output log."
+msgstr " -o, --output\tEscribe un log de la salida."
+
+#: ../src/nhopkg.in:239
+msgid " -v, --verbose\tVerbose operations."
+msgstr " -v, --verbose\tOperaciones verbosas."
+
+#: ../src/nhopkg.in:240
+msgid " --\tStop parssing arguments."
+msgstr " --\tNo obtiene más argumentos."
+
+#: ../src/nhopkg.in:250
+msgid "Nhopkg is already in use..."
+msgstr "Nhopkg está siendo usado..."
+
+#: ../src/nhopkg.in:255
+msgid "Exist an older lock file, but seems that is not in use..."
+msgstr "Existe un archivo lock antiguo, pero parece que no está en uso..."
+
+#: ../src/nhopkg.in:261
+msgid " * You can't rewrite lock file."
+msgstr " * No puedes reescribir el archivo lock."
+
+#: ../src/nhopkg.in:297
+msgid "To run Nhopkg you need have root powers."
+msgstr "Para ejecutar Nhopkg necesita poderes de super usuario."
+
+#: ../src/nhopkg.in:308
+msgid " * Unable to create temporary directory."
+msgstr " * Imposible crear directorio temporal."
+
+#: ../src/nhopkg.in:327
+msgid " --- Updating database:"
+msgstr " --- Actualizando la base de datos:"
+
+#: ../src/nhopkg.in:340
+msgid "Do you want to continue?[yes/NO]: "
+msgstr "¿Desea continuar?[si/NO]: "
+
+#: ../src/nhopkg.in:347
+msgid "yes"
+msgstr "si"
+
+#: ../src/nhopkg.in:351
+msgid "no"
+msgstr "no"
+
+#: ../src/nhopkg.in:368
+msgid " --- Deleting temporary directory."
+msgstr " --- Eliminando directorio temporal."
+
+#: ../src/nhopkg.in:388
+msgid "Compilation directory will be removed from your system."
+msgstr "El directorio de compilación será eliminado de su sistema."
+
+#: ../src/nhopkg.in:392
+msgid " --- Deleting"
+msgstr " --- Eliminando"
+
+#: ../src/nhopkg.in:398
+msgid "will not be deleted."
+msgstr "no será eliminado."
+
+#: ../src/nhopkg.in:412
+msgid "The selected package doesn't exist."
+msgstr "El paquete seleccionado no existe."
+
+#: ../src/nhopkg.in:429
+msgid " * Failed to get package info."
+msgstr " * Falló al obtener información del paquete."
+
+#: ../src/nhopkg.in:452 ../src/nhopkg.in:1109 ../src/nhopkg.in:1290
+#: ../src/nhopkg.in:1581 ../src/nhopkg.in:2750 ../src/nhopkg.in:2862
+#: ../src/nhopkg.in:3065
+msgid " * The selected package is not valid."
+msgstr " * El paquete seleccionado no es válido."
+
+#: ../src/nhopkg.in:459
+msgid "The selected package is created in newer version of Nhopkg."
+msgstr ""
+"El paquete seleccionado está creado en una versión posterior de Nhopkg."
+
+#: ../src/nhopkg.in:460 ../src/nhopkg.in:466 ../src/nhopkg.in:473
+msgid ""
+"Nhopkg is on development and can't use packages of other versions. We "
+"working on this."
+msgstr ""
+"Nhopkg está en desarrollo y no puede usar paquetes de otras versiones. "
+"Estamos trabajando en ello."
+
+#: ../src/nhopkg.in:465
+msgid "The selected package is created in older version of Nhopkg."
+msgstr "El paquete seleccionado está creado en una versión anterior de Nhopkg."
+
+#: ../src/nhopkg.in:471
+msgid "The selected package is created in other version of Nhopkg:"
+msgstr "El paquete seleccionado está creado en otra versión de Nhopkg."
+
+#: ../src/nhopkg.in:479
+msgid " * Unable to get data from package."
+msgstr " * Imposible obtener datos del paquete."
+
+#: ../src/nhopkg.in:489
+msgid " --- Checking MD5 Sum for"
+msgstr " --- Comprobando suma MD5 para"
+
+#: ../src/nhopkg.in:494
+msgid " *** MD5 checksum of package did not match."
+msgstr " *** La suma MD5 del paquete no coincide."
+
+#: ../src/nhopkg.in:505
+msgid " --- Checking package arch for"
+msgstr " --- Comprobando arquitectura del paquete para"
+
+#: ../src/nhopkg.in:540
+msgid " *** Architecture of package is not valid."
+msgstr " *** La arquitectura de paquete no es válida."
+
+#: ../src/nhopkg.in:541
+msgid " --- This package can be installed on the next system:"
+msgstr " --- Este paquete puede ser instalado en el siguiente sistema:"
+
+#: ../src/nhopkg.in:570 ../src/nhopkg.in:577
+msgid "is installed in your system, but is deprecated. Package will be UPDATE."
+msgstr ""
+"está instalado en su sistema, pero es antiguo. El paquete será ACTUALIZADO."
+
+#: ../src/nhopkg.in:583 ../src/nhopkg.in:596
+msgid "is installed in your system and is newer. Package will be DOWNGRADE."
+msgstr ""
+"está instalado en su sistema y es más reciente. El paquete será "
+"DESACTUALIZADO."
+
+#: ../src/nhopkg.in:589
+msgid "is already installed in your system. Package will be REINSTALL."
+msgstr "está instalado ya en su sistema. El paquete será REINSTALADO."
+
+#: ../src/nhopkg.in:601 ../src/nhopkg.in:1147
+msgid " * Package will not be installed."
+msgstr " * El paquete no será instalado."
+
+#: ../src/nhopkg.in:642 ../src/nhopkg.in:681 ../src/nhopkg.in:1386
+#: ../src/nhopkg.in:1395
+msgid "is not on repository."
+msgstr "no está en el repositorio."
+
+#: ../src/nhopkg.in:705 ../src/nhopkg.in:883
+msgid " --- Processing Dependency:"
+msgstr " --- Procesando Dependencia:"
+
+#: ../src/nhopkg.in:707 ../src/nhopkg.in:796 ../src/nhopkg.in:885
+#: ../src/nhopkg.in:974
+msgid "for"
+msgstr "para"
+
+#: ../src/nhopkg.in:748 ../src/nhopkg.in:759 ../src/nhopkg.in:837
+#: ../src/nhopkg.in:848 ../src/nhopkg.in:926 ../src/nhopkg.in:937
+#: ../src/nhopkg.in:1015 ../src/nhopkg.in:1026
+msgid "\t** OK: Present"
+msgstr "\t** OK: Presente"
+
+#: ../src/nhopkg.in:751 ../src/nhopkg.in:762 ../src/nhopkg.in:840
+#: ../src/nhopkg.in:851 ../src/nhopkg.in:929 ../src/nhopkg.in:940
+#: ../src/nhopkg.in:1018 ../src/nhopkg.in:1029
+msgid "\t** FAIL: Present"
+msgstr "\t** FALLÓ: Presente"
+
+#: ../src/nhopkg.in:771
+msgid " *** No build deps found on package:"
+msgstr " *** No se encontraron dependencias de compilación en el paquete:"
+
+#: ../src/nhopkg.in:794 ../src/nhopkg.in:972
+msgid " --- Processing Optional Dependency:"
+msgstr " --- Procesando Dependencias Opcionales:"
+
+#: ../src/nhopkg.in:860
+msgid " *** No optional build deps found on package:"
+msgstr ""
+" *** No se encontraron dependencias opcionales de compilación en el paquete:"
+
+#: ../src/nhopkg.in:949
+msgid " *** No deps found on package:"
+msgstr " *** No se encontraron dependencias en el paquete:"
+
+#: ../src/nhopkg.in:1038
+msgid " *** No optional deps found on package:"
+msgstr " *** No se encontraron dependencias opcionales en el paquete:"
+
+#: ../src/nhopkg.in:1054 ../src/nhopkg.in:1077 ../src/nhopkg.in:1404
+msgid " --- Downloading"
+msgstr " --- Descargando"
+
+#: ../src/nhopkg.in:1057 ../src/nhopkg.in:1080 ../src/nhopkg.in:1407
+msgid " *** Failed to download package. Please, retry."
+msgstr " *** No se ha podido descargar el paquete. Por favor, reintenteló."
+
+#: ../src/nhopkg.in:1102 ../src/nhopkg.in:2744 ../src/nhopkg.in:2856
+#: ../src/nhopkg.in:3060 ../src/nhopkg.in:3216 ../src/nhopkg.in:3432
+#: ../src/nhopkg.in:3457 ../src/nhopkg.in:3650 ../src/nhopkg.in:3239
+msgid " * Unable to uncompress package."
+msgstr " * Imposible descomprimir el paquete."
+
+#: ../src/nhopkg.in:1139
+msgid "needs the following dependencies:"
+msgstr "necesita las siguientes dependencias:"
+
+#: ../src/nhopkg.in:1141
+msgid "needs this dependency:"
+msgstr "necesita la siguiente dependencia:"
+
+#: ../src/nhopkg.in:1177
+msgid "needs the following optional dependencies:"
+msgstr "necesita las siguientes dependencias opcionales:"
+
+#: ../src/nhopkg.in:1180
+msgid "needs this optional dependency:"
+msgstr "necesita la siguiente dependencia opcional:"
+
+#: ../src/nhopkg.in:1269
+msgid " --- Installing"
+msgstr " --- Instalando"
+
+#: ../src/nhopkg.in:1276 ../src/nhopkg.in:1282 ../src/nhopkg.in:1286
+#: ../src/nhopkg.in:1315 ../src/nhopkg.in:1317 ../src/nhopkg.in:1325
+#: ../src/nhopkg.in:1331 ../src/nhopkg.in:1333 ../src/nhopkg.in:1341
+msgid " *** Failed to install package."
+msgstr " *** Error al instalar el paquete."
+
+#: ../src/nhopkg.in:1300
+msgid " --- Setting up"
+msgstr " --- Configurando"
+
+#: ../src/nhopkg.in:1373
+msgid ""
+"There are more than one package with these arguments, please select one."
+msgstr ""
+"Hay más de un paquete con esas características, por favor seleccione uno."
+
+#: ../src/nhopkg.in:1517
+msgid "file deleted."
+msgstr "archivo eliminado."
+
+#: ../src/nhopkg.in:1519
+msgid "unable to delete file."
+msgstr "imposible eliminar el archivo."
+
+#: ../src/nhopkg.in:1529
+msgid "directory deleted."
+msgstr "directorio eliminado."
+
+#: ../src/nhopkg.in:1531
+msgid "unable to delete directory."
+msgstr "imposible eliminar el directorio."
+
+#: ../src/nhopkg.in:1587
+msgid " --- Additional files in package (patches):"
+msgstr " --- Archivos adicionales en el paquete (parches):"
+
+#: ../src/nhopkg.in:1602
+msgid " - Building"
+msgstr " - Compilando"
+
+#: ../src/nhopkg.in:1604 ../src/nhopkg.in:1646
+msgid "This step may take some time depending of package and your system."
+msgstr ""
+"Este paso puede tomar algo de tiempo dependiendo del paquete y su sistema."
+
+#: ../src/nhopkg.in:1625
+msgid " * Failed compilation!"
+msgstr " * ¡Falló la compilación!"
+
+#: ../src/nhopkg.in:1629 ../src/nhopkg.in:1671
+msgid " --- You can see compilation log on"
+msgstr " --- Puede ver el log de compilación en"
+
+#: ../src/nhopkg.in:1644
+msgid " - Installing"
+msgstr " - Instalando"
+
+#: ../src/nhopkg.in:1667
+msgid " * Failed instalation!"
+msgstr " * ¡Falló la instalación!"
+
+#: ../src/nhopkg.in:1677
+msgid " --- You can see instalation log on"
+msgstr " --- Puede ver el log de instalación en"
+
+#: ../src/nhopkg.in:1690
+msgid " --- Saving logs on"
+msgstr " --- Guardando logs en"
+
+#: ../src/nhopkg.in:1786 ../src/nhopkg.in:3742
+msgid " - Building binary package."
+msgstr " - Construyendo el paquete binario."
+
+#: ../src/nhopkg.in:1787
+msgid " --- Searching files in the system."
+msgstr " --- Buscando archivos en el sistema."
+
+#: ../src/nhopkg.in:1791
+msgid " --- Compressing package."
+msgstr " --- Comprimiendo el paquete."
+
+#: ../src/nhopkg.in:1806 ../src/nhopkg.in:3012 ../src/nhopkg.in:3382
+#: ../src/nhopkg.in:3603 ../src/nhopkg.in:3750
+msgid " --- New package is:"
+msgstr " --- El nuevo paquete es:"
+
+#: ../src/nhopkg.in:1809
+msgid " *** Unable to create binary package."
+msgstr " *** Imposible crear el paquete binario."
+
+#: ../src/nhopkg.in:1812
+msgid ""
+" *** Unable to create binary package. Nhopkg can't install any file from "
+"this package."
+msgstr ""
+" *** Imposible crear el paquete binario. nhopkg no puede instalar ningún "
+"archivo desde este paquete."
+
+#: ../src/nhopkg.in:1830
+msgid "Enter your username:"
+msgstr "Introduzca su nombre:"
+
+#: ../src/nhopkg.in:1833
+msgid "You haven't entered your name!"
+msgstr "¡No ha introducido su nombre!"
+
+#: ../src/nhopkg.in:1834
+msgid "Please, enter your username:"
+msgstr "Por favor, introduzca su nombre:"
+
+#: ../src/nhopkg.in:1845
+msgid "Enter your e-mail:"
+msgstr "Introduzca su e-mail:"
+
+#: ../src/nhopkg.in:1848
+msgid "You haven't entered your e-mail!"
+msgstr "¡No ha introducido su e-mail!"
+
+#: ../src/nhopkg.in:1849
+msgid "Please, enter your e-mail:"
+msgstr "Por favor, introduzca su e-mail:"
+
+#: ../src/nhopkg.in:1861
+msgid "Enter package name (Ex: gimp):"
+msgstr "Introduzca el nombre del paquete (Ej: gimp):"
+
+#: ../src/nhopkg.in:1864
+msgid "You haven't entered package name!"
+msgstr "¡No ha introducido el nombre del paquete!"
+
+#: ../src/nhopkg.in:1865
+msgid "Please, enter package name (Ex: gimp):"
+msgstr "Por favor, introduzca el nombre del paquete (Ej: gimp):"
+
+#: ../src/nhopkg.in:1876
+msgid "Enter package version (Ex: 2.6.3):"
+msgstr "Introduzca la versión del paquete (Ej: 2.6.3):"
+
+#: ../src/nhopkg.in:1879
+msgid "You haven't entered package version!"
+msgstr "¡No ha introducido la versión del paquete!"
+
+#: ../src/nhopkg.in:1880
+msgid "Please, enter package version (Ex: 2.6.3):"
+msgstr "Por favor, introduzca la versión del paquete (Ej: 2.6.3):"
+
+#: ../src/nhopkg.in:1891
+msgid "Enter package release (Ex: 1):"
+msgstr "Introduzca la revisión del paquete (Ej: 1)"
+
+#: ../src/nhopkg.in:1894
+msgid "You haven't entered package release!"
+msgstr "¡No ha introducido la revisión del pauqete!"
+
+#: ../src/nhopkg.in:1895
+msgid "Please, enter package release (Ex: 1):"
+msgstr "Por favor, introduzca la revisión del paquete (Ej: 1):"
+
+#: ../src/nhopkg.in:1906
+msgid "Enter package license (Ex: GPLv3):"
+msgstr "Introduzca la licencia del paquete (Ej: GPLv3):"
+
+#: ../src/nhopkg.in:1909
+msgid "You haven't entered package license!"
+msgstr "¡No ha introducido la licencia del paquete!"
+
+#: ../src/nhopkg.in:1910
+msgid "Please, enter package license (Ex: GPLv3):"
+msgstr "Por favor, introduzca la licencia del paquete (Ej: GPLv3):"
+
+#: ../src/nhopkg.in:1921
+msgid "Enter package group (Ex: Graphics):"
+msgstr "Introduzca el grupo del paquete (Ej: Graphics):"
+
+#: ../src/nhopkg.in:1924
+msgid "You haven't entered package group!"
+msgstr "¡No ha introducido el grupo del paquete!"
+
+#: ../src/nhopkg.in:1925
+msgid "Please, enter package group (Ex: Graphics):"
+msgstr "Por favor, introduzca el grupo del paquete (Ej: Graphics):"
+
+#: ../src/nhopkg.in:1936
+msgid ""
+"Enter package arch (you can enter more than one arch separated by space. Ex: "
+"i686):"
+msgstr ""
+"Introduzca la arquitectura del paquete (puede introducir más de una "
+"arquitectura separadas por espacios. Ej: i686):"
+
+#: ../src/nhopkg.in:1939
+msgid "You haven't entered package arch!"
+msgstr "¡No ha introducido la arquitectura del paquete!"
+
+#: ../src/nhopkg.in:1940
+msgid "Please, enter package arch (Ex: i686):"
+msgstr "Por favor, introduzca la arquitectura del paquete (Ej: i686):"
+
+#: ../src/nhopkg.in:1951
+msgid "Enter package web page (Ex: http://gimp.org/):"
+msgstr "Introduzca la página web del paquete (Ej: http://gimp.org/):"
+
+#: ../src/nhopkg.in:1954
+msgid "You haven't entered package web page (URL)!"
+msgstr "¡No ha introducido la página web del paquete!"
+
+#: ../src/nhopkg.in:1955
+msgid "Please, enter package web page (Ex: http://gimp.org/):"
+msgstr ""
+"Por favor, introduzca la página web del paquete (Ej: http://gimp.org/):"
+
+#: ../src/nhopkg.in:1966
+msgid ""
+"Enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
+msgstr ""
+"Introduzca la descipción del paquete (Ej: GIMP is the GNU Image Manipulation "
+"Program.):"
+
+#: ../src/nhopkg.in:1969
+msgid "You haven't entered package description!"
+msgstr "¡No ha introducido la descipción del paquete!"
+
+#: ../src/nhopkg.in:1970
+msgid ""
+"Please, enter package description (Ex: GIMP is the GNU Image Manipulation "
+"Program.):"
+msgstr ""
+"Por favor, introduzca la descripción del pauqete (Ej: GIMP is the GNU Image "
+"Manipulation Program.):"
+
+#: ../src/nhopkg.in:1983
+msgid " * Unable to create nhoid file."
+msgstr " * Imposible crear el archivo nhoid."
+
+#: ../src/nhopkg.in:2007
+msgid "Enter build dependency:"
+msgstr "Introduzca dependencia de compilación:"
+
+#: ../src/nhopkg.in:2025 ../src/nhopkg.in:2040 ../src/nhopkg.in:2088
+#: ../src/nhopkg.in:2103 ../src/nhopkg.in:2153 ../src/nhopkg.in:2168
+#: ../src/nhopkg.in:2218 ../src/nhopkg.in:2233
+msgid "added like package-dependency."
+msgstr "añadido como paquete-dependencia."
+
+#: ../src/nhopkg.in:2026 ../src/nhopkg.in:2041 ../src/nhopkg.in:2047
+#: ../src/nhopkg.in:2055 ../src/nhopkg.in:2060 ../src/nhopkg.in:2089
+msgid "Enter build dependency (if necesary):"
+msgstr "Introduzca dependencia de compilación (si es necesario):"
+
+#: ../src/nhopkg.in:2046 ../src/nhopkg.in:2109 ../src/nhopkg.in:2174
+#: ../src/nhopkg.in:2239
+msgid "added like file-dependency."
+msgstr "añadido como archivo-dependencia."
+
+#: ../src/nhopkg.in:2049 ../src/nhopkg.in:2112 ../src/nhopkg.in:2177
+#: ../src/nhopkg.in:2242
+msgid "Found"
+msgstr "Encontrado"
+
+#: ../src/nhopkg.in:2051 ../src/nhopkg.in:2114 ../src/nhopkg.in:2179
+#: ../src/nhopkg.in:2244
+msgid "on this path:"
+msgstr "en esta dirección:"
+
+#: ../src/nhopkg.in:2053 ../src/nhopkg.in:2116 ../src/nhopkg.in:2181
+#: ../src/nhopkg.in:2246
+msgid "Enter correct path to"
+msgstr "Introduzca la dirección correcta a"
+
+#: ../src/nhopkg.in:2059 ../src/nhopkg.in:2122 ../src/nhopkg.in:2187
+#: ../src/nhopkg.in:2252
+msgid "is not present in your system."
+msgstr "no está presente en su sistema."
+
+#: ../src/nhopkg.in:2070
+msgid "Enter optional build dependency:"
+msgstr "Introduzca dependencia opcional de compilación:"
+
+#: ../src/nhopkg.in:2104 ../src/nhopkg.in:2110 ../src/nhopkg.in:2118
+#: ../src/nhopkg.in:2123
+msgid "Enter optional build dependency (if necesary):"
+msgstr "Introduzca dependencia opcional de compilación (si es necesario):"
+
+#: ../src/nhopkg.in:2133
+msgid "Enter post installation dependency:"
+msgstr "Introduzca dependencia posterior a la instalación:"
+
+#: ../src/nhopkg.in:2154 ../src/nhopkg.in:2169 ../src/nhopkg.in:2175
+#: ../src/nhopkg.in:2183 ../src/nhopkg.in:2188 ../src/nhopkg.in:2234
+msgid "Enter post installation dependency (if necesary):"
+msgstr "Introduzca dependencia posterior a la instalación (si es necesario):"
+
+#: ../src/nhopkg.in:2198
+msgid "Enter optional post installation dependency:"
+msgstr "Introduzca dependencia opcional posterior a la instalación:"
+
+#: ../src/nhopkg.in:2219 ../src/nhopkg.in:2240 ../src/nhopkg.in:2248
+#: ../src/nhopkg.in:2253
+msgid "Enter optional post installation dependency (if necesary):"
+msgstr ""
+"Introduzca dependencia opcional posterior a la instalación (si es necesario):"
+
+#: ../src/nhopkg.in:2300 ../src/nhopkg.in:3980 ../src/nhopkg.in:4022
+#: ../src/nhopkg.in:4066 ../src/nhopkg.in:4080
+msgid "Lasted version avaliable:"
+msgstr "Última versión disponible:"
+
+#: ../src/nhopkg.in:2303 ../src/nhopkg.in:4069 ../src/nhopkg.in:4083
+msgid "Lasted version avaliable: Not avaliable."
+msgstr "Última versión disponible: No disponible."
+
+#: ../src/nhopkg.in:2344 ../src/nhopkg.in:3984 ../src/nhopkg.in:4026
+msgid "Lasted version installed:"
+msgstr "Última versión instalada:"
+
+#: ../src/nhopkg.in:2347 ../src/nhopkg.in:3987 ../src/nhopkg.in:4029
+msgid "Lasted version installed: Not installed."
+msgstr "Última versión instalada: No instalada."
+
+#: ../src/nhopkg.in:2411 ../src/nhopkg.in:2544 ../src/nhopkg.in:2592
+msgid " * The selected directory doesn't exist in your system."
+msgstr " * El directorio seleccionado no existe en su sistema."
+
+#: ../src/nhopkg.in:2464 ../src/nhopkg.in:2473 ../src/nhopkg.in:2482
+#: ../src/nhopkg.in:2491 ../src/nhopkg.in:2507 ../src/nhopkg.in:2516
+#: ../src/nhopkg.in:2525 ../src/nhopkg.in:2534 ../src/nhopkg.in:2555
+#: ../src/nhopkg.in:2564 ../src/nhopkg.in:2573 ../src/nhopkg.in:2582
+#: ../src/nhopkg.in:2598 ../src/nhopkg.in:2608 ../src/nhopkg.in:2617
+#: ../src/nhopkg.in:2626 ../src/nhopkg.in:2635 ../src/nhopkg.in:2644
+#: ../src/nhopkg.in:2653 ../src/nhopkg.in:2662 ../src/nhopkg.in:2671
+#: ../src/nhopkg.in:2680
+msgid " * You have selected more than one valid option."
+msgstr " * Ha seleccionado más de una opción válida."
+
+#: ../src/nhopkg.in:2730 ../src/nhopkg.in:2820 ../src/nhopkg.in:2901
+#: ../src/nhopkg.in:2965 ../src/nhopkg.in:3046 ../src/nhopkg.in:3135
+#: ../src/nhopkg.in:3199 ../src/nhopkg.in:3417 ../src/nhopkg.in:3634
+#: ../src/nhopkg.in:3954 ../src/nhopkg.in:4116 ../src/nhopkg.in:4183
+msgid " * Must select package."
+msgstr " * Debe seleccionar un paquete."
+
+#: ../src/nhopkg.in:2736 ../src/nhopkg.in:2826
+msgid " :: Preparing to install:"
+msgstr " :: Preparando para instalar:"
+
+#: ../src/nhopkg.in:2764 ../src/nhopkg.in:2837 ../src/nhopkg.in:3077
+msgid " - Resolving Dependencies."
+msgstr " - Resolviendo Dependencias."
+
+#: ../src/nhopkg.in:2770 ../src/nhopkg.in:2845 ../src/nhopkg.in:3085
+msgid " - Installing package and dependencies."
+msgstr " - Instalando el paquete y las dependencias."
+
+#: ../src/nhopkg.in:2782 ../src/nhopkg.in:2877 ../src/nhopkg.in:3114
+msgid " - Installation finished sucessfuly!"
+msgstr " - La instalación terminó satisfactoriamente."
+
+#: ../src/nhopkg.in:2907
+msgid " :: Preparing to remove:"
+msgstr " :: Preparando para eliminar:"
+
+#: ../src/nhopkg.in:2911 ../src/nhopkg.in:2975 ../src/nhopkg.in:3142
+#: ../src/nhopkg.in:4160 ../src/nhopkg.in:4229
+msgid " * The selected package is not installed by Nhopkg."
+msgstr " * El paquete seleccionado no está instalado por Nhopkg."
+
+#: ../src/nhopkg.in:2926
+msgid "The nexts packages will be deleted from your system:"
+msgstr "Los siguientes paquetes serán eliminados de su sistema:"
+
+#: ../src/nhopkg.in:2931
+msgid "The next package will be deleted from your system:"
+msgstr "El siguiente paquete será eliminado de su sistema:"
+
+#: ../src/nhopkg.in:2936
+msgid " * Package will not be removed from your sistem."
+msgstr " * El paquete no será eliminado de su sistema."
+
+#: ../src/nhopkg.in:2938
+msgid " - Removing package and inverse dependencies."
+msgstr " - Eliminado el paquete y las dependencias inversas."
+
+#: ../src/nhopkg.in:2942
+msgid "has been removed from your sistem."
+msgstr "ha sido eliminado de su sistema."
+
+#: ../src/nhopkg.in:2971
+msgid " :: Preparing to backup:"
+msgstr " :: Prepando para hacer backup:"
+
+#: ../src/nhopkg.in:3015 ../src/nhopkg.in:3385 ../src/nhopkg.in:3606
+#: ../src/nhopkg.in:3753
+msgid " *** Unable to build package."
+msgstr " *** Imposible crear paquete."
+
+#: ../src/nhopkg.in:3052
+msgid " :: Preparing to build:"
+msgstr " :: Preparando para compilar:"
+
+#: ../src/nhopkg.in:3146
+msgid " :: Checking for:"
+msgstr " :: Comprobando:"
+
+#: ../src/nhopkg.in:3159
+msgid " *** Package check fail!"
+msgstr " *** ¡La comprobación del paquete falló!"
+
+#: ../src/nhopkg.in:3161 ../src/nhopkg.in:3168
+msgid "of"
+msgstr "de"
+
+#: ../src/nhopkg.in:3163 ../src/nhopkg.in:3170
+msgid "files are present."
+msgstr "archivos están presentes."
+
+#: ../src/nhopkg.in:3166
+msgid " --- Package check ok!"
+msgstr " --- La comprobación del paquete fue un éxito."
+
+#: ../src/nhopkg.in:3205 ../src/nhopkg.in:3423
+msgid " :: Preparing to create source package:"
+msgstr " :: Preparando para crear un paquete fuente:"
+
+#: ../src/nhopkg.in:3211 ../src/nhopkg.in:3646
+msgid " - Loading the wizard..."
+msgstr " - Cargando el asistente..."
+
+#: ../src/nhopkg.in:3220
+msgid "Nhopkg Create Source Wizard"
+msgstr "Nhopkg Create Source Wizard"
+
+#: ../src/nhopkg.in:3221
+msgid ""
+"This wizard helps you to create a (*.src.nho) package from other source "
+"package like (*.tar.bz2)."
+msgstr ""
+"Este asistente le ayuda para crear un (*.src.nho) paquete desde otro paquete "
+"fuente como (*.tar.bz2)."
+
+#: ../src/nhopkg.in:3222 ../src/nhopkg.in:3662
+msgid "It is very important to complete all the fields correctly."
+msgstr "Es muy importante que complete todos los campos correctamente."
+
+#: ../src/nhopkg.in:3236 ../src/nhopkg.in:3454 ../src/nhopkg.in:3685
+msgid " --- Setting up package sources."
+msgstr " --- Configurando paquete fuente."
+
+#: ../src/nhopkg.in:3253
+msgid "Add patches into package"
+msgstr "Añadir parches al paquete"
+
+#: ../src/nhopkg.in:3254
+msgid "You can add patches from your system. Enter real path to patch."
+msgstr ""
+"Puede añadir parches desde su sistema. Introduzca la dirección al parche."
+
+#: ../src/nhopkg.in:3255 ../src/nhopkg.in:3287 ../src/nhopkg.in:3299
+#: ../src/nhopkg.in:3319 ../src/nhopkg.in:3343 ../src/nhopkg.in:3362
+#: ../src/nhopkg.in:3527 ../src/nhopkg.in:3720
+msgid "To end this step press Enter two times."
+msgstr "Para finalizar este paso presione Enter dos veces."
+
+#: ../src/nhopkg.in:3257 ../src/nhopkg.in:3271
+msgid "Enter path to patch:"
+msgstr "Introduzca la dirección al parche:"
+
+#: ../src/nhopkg.in:3264
+msgid "added to the package."
+msgstr "añadido al paquete."
+
+#: ../src/nhopkg.in:3269
+msgid "not found! Retry."
+msgstr "no encontrado! Reintenteló."
+
+#: ../src/nhopkg.in:3275
+msgid " --- Added patches:"
+msgstr " --- Parches añadidos:"
+
+#: ../src/nhopkg.in:3278
+msgid " --- No patches added."
+msgstr " --- No se añadieron parches."
+
+#: ../src/nhopkg.in:3282 ../src/nhopkg.in:3522 ../src/nhopkg.in:3715
+msgid "Add external dependencies"
+msgstr "Añadir dependencias externas"
+
+#: ../src/nhopkg.in:3283 ../src/nhopkg.in:3523 ../src/nhopkg.in:3716
+msgid ""
+"You can add external dependencies to your package. Dependencies are other "
+"libraries or softwares needed to build, install and run other software. It's "
+"important that they are satisfied."
+msgstr ""
+"Puede añadir dependencias externas a su paquete. Las dependencias son otras "
+"librerías o programas necesarios para compilar, instalar o ejecutar otro "
+"programa. Es importante que estén satisfechas."
+
+#: ../src/nhopkg.in:3285 ../src/nhopkg.in:3525 ../src/nhopkg.in:3718
+msgid ""
+"To add dependency, enter its name with or without version. Dependency must "
+"be installed by Nhopkg."
+msgstr ""
+"Para añadir una dependencia, introduce su nombre con o sin versión. La "
+"dependencia debe estar instalada por Nhopkg."
+
+#: ../src/nhopkg.in:3286 ../src/nhopkg.in:3526 ../src/nhopkg.in:3719
+msgid ""
+"You can add too files present in your system needed for the package. Ex: "
+"libc.so.6"
+msgstr ""
+"Puede añadir también archivos presentes en su sitema necesarios para el "
+"paquete. Ej: libc.so.6"
+
+#: ../src/nhopkg.in:3297
+msgid "Add compilation commands"
+msgstr "Añadir comandos de compilación"
+
+#: ../src/nhopkg.in:3298
+msgid "Here you can enter compilation commands. Ex: ./configure, make."
+msgstr "Aquí puede introducir comandos de compilación. Ej: ./configure, make."
+
+#: ../src/nhopkg.in:3301
+msgid "Enter compilation commands:"
+msgstr "Introduzca comandos de compilación:"
+
+#: ../src/nhopkg.in:3317
+msgid "Add installation commands"
+msgstr "Añadir comandos de instalación"
+
+#: ../src/nhopkg.in:3318
+msgid ""
+"Here you can enter instalation commands. Ex: make install, install ..., cp -"
+"v ... Files that will be installed in this step will be in the binary "
+"package."
+msgstr ""
+"Aquí puede introducir comandos de instalación. Ej: make install, "
+"install ..., cp -v ... Los archivos que serán instalados en este paso "
+"estarán en el paquete binario."
+
+#: ../src/nhopkg.in:3321
+msgid "Enter instalation commands:"
+msgstr "Introduzca comandos de instalación:"
+
+#: ../src/nhopkg.in:3333
+msgid " * You must add at least one command!"
+msgstr " * ¡Debe añadir por lo menos un comando!"
+
+#: ../src/nhopkg.in:3341
+msgid "Add post installation commands"
+msgstr "Añadir comandos posteriores a la instalación"
+
+#: ../src/nhopkg.in:3342
+msgid ""
+"Here you can enter post instalation commands, as hard links or similar. This "
+"commands will be in the binary package too, but not created files by these "
+"commands. Ex: ln -sf, ldconfig ..."
+msgstr ""
+"Aquí puede introducir comandos para después de la instalación, como enlaces "
+"fuertes o similares. Estos comandos estarán en paquete binario también, pero "
+"no los archivos creados con estos comandos. Ej: ln -sf, ldconfig ..."
+
+#: ../src/nhopkg.in:3345
+msgid "Enter post instalation commands:"
+msgstr "Introduzca comandos posteriores a la instalación:"
+
+#: ../src/nhopkg.in:3360
+msgid "Add post remove commands"
+msgstr "Añadir comandos posteriores a la eliminación"
+
+#: ../src/nhopkg.in:3361
+msgid ""
+"Here you can enter post remove commands, as remove hard links created in "
+"post installation commands or similar. This commands will be ejecuted after "
+"package has been deleted. Ex: rm /etc/ld.so.conf."
+msgstr ""
+"Aquí puede introducir comandos para después de la eliminación, como eliminar "
+"enlaces fuertes creados en los comandos posteriores a la instalción o "
+"similares. Estos comandos se ejecutarán después de que el paquete haya sido "
+"eliminado. Ej: rm /etc/ld.so.conf."
+
+#: ../src/nhopkg.in:3364
+msgid "Enter post remove commands:"
+msgstr "Introduzca comandos posteriores a la eliminación:"
+
+#: ../src/nhopkg.in:3377 ../src/nhopkg.in:3598
+msgid " - Building source package."
+msgstr " - Construyendo el paquete fuente"
+
+#: ../src/nhopkg.in:3413
+msgid "Automated package creation."
+msgstr "Creación automatizada del paquete."
+
+#: ../src/nhopkg.in:3414
+msgid ""
+"This option don't get any type of dependencies for the package and could "
+"fail in some packages. If you want to create a good package you sould use --"
+"create-source option."
+msgstr ""
+"Esta opción no obtiene ningún tipo de dependencias para el paquete y podría "
+"fallar en algunos paquetes.Si quiere crear un buen paquete debería usar la "
+"opción --create-source."
+
+#: ../src/nhopkg.in:3433
+msgid " --- Getting user and package data."
+msgstr " --- Obteniendo datos del usuario y el paquete."
+
+#: ../src/nhopkg.in:3580
+msgid " *** Unable to add installation comands."
+msgstr " *** Imposible añadir comandos de instalación."
+
+#: ../src/nhopkg.in:3640
+msgid " :: Prepating to convert .tgz package into .nho package:"
+msgstr " :: Preparando la conversión del paquete .tgz a .nho"
+
+#: ../src/nhopkg.in:3660
+msgid "Nhopkg tgz2nho"
+msgstr "Nhopkg tgz2nho"
+
+#: ../src/nhopkg.in:3661
+msgid ""
+"This wizard helps you to convert Slackware package (*.tgz) into Nhopkg "
+"binary package (*.nho)."
+msgstr ""
+"Este asistente te ayuda a convertir los paquetes de Slackware (*.tgz) a "
+"paquetes binarios de Nhopkg (*.nho)."
+
+#: ../src/nhopkg.in:3774
+msgid " :: Creating software repository on:"
+msgstr " :: Creando repositorio de software en:"
+
+#: ../src/nhopkg.in:3787
+msgid " - Adding"
+msgstr " - Añadiendo"
+
+#: ../src/nhopkg.in:3792 ../src/nhopkg.in:3804
+msgid " * One or more packages aren't valid."
+msgstr " * Uno o más paquetes no son válidos"
+
+#: ../src/nhopkg.in:3814 ../src/nhopkg.in:3820
+msgid " *** Unable to create repository."
+msgstr " *** Incapaz de crear el repositorio"
+
+#: ../src/nhopkg.in:3829
+msgid " --- Your new repository has been created sucesful."
+msgstr " --- Tu nuevo repositorio ha sido creado correctamente."
+
+#: ../src/nhopkg.in:3831
+msgid " *** Can't find any .nho package in this directory."
+msgstr " *** No se ha encontrado ningún paquete .nho en este directorio."
+
+#: ../src/nhopkg.in:3855
+msgid " :: Updating from repository:"
+msgstr " :: Actualizando desde el repositorio:"
+
+#: ../src/nhopkg.in:3873 ../src/nhopkg.in:3883 ../src/nhopkg.in:3891
+msgid " * Unable to download files from repository."
+msgstr " * Error al descargar archivos del repositorio."
+
+#: ../src/nhopkg.in:3877
+msgid " * Repository already is updated."
+msgstr " * El repositorio ya está actualizado."
+
+#: ../src/nhopkg.in:3889
+msgid " - Downloading configuration files from server."
+msgstr " - Descargando los archivos de configuración desde el servidor."
+
+#: ../src/nhopkg.in:3892
+msgid " --- Downloading files database."
+msgstr " --- Descargando la base de datos de los archivos."
+
+#: ../src/nhopkg.in:3894 ../src/nhopkg.in:3897
+msgid " *** Unable to download files from repository."
+msgstr " *** Error al descargar archivos del repositorio."
+
+#: ../src/nhopkg.in:3895
+msgid " --- Downloading packages database."
+msgstr " --- Descargando la base de datos de los paquetes."
+
+#: ../src/nhopkg.in:3908
+msgid " - Repository database updated sucesful."
+msgstr " - La base de datos del repositorio se actualizó correctamente."
+
+#: ../src/nhopkg.in:3929
+msgid " - Cleaning up cache data."
+msgstr " - Limpiando datos de caché."
+
+#: ../src/nhopkg.in:3932
+msgid " * Unable to clean up cache."
+msgstr " * Imposible limpiar la caché."
+
+#: ../src/nhopkg.in:3934
+msgid " - Cleaning up build directory."
+msgstr " - Limpiando directorio de compilación."
+
+#: ../src/nhopkg.in:3937
+msgid " * Unable to clean up build directory."
+msgstr " * imposible limpiar el directorio de compilación."
+
+#: ../src/nhopkg.in:3960
+msgid " :: Searching for:"
+msgstr " :: Buscando:"
+
+#: ../src/nhopkg.in:3965
+msgid " - Results found:"
+msgstr " - Resultados encontrados:"
+
+#: ../src/nhopkg.in:3968 ../src/nhopkg.in:4009 ../src/nhopkg.in:4051
+msgid " * No results found."
+msgstr " * No se encontraron resultados."
+
+#: ../src/nhopkg.in:3976 ../src/nhopkg.in:4018 ../src/nhopkg.in:4060
+#: ../src/nhopkg.in:4074
+msgid "Package:"
+msgstr "Paquete:"
+
+#: ../src/nhopkg.in:3978 ../src/nhopkg.in:4020 ../src/nhopkg.in:4062
+#: ../src/nhopkg.in:4076
+msgid "Description:"
+msgstr "Descripción:"
+
+#: ../src/nhopkg.in:4005
+msgid " :: Listing packages on repository:"
+msgstr " :: Mostrando los archivos en el repositorio:"
+
+#: ../src/nhopkg.in:4047
+msgid " :: Listing installed packages."
+msgstr " :: Mostrando los paquetes instalados."
+
+#: ../src/nhopkg.in:4092 ../src/nhopkg.in:4129 ../src/nhopkg.in:4147
+#: ../src/nhopkg.in:4200 ../src/nhopkg.in:4219
+msgid " --- You can see the log on"
+msgstr " --- Puede ver el log en"
+
+#: ../src/nhopkg.in:4095 ../src/nhopkg.in:4132 ../src/nhopkg.in:4150
+#: ../src/nhopkg.in:4203 ../src/nhopkg.in:4222
+msgid " *** Unable to write log file. Have you write permissions?"
+msgstr " *** Imposible escribir el log. ¿Tiene permisos de escritura?"
+
+#: ../src/nhopkg.in:4137 ../src/nhopkg.in:4155
+msgid " :: Package info for:"
+msgstr " :: Información del paquete para:"
+
+#: ../src/nhopkg.in:4193 ../src/nhopkg.in:4212
+msgid ""
+" * Muah Muah Muah!! Seems that maintainer of this package don't know how to "
+"create a good package or had a problem during installation."
+msgstr ""
+" * ¡Muah, Muah, Muah! Parece que el creador de este paquete no sabe cómo "
+"crear un buen paquete o ha habido un problema durante la instalación."
+
+#: ../src/nhopkg.in:4261
+msgid " * You need to give some command."
+msgstr " * Necesitas introducir algún comando."

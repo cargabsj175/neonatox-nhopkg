@@ -1,0 +1,8 @@
+---- nhopkg 0.5 2009-04-29 13:07:30 ----
+Fiexd some bugs.
+Dependencies manager.
+Repository support.
+Auto-package option to create automaticaly a source package.
+New nhoid file (now is not needed nho.source or nho.binary).
+Compression of log files (bzip2).
+Compression of files with package files (bzip2).

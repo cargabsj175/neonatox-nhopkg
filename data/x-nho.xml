@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-nho">
+    <comment>Nhopkg package</comment>
+    <comment xml:lang="be@latin">Pakunak Nhopkg</comment>
+    <comment xml:lang="bg">Пакет — Nhopkg</comment>
+    <comment xml:lang="ca">paquet Nhopkg</comment>
+    <comment xml:lang="cs">Balíček Nhopkg</comment>
+    <comment xml:lang="da">Nhopkg-pakke</comment>
+    <comment xml:lang="de">Nhopkg-Paket</comment>
+    <comment xml:lang="el">πακέτο Nhopkg</comment>
+    <comment xml:lang="en_GB">Nhopkg package</comment>
+    <comment xml:lang="eo">Nhopkg-pakaĵo</comment>
+    <comment xml:lang="es">paquete Nhopkg</comment>
+    <comment xml:lang="eu">Nhopkg paketea</comment>
+    <comment xml:lang="fi">Nhopkg-paketti</comment>
+    <comment xml:lang="fr">paquet Nhopkg</comment>
+    <comment xml:lang="ga">pacáiste Nhopkg</comment>
+    <comment xml:lang="hu">Nhopkg-csomag</comment>
+    <comment xml:lang="id">Paket Nhopkg</comment>
+    <comment xml:lang="it">Pacchetto Nhopkg</comment>
+    <comment xml:lang="ja">Nhopkg パッケージ</comment>
+    <comment xml:lang="ko">Nhopkg 꾸러미</comment>
+    <comment xml:lang="lt">Nhopkg paketas</comment>
+    <comment xml:lang="lv">Nhopkg paciņa</comment>
+    <comment xml:lang="ms">Pakej Nhopkg</comment>
+    <comment xml:lang="nb">Nhopkg-pakke</comment>
+    <comment xml:lang="nl">Nhopkg-pakket</comment>
+    <comment xml:lang="nn">Nhopkg-pakke</comment>
+    <comment xml:lang="pl">Pakiet Nhopkg</comment>
+    <comment xml:lang="pt">pacote Nhopkg</comment>
+    <comment xml:lang="pt_BR">Pacote Nhopkg</comment>
+    <comment xml:lang="ru">пакет Nhopkg</comment>
+    <comment xml:lang="sq">Paketë Nhopkg</comment>
+    <comment xml:lang="sr">Nhopkg пакет</comment>
+    <comment xml:lang="sv">Nhopkg-paket</comment>
+    <comment xml:lang="uk">Пакет Nhopkg</comment>
+    <comment xml:lang="vi">Gói Nhopkg</comment>
+    <comment xml:lang="zh_CN">Nhopkg 软件包</comment>
+    <comment xml:lang="zh_TW">Nhopkg 套件</comment>
+    <generic-icon name="package-x-generic"/>
+    <alias type="application/x-nhopkg"/>
+    <glob pattern="*.nho"/>
+    </mime-type>
+</mime-info>
+

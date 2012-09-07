@@ -1,0 +1,4406 @@
+#!/bin/bash
+###############################################################################
+#	nhopkg v. @PACKAGE_VERSION@ @RELEASEDATE@  <http://nhopkg.sourceforge.net>
+#
+#    Nhopkg is an universal package manager.
+#    It can be used in any GNU/linux distribution and uses .nho  packages
+#    (binary) and  .src.nho  packages (source).
+#
+# Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################################
+#
+#==============================================================================
+# Section: Basic configurations.
+#==============================================================================
+## Nhopkg basic variables and configurations. Please don't edit these.
+# Get the config file.
+prefix="@prefix@"
+NHOPKG_CONF="@sysconfdir@/nhopkg/nhopkg.conf"
+NHOPKG_CONF_DEFAULT="@pkgdatadir@/nhopkg.conf"
+if [[ -e "${NHOPKG_CONF}" ]]; then
+	source "${NHOPKG_CONF}" 2> /dev/null
+elif [[ -e "${NHOPKG_CONF_DEFAULT}" ]]; then
+	echog " * Unable to locate Nhopkg configuration file!"
+	echog " - Loading default Nhopkg configuration file..."
+	source "${NHOPKG_CONF_DEFAULT}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg configuration file!"
+	exit 1
+fi
+# Nhopkg version.
+NHOPKG_VERSION="@PACKAGE_VERSION@"
+# Edit this variable could cause problems.
+NHOID_VERSION="0.5"
+# Get default IFS variable.
+OLDIFS="${IFS}"
+#==============================================================================
+# Section: Nhopkg colorized script.
+#==============================================================================
+NORMAL="\\033[0;39m"
+BOLD="\\033[1;39m"
+#==============================================================================
+# Section: Nhopkg progress bar variables.
+#==============================================================================
+PROGRESS_BAR_BEGIN='='
+PROGRESS_BAR_END='>'
+PROGRESS_BAR_EMPTY=' '
+#==============================================================================
+# Section: Nhopkg multilanguage (gettext).
+#==============================================================================
+# Is needed export TEXTDOMAIN and TEXTDOMAINDIR variables to work correctly with gettext.
+export TEXTDOMAIN TEXTDOMAINDIR
+# ---------------------------------------------------------
+# echog()
+# Description: Print messages in system languaje with new line.
+# Parameters: "Message to user."
+# Returns: 0 in success.
+# ---------------------------------------------------------
+function echog()
+{
+	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
+		gettext -es "${*}"
+	else
+		echo -e "${*}"
+	fi
+	# Success.
+	return 0
+}
+# ---------------------------------------------------------
+# echogn()
+# Description: Print messages in system languaje without new line.
+# Parameters: "Message to user."
+# Returns: 0 in success.
+# ---------------------------------------------------------
+function echogn()
+{
+	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
+		gettext -ens "${*}"
+	else
+		echo -ne "${*}"
+	fi
+	# Success.
+	return 0
+}
+
+#==============================================================================
+# Section: Nhopkg functions.
+#==============================================================================
+#======================================0
+# Basic nhopkg functions
+#======================================0
+# ---------------------------------------------------------
+# get_good_file_name()
+# Description: This function is used to get the good file name to search dependencies.
+# Parameters: file_name
+# Returns: 0 in success and GOOD_FILE_NAME variable.
+# ---------------------------------------------------------
+function get_good_file_name()
+{
+	REAL_FILE_NAME="${1}"
+	REAL_FILE_NAME_WITH_SPACES=$(echo "${REAL_FILE_NAME}" | sed -e 's@/@ @g')
+	REAL_FILE_NAME_BAR_NUMS=$(echo "${REAL_FILE_NAME_WITH_SPACES}" | wc -w)
+	if (( ${REAL_FILE_NAME_BAR_NUMS} <= 2 )) && \
+	(( ${REAL_FILE_NAME_BAR_NUMS} > 0 )); then
+		GOOD_FILE_NAME="${REAL_FILE_NAME}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "3" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "4" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "5" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "6" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/*/}"
+	elif (( "${REAL_FILE_NAME_BAR_NUMS}" > "6" )); then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/*/*/}"
+	fi
+	# Success.
+	return 0
+}
+# ---------------------------------------------------------
+# noemptyfuncs()
+# Description: This function is used if you don't want a bash error if any function is empty.
+# Parameters: none
+# Returns: 0 in any way.
+# ---------------------------------------------------------
+function noemptyfuncs()
+{
+	# Do you prefer other?
+	#echo -n
+	#:
+	return 0 # Best than others.
+}
+# ---------------------------------------------------------
+# print_background_title()
+# Description: This function prints a title.
+# Parameters: message
+# Returns: 0 in any way and title messages.
+# ---------------------------------------------------------
+function print_background_title()
+{
+	# Get message text.
+	MESSAGE="${1}"
+	MESSAGE_CHARS=$(echog "${MESSAGE}" | wc -m)
+	((MESSAGE_CHARS++))
+	# Count colums of shell.
+	SHELL_COLUMS=$(tput cols)
+	TITLE_COLUMS=$((${SHELL_COLUMS} - ${MESSAGE_CHARS}))
+	TITLE_COLUMS=$((${TITLE_COLUMS} / 2))
+	for ((i=0;i<${TITLE_COLUMS};i++));
+	do
+		echo -n "="
+	done
+	echo -n " "
+	echogn "${MESSAGE}"
+	echo -n " "
+	for ((i=0;i<${TITLE_COLUMS};i++));
+	do
+		echo -n "="
+	done
+	echo
+	# Success.
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_version()
+# Description: Print nhopkg version. If user is in LFS based system, Nhopkg prints special message ;)
+# Parameters: none
+# Returns: 0 in any way and Nhopkg version.
+# ---------------------------------------------------------
+function nhopkg_version()
+{
+	echo
+	## Check if Nhopkg is running in LFS system ;-)
+	if [[ -e "/etc/lfs-release" ]]; then
+		echog "Great Work your LFS! ;-)"
+	fi
+	echogn "Nhopkg version"
+	echo " ${NHOPKG_VERSION}"
+	echo "Nhopkg  Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>"
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_usage()
+# Description: Shows the how-to usage Nhopkg.
+# Parameters: none
+# Returns: 0 in success and usage message.
+# ---------------------------------------------------------
+function nhopkg_usage()
+{
+	echo
+	echog "Usage: nhopkg [command] [options] package"
+	echog "To see the help: nhopkg --help"
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_usage_with_sudo()
+# Description: Shows the how-to usage Nhopkg with sudo.
+# Parameters: none
+# Returns: 0 in success and usage message (with sudo).
+# ---------------------------------------------------------
+function nhopkg_usage_with_sudo()
+{
+	echo
+	echog "Usage: sudo nhopkg [command] [options] package"
+	echog "To see the help: nhopkg --help"
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_license()
+# Description: Shows nhopkg's license (always will be software libre).
+# Parameters: none
+# Returns: 0 in success and license message.
+# ---------------------------------------------------------
+function nhopkg_license()
+{
+	echo "Nhopkg  Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <projectnhoax@gmail.com>"
+	echo
+	echog "This program comes with ABSOLUTELY NO WARRANTY."
+	echog "This is free software, and you are welcome to redistribute it under certain conditions; for details type nhopkg --license-all."
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_help()
+# Description: Shows the help of nhopkg.
+# Parameters: none
+# Returns: 0 in success and help pages.
+# TODO: Add support to explain any command with --help command.
+# ---------------------------------------------------------
+function nhopkg_help()
+{
+	nhopkg_usage_with_sudo
+	echo
+	echog "Examples:"
+	echog " * Install binary package."
+	echo "sudo nhopkg -i /home/user/gimp-2.6.3-2.nho"
+	echog " * Show files on package."
+	echo "nhopkg --show gimp-2.6.3-2"
+	echo
+	echog "Commands:"
+	echog " -i, --install\tInstalls binary package."
+	echog " -S, --super-install\tInstalls binary package form repository."
+	echog " -d, --dios\tSame as -S, --super-install."
+	echog " -r, --remove\tRemoves package installed by Nhopkg."
+	echog " -B, --backup\tCreates binary package from installed package."
+	echog " -b, --build\tCompiles and installs source package."
+	echog " -k, --check\tChecks if installed package is correct."
+	echog " -c, --create-source\tCreates source package from tarball."
+	echog " -A, --auto-package\tCreates automatically source package from tarball."
+	echog " -z, --tgz2nho\tConverts .tgz package to .nho package."
+	echog " -g, --create-repo\tCreates software repository on selected directory."
+	echog " -U, --update\tUpdate repository database."
+	echog " -e, --clean\tRemove cached data."
+	echog " -s, --search\tSearch for package and its details."
+	echog " -t, --list-repo\tLists packages on repository and their details."
+	echog " -l, --list\tLists installed packages."
+	echog " -n, --info\tShows package details."
+	echog " -w, --show\tShows package files."
+	echog " -u, --update-db\tUpdate Nhopkg database."
+	echog " --license\tShows Nhopkg license."
+	echog " --license-all\tShows complete Nhopkg license."
+	echog " --version\tShows Nhopkg version."
+	echog " -h, --help\tShows Nhopkg help pages."
+	echo
+	echog "Options:"
+	echog " -R, --recursive\tNhopkg works recursively."
+	echog " --root\tSets install root."
+	echog " --no-check-deps\tDon't check dependencies."
+	echog " --no-check-arch\tDon't check architecture."
+	echog " --no-check-md5\tDon't check MD5 Sum."
+	echog " --force-check-deps\tForce check dependencies."
+	echog " --force-check-arch\tForce check architecture."
+	echog " --force-check-md5\tForce check MD5 Sum."
+	echog " --purge\tRemove inverse dependencies of package."
+	echog " -o, --output\tWrite an output log."
+	echog " -v, --verbose\tVerbose operations."
+	echog " --\tStop parssing arguments."
+	return 0
+}
+# ---------------------------------------------------------
+# check_if_running()
+# Description: Check if Nhopkg is already running.
+# Parameters: none
+# Returns: NHOPKG_LECHE variable (1 if running and 0 if not).
+# ---------------------------------------------------------
+function check_if_running()
+{
+	declare -x NHOPKG_LECHE
+	NHOPKG_LECHE=0
+	while [[ -e "${NHOPKG_LOCKFILE}" ]];
+	do
+		echo
+		echog "Nhopkg is already in use..."
+		OLDPID=$(cat "${NHOPKG_LOCKFILE}")
+		if [[ $(ps -p "${OLDPID}" | grep "nhopkg") ]]; then
+			NHOPKG_LECHE=1
+		else
+			echog "Exist an older lock file, but seems that is not in use..."
+			if [[ -w "${NHOPKG_LOCKFILE}" ]]; then
+				echo $$ > "${NHOPKG_LOCKFILE}"
+				NHOPKG_LECHE=0
+				return 0
+			else
+				echog " * You can't rewrite lock file."
+				# This varible is to be used with front ends.
+				NHOPKG_LECHE=1
+				# Nhopkg can't make other thing, exits.
+				exit 1
+			fi
+		fi
+		# Every 5 seconds Nhopkg check if there are other Nhopkg running.
+		sleep 5
+	done
+	echo $$ > "${NHOPKG_LOCKFILE}"
+	return 0
+}
+# ---------------------------------------------------------
+# get_pwd_dir()
+# Description: Sets directory name and its owner of directory where Nhopkg is running.
+# Parameters: none
+# Returns: CWD and DIROWNER variables. Return 0 if success.
+# ---------------------------------------------------------
+function get_pwd_dir()
+{
+	if [[ -d $(pwd) ]]; then
+		CWD=$(pwd)
+	else
+		CWD="/tmp"
+	fi
+	# Get owner of dir.
+	DIROWNER=$(ls -n "${CWD}" | tail -1 | awk '{print $3":"$4}')
+	if [[ -z "${DIROWNER}" ]] || [[ "${DIROWNER}" = ":" ]]; then
+		# By default 0:0 (root:root).
+		DIROWNER="0:0"
+	fi
+	return 0
+}
+# ---------------------------------------------------------
+# check_if_root_uid()
+# Description: Check if Nhopkg is running as root.
+# Parameters: none
+# Returns: exit 1 if not root. Return 0 if success.
+# ---------------------------------------------------------
+function check_if_root_uid()
+{
+	if [[ "${UID}" != "0" ]]; then
+		echog "To run Nhopkg you need have root powers."
+		exit 1
+	fi
+	return 0
+}
+# ---------------------------------------------------------
+# make_tmp_dir()
+# Description: Creates secure temporal directory for nhopkg.
+# Parameters: none
+# Returns: NHOPKG_TMPDIR variable (is temporal directory). Return 0 if success.
+# ---------------------------------------------------------
+function make_tmp_dir()
+{
+	NHOPKG_TMPDIR=$(mktemp -udt "${TEMPLATE_TMPDIR}" -p "${TMPDIR}")
+	mkdir -p "${NHOPKG_TMPDIR}"
+	check_if_ok " * Unable to create temporary directory."
+	return 0
+}
+# ---------------------------------------------------------
+# check_if_ok()
+# Description: Checks that the previous command was ok. If fails exits with error.
+# Parameters: none
+# Returns: Return 0 if success. Error message and exit 1 if error.
+# ---------------------------------------------------------
+function check_if_ok() {
+	if [[ "${?}" != "0" ]]; then
+		NHO_MSG_ERROR="${1}"
+		if [[ -n "${NHO_MSG_ERROR}" ]]; then			
+			echog "${NHO_MSG_ERROR}" >&2
+		fi
+		# Clean up and exits.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	return 0
+}
+# ---------------------------------------------------------
+# update_local_db()
+# Description: Update nhopkg files database.
+# Parameters: none
+# Returns: Return 0 if success.
+# ---------------------------------------------------------
+function update_local_db()
+{
+	echogn " --- Updating database:"
+	echo " ${NHOPKG_DB}"
+	updatedb --output="${NHOPKG_DB}" --prunepaths="${NO_DIRS_IN_DB}"
+	check_if_ok " * Fails to update database."
+	return 0
+}
+# ---------------------------------------------------------
+# nhopkg_ask_follow()
+# Description: Ask if continue or not. By default NO.
+# Parameters: none
+# Returns: Return 0 if yes and 1 if no.
+# ---------------------------------------------------------
+function nhopkg_ask_follow()
+{
+	if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
+		# If you set recursive mode don't ask. By default YES (0).
+		return 0
+	fi
+	echogn "Do you want to continue?[yes/NO]: "
+	read -e follow
+	if [[ -z "${follow}" ]]; then
+		# Don't continue, return 1.
+		return 1
+	fi
+	case "${follow}" in
+		$(echog "yes"))
+			# Continue, return 0.
+			return 0
+		;;
+		$(echog "no"))
+			# Don't continue, return 1.
+			return 1
+		;;
+		*)
+			nhopkg_ask_follow
+		;;
+	esac
+}
+#======================================1
+# Clean nhopkg functions
+#======================================1
+## Funtion cleanup_tmp_dir(). Clean up temporal directory recursively.
+# Usage: cleanup_tmp_dir (without arguments)
+function cleanup_tmp_dir()
+{
+	if [[ -d "${NHOPKG_TMPDIR}" ]]; then
+		echog " --- Deleting temporary directory."
+		# Force and recursive mode.
+		rm -Rf "${NHOPKG_TMPDIR}"
+	fi
+}
+## Funtion cleanup_all(). Clean up nhopkg.
+# Usage: cleanup_all (without arguments)
+function cleanup_all()
+{
+	if [[ -f "${NHOPKG_LOCKFILE}" ]]; then
+		rm -f "${NHOPKG_LOCKFILE}"
+		# If tmpdir exist, delete it.
+		cleanup_tmp_dir
+	fi
+}
+## Function cleanup_build_dir(). Clean up nhopkg build directory.
+# Usage: cleanup_build_dir (without arguments)
+function cleanup_build_dir()
+{
+	if [[ -d "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}" ]]; then
+		echog "Compilation directory will be removed from your system."
+		nhopkg_ask_follow
+		case "${?}" in
+			0)
+				echogn " --- Deleting"
+				echo " ${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}."
+				rm -Rf "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+			;;
+			1)
+				echo -n " --- ${NHOPKG_BUILDIR}/${pkgname}-${pkgversion} "
+				echog "will not be deleted."
+			;;
+		esac
+	fi
+}
+#================================2
+# Packages nhopkg functions
+#================================2
+## Function check_if_exist_local_package(). Check if selected package exists. If not exist fails.
+# Usage: check_if_exist_local_package package (or file)
+function check_if_exist_local_package()
+{
+	if [[ ! -f "${1}" ]]; then
+		echo -n "${1}: " >&2
+		echog "The selected package doesn't exist." >&2
+		exit 1
+	fi
+}
+## Function get_basic_data(). Get basic data from package and checks it.
+# Usage: get_basic_data package_info_file
+# Gives: pkgname, pkgversion and pkgrevision variables.
+function get_basic_data()
+{
+	# Get basic package info.
+	pkgname=$(grep "# Name:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgversion=$(grep "# Version:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgrevision=$(grep "# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# Checks that are all fields.
+	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]]\
+	|| [[ -z "${pkgrevision}" ]] || [[ -z "${pkgdescription}" ]]; then
+		echog " * Failed to get package info." >&2
+		exit 1
+	fi
+}
+## Function get_nhoid_data(). Get data from package and checks that is a correct package.
+# Usage: get_nhoid_data nhoid_file
+# Gives: nhoid (local), pkgowner, pkgname, pkgversion, pkgrevision, pkglicense, pkggroup, pkgurl, pkgdescription, pkgmd5, pkgarch and pkginstalledsize variables.
+function get_nhoid_data()
+{
+	local nhoid=$(grep "^#%NHO-" "${1}" 2> /dev/null | sed -e 's@^#%NHO-@@')
+	pkgowner=$(grep "^# Package Maintainer:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgname=$(grep "^# Name:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgversion=$(grep "^# Version:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgrevision=$(grep "^# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkglicense=$(grep "^# License:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkggroup=$(grep "^# Group:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgurl=$(grep "^# Url:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgmd5=$(grep -a "^# MD5:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	# Checks that is a correct package.
+	if [[ -z "${nhoid}" ]]; then
+		echog " * The selected package is not valid." >&2
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	# Checks that is a package created in the same version.
+	if [[ "${nhoid}" > "${NHOID_VERSION}" ]]; then
+		echog "The selected package is created in newer version of Nhopkg."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	elif [[ "${nhoid}" < "${NHOID_VERSION}" ]]; then
+		echog "The selected package is created in older version of Nhopkg."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	elif [[ "${nhoid}" != "${NHOID_VERSION}" ]]; then
+		echogn "The selected package is created in other version of Nhopkg:"
+		echo " ${nhoid}."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	source "${1}" 2> /dev/null
+	check_if_ok " * Unable to get data from package."
+}
+## Function check_package_md5sum(). Check md5 of package.
+# Usage: check_package_md5sum (without arguments)
+function check_package_md5sum()
+{
+	if [[ "${NHOPKG_CHECKMD5}" != "yes" ]]; then
+		return 0
+	fi
+	if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+		echogn " --- Checking MD5 Sum for"
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	fi
+	cd "${NHOPKG_TMPDIR}"
+	echo "${pkgmd5}" | md5sum -c &> /dev/null
+	check_if_ok " *** MD5 checksum of package did not match."
+	cd "${CWD}"
+}
+## Function check_package_arch(). Check architecture of package and compare it with the system.
+# Usage: check_package_arch (without arguments)
+function check_package_arch()
+{
+	if [[ "${NHOPKG_CHECKARCH}" != "yes" ]]; then
+		return 0
+	fi
+	if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+		echogn " --- Checking package arch for"
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	fi
+	HOST_ARCH=$(uname -m)
+	# Check arch of given package.
+	for arch in ${pkgarch};
+	do
+		case "${arch}" in
+			noarch|all|any)
+				# Package no have specific architecture.
+				VALID_ARCH="yes"
+				break
+			;;
+			$HOST_ARCH)
+				# Check for host arch.
+				VALID_ARCH="yes"
+				break
+			;;
+			i?86)
+				# Checking for ix86 architectures.
+				xarch=$(echo "${arch}" | sed -e 's@i@@' -e 's@86@@')
+				xHOST_ARCH=$(echo "${HOST_ARCH}" | sed -e 's@i@@' -e 's@86@@')
+				# Check if xHOST_ARCH is larger than xarch
+				if (( "${xHOST_ARCH}" > "${xarch}" )); then
+					VALID_ARCH="yes"
+					break
+				fi
+			;;
+			*)
+				# No valid arch.
+				continue
+			;;
+		esac
+	done
+	if [[ "${VALID_ARCH}" != "yes" ]]; then
+		echog " *** Architecture of package is not valid." >&2
+		echogn " --- This package can be installed on the next system:"
+		echo " ${pkgarch}"
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+}
+## Function check_if_installed_package(). Checks if package is already installed in the system.
+# Usage: check_if_installed_package (without arguments)
+function check_if_installed_package()
+{
+	# Checks that exist other versión of package.
+	if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+		return 0
+	fi
+	# Get data from old package.
+	local newpkgname newpkgversion newpkgrevision
+	newpkgname="${pkgname}"
+	newpkgversion="${pkgversion}"
+	newpkgrevision="${pkgrevision}"
+	local pkgname pkgversion pkgrevision
+	get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${newpkgname}"
+	# Compare package names.
+	if [[ "${pkgname}" == "${newpkgname}" ]]; then
+		# Compare package versions.
+		if [[ "${pkgversion}" < "${newpkgversion}" ]]; then
+			echo -en "${BOLD}"
+			echo -n "${pkgname} "
+			echo -en "${NORMAL}"
+			echog "is installed in your system, but is deprecated. Package will be UPDATE."
+			nhopkg_ask_follow
+		elif [[ "${pkgversion}" == "${newpkgversion}" ]]; then
+			if [[ "${pkgrevision}" < "${newpkgrevision}" ]]; then
+				echo -en "${BOLD}"
+				echo -n "${pkgname} "
+				echo -en "${NORMAL}"
+				echog "is installed in your system, but is deprecated. Package will be UPDATE."
+				nhopkg_ask_follow
+			elif [[ "${pkgrevision}" > "${newpkgrevision}" ]]; then
+				echo -en "${BOLD}"
+				echo -n "${pkgname} "
+				echo -en "${NORMAL}"
+				echog "is installed in your system and is newer. Package will be DOWNGRADE."
+				nhopkg_ask_follow
+			else
+				echo -en "${BOLD}"
+				echo -n "${pkgname} "
+				echo -en "${NORMAL}"
+				echog "is already installed in your system. Package will be REINSTALL."
+				nhopkg_ask_follow
+			fi
+		elif  [[ "${pkgversion}" > "${newpkgversion}" ]]; then
+			echo -en "${BOLD}"
+			echo -n "${pkgname} "
+			echo -en "${NORMAL}"
+			echog "is installed in your system and is newer. Package will be DOWNGRADE."
+			nhopkg_ask_follow
+		fi
+	fi
+	# If NO is selected exits.
+	check_if_ok " * Package will not be installed."
+	# If YES is selected remove old package.
+	remove_package
+	remove_package_config_files
+}
+#======================================3
+# Dependencies tracking nhopkg functions
+#======================================3
+## Function check_if_repository_package(). Checks if dependency packages are on repository.
+# Usage: check_if_repository_package (without arguments)
+function check_if_repository_package()
+{
+	# Checks if this dependency are on repository.
+	get_good_file_name "$(echo "${FILE_DEP}" | awk '{print $1}')"
+	local MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
+	MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
+	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .bz2)
+	# Add dependency to install
+	# Check that dependency isn't already in list.
+	if [[ -n "${MATCHPACKAGE}" ]]; then
+		if [[ -z "${RCASEPACKAGES[*]}" ]]; then
+			RCASEPACKAGES=("${MATCHPACKAGE}")
+			INCLUDE_DEP="0"
+		else
+			for rpackages in ${RCASEPACKAGES[*]};
+			do
+				if [[ "${rpackages}" = "${MATCHPACKAGE}" ]]; then
+					INCLUDE_DEP="1"
+					break
+				fi
+			done
+			if [[ "${INCLUDE_DEP}" != "1" ]]; then
+				RCASEPACKAGES=("${MATCHPACKAGE}" ${RCASEPACKAGES[@]})
+			fi
+		fi
+		if [[ "${INCLUDE_DEP}" != "1" ]]; then
+			check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
+			check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
+		fi
+	else
+		echo -n  " *** $(echo ${FILE_DEP} | awk '{print $1}') " >&2
+		echog "is not on repository." >&2
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+}
+## Function check_if_repository_optional_package(). Checks if dependency (optional) packages are on repository.
+# Usage: check_if_repository_optional_package (without arguments)
+function check_if_repository_optional_package()
+{
+	# Checks if this dependency are on repository.
+	get_good_file_name "$(echo "${FILE_DEP}" | awk '{print $1}')"
+	local MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
+	MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
+	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .bz2)
+	# Add dependency to install
+	# Check that dependency isn't already in list.
+	if [[ -n "${MATCHPACKAGE}" ]]; then
+		if [[ -z "${ORCASEPACKAGES[*]}" ]]; then
+			ORCASEPACKAGES=("${MATCHPACKAGE}")
+			INCLUDE_DEP="0"
+		else
+			for rpackages in ${ORCASEPACKAGES[*]};
+			do
+				if [ "${rpackages}" = "${MATCHPACKAGE}" ]; then
+					INCLUDE_DEP="1"
+					break
+				fi
+			done
+			if [[ "${INCLUDE_DEP}" != "1" ]]; then
+				ORCASEPACKAGES=("${MATCHPACKAGE}" ${ORCASEPACKAGES[@]})
+			fi
+		fi
+		if [[ "${INCLUDE_DEP}" != "1" ]]; then
+			check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
+			check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
+		fi
+	else
+		echo -n  " *** $(echo ${FILE_DEP} | awk '{print $1}') " >&2
+		echog "is not on repository." >&2
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+}
+## Function check_build_dependencies(). Checks required build dependencies.
+# Usage: check_build_dependencies file_to_check
+function check_build_dependencies()
+{
+	local pkgname pkgversion pkgrevision
+	get_basic_data "${1}"
+	local CASE_DEPS=$(grep "^# BuildDep:" "${1}" 2> /dev/null)
+	if [[ -n "${CASE_DEPS}" ]]; then
+		local IFS=$'\n'
+		local buildeps
+		for buildeps in ${CASE_DEPS};
+		do
+			local IFS="${OLDIFS}"
+			# Gets name and files from dependency.
+			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
+			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
+			# Shows dependency for check.
+			echogn " --- Processing Dependency:"
+			echo -n " ${NAME_DEP} "
+			echogn "for"
+			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+			# Check dependency!
+			# Count dependency files.
+			local CHECK_FILE_DEP_NUM="0"
+			local FILE_DEP_NUM="0"
+			local FILE_DEP_COUNT
+			for FILE_DEP_COUNT in ${FILE_DEP};
+			do
+				(( FILE_DEP_NUM++ ))
+			done
+			local CHECK_DILE_DEP
+			for CHECK_FILE_DEP in ${FILE_DEP};
+			do
+				# File is in the exact path.
+				if [[ -f "${CHECK_FILE_DEP}" ]]; then
+					# Apunta nueva dependencia cumplida ;)
+					(( CHECK_FILE_DEP_NUM++ ))
+					if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+						echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+					fi
+				else
+				# File is not in the exact path.
+					get_good_file_name "${CHECK_FILE_DEP}"
+					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					if [[ -n "${LOCATE_DEPS}" ]]; then
+						(( CHECK_FILE_DEP_NUM++ ))
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}\n" | head -1)"
+						fi
+					else
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+						fi
+					fi
+				fi
+			done
+			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
+			# Check if dependency is installed in the system.
+			if (("${FILE_DEP_NUM}" <= "5")); then
+				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_package
+				fi
+			elif (("${FILE_DEP_NUM}" > "5")); then
+				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
+				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_package
+				fi
+			fi
+
+		done
+	else
+		echogn " *** No build deps found on package:" >&2
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
+	fi
+	local IFS="${OLDIFS}"
+}
+## Function check_optional_build_dependencies(). Checks optional build dependencies.
+# Usage: check_optional_build_dependencies file_to_check
+function check_optional_build_dependencies()
+{
+	local pkgname pkgversion pkgrevision
+	get_basic_data "${1}"
+	local CASE_DEPS=$(grep "^# OptionalBuildDep:" "${1}" 2> /dev/null)
+	if [[ -n "${CASE_DEPS}" ]]; then
+		local IFS=$'\n'
+		local buildeps
+		for buildeps in ${CASE_DEPS};
+		do
+			local IFS="${OLDIFS}"
+			# Gets name and files from dependency.
+			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
+			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
+			# Shows dependency for check.
+			echogn " --- Processing Optional Dependency:"
+			echo -n " ${NAME_DEP} "
+			echogn "for"
+			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+			# Check dependency!
+			# Count dependency files.
+			local CHECK_FILE_DEP_NUM="0"
+			local FILE_DEP_NUM="0"
+			local FILE_DEP_COUNT
+			for FILE_DEP_COUNT in ${FILE_DEP};
+			do
+				(( FILE_DEP_NUM++ ))
+			done
+			local CHECK_DILE_DEP
+			for CHECK_FILE_DEP in ${FILE_DEP};
+			do
+				# File is in the exact path.
+				if [[ -f "${CHECK_FILE_DEP}" ]]; then
+					# Apunta nueva dependencia cumplida ;)
+					(( CHECK_FILE_DEP_NUM++ ))
+					if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+						echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+					fi
+				else
+				# File is not in the exact path.
+					get_good_file_name "${CHECK_FILE_DEP}"
+					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					if [[ -n "${LOCATE_DEPS}" ]]; then
+						(( CHECK_FILE_DEP_NUM++ ))
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}\n" | head -1)"
+						fi
+					else
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+						fi
+					fi
+				fi
+			done
+			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
+			# Check if dependency is installed in the system.
+			if (("${FILE_DEP_NUM}" <= "5")); then
+				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_optional_package
+				fi
+			elif (("${FILE_DEP_NUM}" > "5")); then
+				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
+				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_optional_package
+				fi
+			fi
+
+		done
+	else
+		echogn " *** No optional build deps found on package:" >&2
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
+	fi
+	local IFS="${OLDIFS}"
+}
+## Function check_post_dependencies(). Checks required dependencies.
+# Usage: check_post_dependencies file_to_check
+function check_post_dependencies()
+{
+	local pkgname pkgversion pkgrevision
+	get_basic_data "${1}"
+	local CASE_DEPS=$(grep "^# Dep(post):" "${1}" 2> /dev/null)
+	if [[ -n "${CASE_DEPS}" ]]; then
+		local IFS=$'\n'
+		local buildeps
+		for buildeps in ${CASE_DEPS};
+		do
+			local IFS="${OLDIFS}"
+			# Gets name and files from dependency.
+			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
+			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
+			# Shows dependency for check.
+			echogn " --- Processing Dependency:"
+			echo -n " ${NAME_DEP} "
+			echogn "for"
+			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+			# Check dependency!
+			# Count dependency files.
+			local CHECK_FILE_DEP_NUM="0"
+			local FILE_DEP_NUM="0"
+			local FILE_DEP_COUNT
+			for FILE_DEP_COUNT in ${FILE_DEP};
+			do
+				(( FILE_DEP_NUM++ ))
+			done
+			local CHECK_DILE_DEP
+			for CHECK_FILE_DEP in ${FILE_DEP};
+			do
+				# File is in the exact path.
+				if [[ -f "${CHECK_FILE_DEP}" ]]; then
+					# New success dep ;)
+					((CHECK_FILE_DEP_NUM++))
+					if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+						echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+					fi
+				else
+				# File is not in the exact path.
+					get_good_file_name "${CHECK_FILE_DEP}"
+					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILENAME}")
+					if [[ -n "${LOCATE_DEPS}" ]]; then
+						(( CHECK_FILE_DEP_NUM++ ))
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}\n" | head -1)"
+						fi
+					else
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+						fi
+					fi
+				fi
+			done
+			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
+			# Check if dependency is installed in the system.
+			if (("${FILE_DEP_NUM}" <= "5")); then
+				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_package
+				fi
+			elif (("${FILE_DEP_NUM}" > "5")); then
+				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
+				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_package
+				fi
+			fi
+
+		done
+	else
+		echogn " *** No deps found on package:" >&2
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
+	fi
+	local IFS="${OLDIFS}"
+}
+## Function check_optional_post_dependencies(). Checks optional dependencies.
+# Usage: check_optional_post_dependencies file_to_check
+function check_optional_post_dependencies()
+{
+	local pkgname pkgversion pkgrevision
+	get_basic_data "${1}"
+	local CASE_DEPS=$(grep "^# OptionalDep(post):" "${1}" 2> /dev/null)
+	if [[ -n "${CASE_DEPS}" ]]; then
+		local IFS=$'\n'
+		local buildeps
+		for buildeps in ${CASE_DEPS};
+		do
+			local IFS="${OLDIFS}"
+			# Gets name and files from dependency.
+			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
+			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
+			# Shows dependency for check.
+			echogn " --- Processing Optional Dependency:"
+			echo -n " ${NAME_DEP} "
+			echogn "for"
+			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+			# Check dependency!
+			# Count dependency files.
+			local CHECK_FILE_DEP_NUM="0"
+			local FILE_DEP_NUM="0"
+			local FILE_DEP_COUNT
+			for FILE_DEP_COUNT in ${FILE_DEP};
+			do
+				(( FILE_DEP_NUM++ ))
+			done
+			local CHECK_DILE_DEP
+			for CHECK_FILE_DEP in ${FILE_DEP};
+			do
+				# File is in the exact path.
+				if [[ -f "${CHECK_FILE_DEP}" ]]; then
+					# Apunta nueva dependencia cumplida ;)
+					(( CHECK_FILE_DEP_NUM++ ))
+					if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+						echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+					fi
+				else
+				# File is not in the exact path.
+					get_good_file_name "${CHECK_FILE_DEP}"
+					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					if [[ -n "${LOCATE_DEPS}" ]]; then
+						(( CHECK_FILE_DEP_NUM++ ))
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}\n" | head -1)"
+						fi
+					else
+						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+							echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+						fi
+					fi
+				fi
+			done
+			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
+			# Check if dependency is installed in the system.
+			if (("${FILE_DEP_NUM}" <= "5")); then
+				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_optional_package
+				fi
+			elif (("${FILE_DEP_NUM}" > "5")); then
+				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
+				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+					echogn "\t** OK: Present"
+					echo " (${DEPS_PERCENT}%)"
+				else
+					echogn "\t** FAIL: Present"
+					echo " (${DEPS_PERCENT}%)"
+					# Check on repo.
+					check_if_repository_optional_package
+				fi
+			fi
+
+		done
+	else
+		echogn " *** No optional deps found on package:" >&2
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
+	fi
+	local IFS="${OLDIFS}"
+}
+## Function downloadrequiredeps(). Download required dependencies.
+# Usage: downloadrequiredeps (without arguments)
+function downloadrequiredeps()
+{
+	for RCASEPACKAGE in ${RCASEPACKAGES[*]};
+	do
+		# Is not necesary check if package is on repository. Is already checked.
+		# Get data from package and download it.
+		local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		echogn " --- Downloading"
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		check_if_ok " *** Failed to download package. Please, retry."
+		# Adds downloaded packages to list for install.
+		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
+			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.nho")
+		else
+			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.nho")
+		fi
+	done
+}
+## Function downloadoptdeps(). Download optional dependencies.
+# Usage: downloadoptdeps (without arguments)
+function downloadoptdeps()
+{
+	for ORCASEPACKAGE in ${ORCASEPACKAGES[*]};
+	do
+		# Is not necesary check if package is on repository. Is already checked.
+		# Get data from package and download it.
+		local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		echogn " --- Downloading"
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		check_if_ok " *** Failed to download package. Please, retry."
+		# Adds downloaded packages to list for install.
+		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
+			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.nho")
+		else
+			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.nho")
+		fi
+	done
+}
+## Function installdownloadedeps(). Installs downloaded dependencies.
+# Usage: installdownloadedeps (without arguments)
+function installdownloadedeps()
+{
+	for DCASEPACKAGE in ${DCASEPACKAGES[*]};
+	do
+		check_if_exist_local_package "${NHOPKG_LOCALSTATEDIR}/cache/${DCASEPACKAGE}"
+		# Get data from package.
+		local NHOPKG_TMPDIR
+		make_tmp_dir
+		# Uncompress package.
+		tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${DCASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+		# Comprueba que no ha habido error al descomprimir
+		check_if_ok " * Unable to uncompress package."
+		# Get data from package.
+		# Checks that is good package and get data from it.
+		if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+			local pkgowner pkgname pkgversion pkgrevision pkglicense pkggroup pkgurl pkgdescription pkgmd5 pkgarch pkginstalledsize
+			get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+		else
+			echog " * The selected package is not valid." >&2
+			# Clean and exits with error.
+			cleanup_tmp_dir
+			exit 1
+		fi
+		## 3. Checks MD5 sum and architecture.
+		check_package_md5sum
+		check_package_arch
+		## 6. Install binary package.
+		bin_install
+		## 7. Configure installation.
+		bin_install_setting_up
+		bin_install_create_config_files
+		# 8. Clean up and exit.
+		cleanup_tmp_dir
+	done
+}
+## Function askforinstallrequiredeps(). Asks to user if wants to install required dependencies. If NO nhopkg exits.
+# Usage: askforinstallrequiredeps (without arguments)
+function askforinstallrequiredeps()
+{
+	unset DCASEPACKAGES
+	if [[ -z "${RCASEPACKAGES[0]}" ]]; then
+		return 0
+	fi
+	# Asks for continue.
+	echo -en "${BOLD}"
+	echo -n "${pkgname}-${pkgversion}-${pkgrevision} "
+	echo -en "${NORMAL}"
+	if [[ -n "${RCASEPACKAGES[1]}" ]]; then
+		echogn "needs the following dependencies:"
+	else
+		echogn "needs this dependency:"
+	fi
+	local IFS=,
+	echo " ${RCASEPACKAGES[*]}."
+	local IFS="${OLDIFS}"
+	nhopkg_ask_follow
+	check_if_ok " * Package will not be installed."
+	Q_INSTALL_REQUIRED_DEPS="0"
+}
+## Function installrequiredeps(). Installs required dependencies from repos if aren't installed yet.
+# Usage: installrequiredeps (without arguments)
+function installrequiredeps()
+{
+	# Check if install.
+	if [[ "${Q_INSTALL_REQUIRED_DEPS}" != "0" ]]; then
+		return 0
+	fi
+	# Download packages from repo.
+	downloadrequiredeps
+	# Installs downloaded packages.
+	installdownloadedeps
+	unset RCASEPACKAGES
+}
+## Function askforinstalloptdeps(). Asks to user if wants to install optional dependencies. If NO nhopkg continues.
+# Usage: askforinstalloptdeps (without arguments)
+function askforinstalloptdeps()
+{
+	unset DCASEPACKAGES
+	if [[ -z "${ORCASEPACKAGES[0]}" ]]; then
+		return 0
+	fi
+	# Asks for continue.
+	echo -en "${BOLD}"
+	echo -n "${pkgname}-${pkgversion}-${pkgrevision} "
+	echo -en "${NORMAL}"
+	if [[ -n "${ORCASEPACKAGES[1]}" ]]; then
+		echogn "needs the following optional dependencies:"
+	
+	else
+		echogn "needs this optional dependency:"
+	fi
+	local IFS=,
+	echo " ${ORCASEPACKAGES[*]}."
+	local IFS="${OLDIFS}"
+	nhopkg_ask_follow
+	Q_INSTALL_OPT_DEPS="${?}"
+}
+## Function installoptdeps(). Installs optional dependencies from repos if aren't installed yet.
+# Usage: installoptdeps (without arguments)
+function installoptdeps()
+{
+	# Check if install.
+	if [[ "${Q_INSTALL_OPT_DEPS}" != "0" ]]; then
+		return 0
+	fi
+	# Download packages from repo.
+	downloadoptdeps
+	# Installs downloaded packages.
+	installdownloadedeps
+	unset ORCASEPACKAGES
+}
+#======================================4
+# Install (binary package) functions
+#======================================4
+## Function bin_install_progress(). Prints a progress bar for the installation process.
+# Usage: bin_install_progress command (Ex: tar xvfP -) logfile tarfile (Ex: data.tar.bz2) filename (Package name. Ex: ${pkgname}) installedsize (Ex: ${pkginstalledsize})
+bin_install_progress()
+{
+	local COMMAND="${1}"
+	local LOG_FILE="${2}"
+	local TAR_FILE="${3}"
+	local FILE_NAME="${4}"
+	local INSTALLED_SIZE="${5}"
+	SHELL_COLUMS=$(tput cols)
+	UNTAR_SIZE=0
+	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-$(echo "${INSTALLED_SIZE}" | wc -m)-25))
+	MIN_BAR_WIDTH="5"
+	if (( ${BAR_WIDTH} < ${MIN_BAR_WIDTH} )); then
+		BAR_WIDTH="${MIN_BAR_WIDTH}"
+	fi
+	START_TIME=$(date -u +%s)
+	(bzcat ${TAR_FILE}) | (
+	while (( ${UNTAR_SIZE} < ${INSTALLED_SIZE} ));
+	do
+		dd bs=512 count=2048 2>/dev/null # || return 1
+		(( UNTAR_SIZE += 1024 ))
+		if (( ${UNTAR_SIZE} > ${INSTALLED_SIZE} )); then
+			UNTAR_SIZE=$INSTALLED_SIZE
+		fi
+		# Print title.
+		printf "\r %-5s: " ${FILE_NAME} >&2
+		# pPrint percentage.
+		export PERCENT=$(( 100 * $UNTAR_SIZE / $INSTALLED_SIZE ))
+		printf "%3d%% [" $PERCENT >&2
+		# Print progress bar.
+		PROGRESS_BAR=$(( $BAR_WIDTH * $UNTAR_SIZE / $INSTALLED_SIZE ))
+		for i in $(seq 1 $PROGRESS_BAR);
+		do
+			printf "${PROGRESS_BAR_BEGIN}" >&2
+		done
+		if (( "${PERCENT}" < "100" )); then
+			printf "${PROGRESS_BAR_END}" >&2
+		else
+			printf "${PROGRESS_BAR_BEGIN}" >&2
+		fi
+		for i in $(seq $PROGRESS_BAR $(( BAR_WIDTH-- )));
+		do
+			printf "${PROGRESS_BAR_EMPTY}" >&2
+		done
+		# Print size of file copied.
+		printf -v size "%d kB" $UNTAR_SIZE
+		printf "] %7s" "$size" >&2
+		# Print ETA.
+		ELAPSED_TIME=$(( $(date -u +%s) - $START_TIME ))
+		REMAIN_TIME=$(( $INSTALLED_SIZE - $UNTAR_SIZE ))
+		ETA_TIME=$(( ($ELAPSED_TIME * $REMAIN_TIME) / $UNTAR_SIZE + 1))
+		# Get minutes and seconds
+		ETA_TIME_MIN=$(( $ETA_TIME / 60 ))
+		ETA_TIME_SEC=$(( $ETA_TIME % 60 ))
+		printf " %02dm%02ds ETA" $ETA_TIME_MIN $ETA_TIME_SEC >&2
+	done
+	echo >&2
+	) | ${COMMAND}  2>/dev/null > ${LOG_FILE}
+}
+## Funtion bin_install(). Installs binary package form data.tar.bz2.
+# Usage: bin_install (without arguments)
+function bin_install()
+{
+	echogn " --- Installing"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	if [ -f "${NHOPKG_TMPDIR}/data.tar.bz2" ]; then
+		# Checks if --root or --root= option are selected.
+		if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			# Checks if all is good.
+			check_if_ok " *** Failed to install package."
+		else
+			# Checks if data.tar.bz2 is preceded by / or not.
+			if [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
+				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+				# Checks if all is good.
+				check_if_ok " *** Failed to install package."
+			else
+				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+				# Checks if all is good.
+				check_if_ok " *** Failed to install package."
+			fi
+		fi
+	else
+		echog " * The selected package is not valid." >&2
+		# Clean up and exits.
+		cleanup_tmp_dir
+		exit 1
+	fi
+}
+## Function bin_install_setting_up(). Configure installation from nhoid (npostinstall() function).
+# Usage: bin_install_setting_up (without arguments)
+function bin_install_setting_up()
+{
+	echogn " --- Setting up"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	if [ "${VERBOSE_MODE}" = "yes" ]; then
+		npostinstall
+	else
+		npostinstall &> /dev/null
+	fi
+}
+## Function bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
+# Usage: bin_install_create_config_files (without arguments)
+function bin_install_create_config_files()
+{
+	if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
+		2> /dev/null
+		check_if_ok " *** Failed to install package."
+		bzip2 "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		check_if_ok " *** Failed to install package."
+		# Touch info package file and make symlinks.
+		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		# Add npostremove() function to nhoid.
+		echo >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
+		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		2> /dev/null
+		check_if_ok " *** Failed to install package."
+		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
+	else
+		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
+		2> /dev/null
+		check_if_ok " *** Failed to install package."
+		bzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		check_if_ok " *** Failed to install package."
+		# Touch info package file and make symlinks.
+		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		# Add npostremove() function to nhoid.
+		echo >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
+		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		2> /dev/null
+		check_if_ok " *** Failed to install package."
+		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
+	fi
+}
+#======================================5
+# Super Install (binary package from repo) functions.
+#======================================5
+## Function getpackage(). Search selected package on repository.
+# Usage: getpackage (without arguments)
+# Gives: pkgname, pkgversion and pkgrevision variables.
+function getpackage()
+{
+	if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" ]]; then
+		# Get data from package and download it.
+		pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+	else
+		get_good_file_name "${CASEPACKAGE}"
+		MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.bz2 2> /dev/null)
+		for package in ${MATCHPACKAGE};
+		do
+			if [[ -z "${MATCHPACKAGES}" ]]; then
+				MATCHPACKAGES=$(basename "${package}" .bz2)
+			else
+				MATCHPACKAGES="${MATCHPACKAGES} $(basename "${package}" .bz2)"
+			fi
+		done
+		if [[ -n "${MATCHPACKAGES}" ]]; then
+			# Check if there are more than one package.
+			if [[ $(echo ${MATCHPACKAGES} | awk '{print $2}') ]]; then
+				echog "There are more than one package with these arguments, please select one."
+				select package in ${MATCHPACKAGES};
+				do
+					if [[ -n "${package}" ]]; then
+						MATCHPACKAGE="${package}"
+						break
+					fi
+				done
+			else
+				MATCHPACKAGE=$(echo ${MATCHPACKAGES} | awk '{print $1}')
+			fi
+		else
+			echo -n " *** ${CASEPACKAGE} " >&2
+			echog "is not on repository." >&2
+			exit 1
+		fi
+		pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
+		pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
+		pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
+	fi
+	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]] || [[ -z "${pkgrevision}" ]]; then
+		echo -n " *** ${CASEPACKAGE} " >&2
+		echog "is not on repository." >&2
+		exit 1
+	fi
+}
+## Function dowloadpackage(). Downloads package to install.
+# Usage: downloadpackage (without arguments)
+# Gives: Downloaded package on cache/ directory.
+function downloadpackage()
+{
+	echogn " --- Downloading"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
+	wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+	check_if_ok " *** Failed to download package. Please, retry."
+}
+#======================================6
+# Remove (packages) functions.
+#======================================6
+## Function remove_progress(). Prints a progress bar for remove process.
+# Usage: remove_progress (without arguments)
+function remove_progress()
+{
+	((DELETED_FILES++))
+	printf "\r %-5s: " "${pkgname}-${pkgversion}-${pkgrevision}" >&2
+	# Print percentage.
+	export PERCENT=$(( 100 * $DELETED_FILES / $TOTAL_FILES ))
+	printf "%3d%% [" $PERCENT >&2
+	# Print progress bar.
+	PROGRESS_BAR=$(( $BAR_WIDTH * $DELETED_FILES / $TOTAL_FILES ))
+	for i in $(seq 1 $PROGRESS_BAR);
+	do
+		printf "${PROGRESS_BAR_BEGIN}" >&2
+	done
+	if (( "${PERCENT}" < "100" )); then
+		printf "${PROGRESS_BAR_END}" >&2
+	else
+		printf "${PROGRESS_BAR_BEGIN}" >&2
+	fi
+	for i in $(seq $PROGRESS_BAR $(( BAR_WIDTH-- )));
+	do
+		printf "${PROGRESS_BAR_EMPTY}" >&2
+	done
+	# Print size of file copied.
+	printf "]" >&2
+	# Print ETA.
+	ELAPSED_TIME=$(( $(date -u +%s) - $START_TIME ))
+	REMAIN_TIME=$(( $TOTAL_FILES - $DELETED_FILES ))
+	ETA_TIME=$(( ($ELAPSED_TIME * $REMAIN_TIME) / $DELETED_FILES + 1))
+	# Get minutes and seconds.
+	ETA_TIME_MIN=$(( $ETA_TIME / 60 ))
+	ETA_TIME_SEC=$(( $ETA_TIME % 60 ))
+	printf " %02dm%02ds ETA" $ETA_TIME_MIN $ETA_TIME_SEC >&2
+}
+## Function check_inverse_dependencies(). Checks what packages are depending of other.
+# Usage: check_inverse_dependencies (without arguments)
+# Gives: INVERSEDEPS variable.
+function check_inverse_dependencies()
+{
+	for package in ${installedpackages[*]};
+	do
+		local IFS=$'\n'
+		# No me interesan dependencias opcionales.
+		for dependency in $(grep "^# Dep(post):" "${NHOPKG_LOCALSTATEDIR}/packages/${package}");
+		do
+			DEPFILES=$(echo "${dependency}" | awk -F'\t' '{print $3}')
+			local IFS=" "
+			for depfile in ${DEPFILES};
+			do
+				# Could fail.
+				#RETURN=$(bzgrep -c "${depfile#/*/*/}" "${NHOPKG_LOCALSTATEDIR}/files/${1}.bz2")
+				get_good_file_name "${depfile}"
+				RETURN=$(bzgrep -c "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/files/${1}.bz2")
+				if [[ "${RETURN}" != "0" ]]; then
+					if [[ -z "${INVERSEDEPS[@]}" ]]; then
+						INVERSEDEPS=("${package}")
+						check_inverse_dependencies "${package}"
+					else
+						for d in ${INVERSEDEPS[*]};
+						do
+							if [[ "${d}" = "${package}" ]]; then
+								local LECHE="1"
+								break
+							fi
+						done
+						if [[ "${LECHE}" != "1" ]]; then
+							INVERSEDEPS=("${package}" "${INVERSEDEPS[@]}")
+							check_inverse_dependencies "${package}"
+						fi
+					fi
+					break
+				fi
+			done
+		done
+	done
+}
+## Function remove_package(). Remove all files from package.
+# Usage: remove_package() (without arguments)
+function remove_package()
+{
+	# Progress Bar variables.
+	TOTAL_FILES=$(bzgrep -vc "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2")
+	DELETED_FILES="0"
+	SHELL_COLUMS=$(tput cols)
+	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-22))
+	MIN_BAR_WIDTH="5"
+	export PERCENT
+	if (( ${BAR_WIDTH} < ${MIN_BAR_WIDTH} )); then
+		BAR_WIDTH="${MIN_BAR_WIDTH}"
+	fi
+	START_TIME=$(date -u +%s)
+	for removefiles in $(bzgrep -v "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2")
+	do
+		# Check that file begin with /.
+		if  [[ $(echo "${removefiles}" | grep "^/") ]]; then
+			removefiles="${removefiles}"
+		else
+			removefiles="/${removefiles}"
+		fi
+		if [[ -f "${removefiles}" ]]; then
+			rm -f "${removefiles}"
+			if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+				echo -n " > ${removefiles}: "
+				if [ ! -f "${removefiles}" ]; then
+					echog "file deleted."
+				else
+					echog "unable to delete file."
+				fi
+			else
+				remove_progress
+			fi
+		elif [[ -d "${removefiles}" ]]; then
+			rmdir --ignore-fail-on-non-empty "${removefiles}"
+			if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+				echo -n " > ${removefiles}: "
+				if [ ! -d "${removefiles}" ]; then
+					echog "directory deleted."
+				else
+					echog "unable to delete directory."
+				fi
+			else
+				remove_progress
+			fi
+		fi
+	done
+	# To end progress bar.
+	echo >&2
+}
+## Function remove_package_all(). Removes all packages (selected package and its inverse dependencies).
+# Usage: remove_package_all (without arguments)
+function remove_package_all()
+{
+	for package2delete in ${INVERSEDEPS[*]};
+	do
+		local pkgname=$(grep "# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${package2delete}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgversion=$(grep "# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${package2delete}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgrevision=$(grep "# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${package2delete}" 2> /dev/null | awk -F'\t' '{print $2}')
+		source "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		remove_package
+		remove_package_config_files
+	done
+	# Configure desinstallation.
+	if [ "${VERBOSE_MODE}" = "yes" ]; then
+		npostremove
+	else
+		npostremove 2> /dev/null
+	fi
+	
+}
+## Function remove_package_config_files(). Remove configure files form removed package.
+# Usage: remove_package_config_files (without arguments)
+function remove_package_config_files()
+{
+	# Remove configuration files.
+	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
+	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+	rm -f "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+}
+#======================================7
+# Build (packages) functions.
+#======================================7
+## Function build_prepare(). Prepares system to build package.
+# Usage: build_prepare (without arguments)
+function build_prepare()
+{
+	mkdir -p "${NHOPKG_BUILDIR}"
+	tar jxfC "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" "${NHOPKG_BUILDIR}" &> /dev/null
+	check_if_ok " * The selected package is not valid."
+	# Hide nhoid file.
+	mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
+	rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2"
+	# Checks if there are any patch.
+	if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
+		echog " --- Additional files in package (patches):"
+		for patch in $(ls "${NHOPKG_TMPDIR}");
+		do
+			echo -e "\t> ${patch}"
+		done
+		# Move files.
+		mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
+	fi
+}
+## Function build_package(). Build package form nhoid functions.
+# Usage: build_package (without arguments)
+function build_package()
+{
+	# Go to build directory.
+	cd "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+	echogn " - Building"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	echog "This step may take some time depending of package and your system."
+	# Gets date, hour, host and arch of compilation.
+	BUILD_DATE=$(date -u "+%F %T %z")
+	BUILD_HOST="$(uname -n)"
+	BUILD_ARCH="$(uname -m)"
+	if [ "${VERBOSE_MODE}" = "yes" ]; then
+		(nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
+		| tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+	else
+		(nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+	fi
+}
+## Function check_build_package(). Checks if build step is all Ok.
+# Usage: check_build_package (without arguments)
+function check_build_package()
+{
+	# First check is RETVAL file exist.
+	if [[ ! -e "${NHOPKG_TMPDIR}/.RETVAL" ]]; then
+		return 0
+	fi
+	if [[ $(cat "${NHOPKG_TMPDIR}/.RETVAL" 2> /dev/null) != "0" ]]; then
+		echog " * Failed compilation!" >&2
+		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+			mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${CWD}"
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+			echogn " --- You can see compilation log on"
+			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+		fi
+		# Clean up and exits with error.
+		cleanup_tmp_dir
+		cleanup_build_dir
+		exit 1
+	fi
+}
+## Function build_package_install(). Install source package form nhoid functions.
+# Usage: build_package_install (without arguments)
+function build_package_install()
+{
+	# Touch pre installation file.
+	touch "${NHOPKG_TMPDIR}/.nho-preinstall"
+	echogn " - Installing"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	echog "This step may take some time depending of package and your system."
+	# Sleep 3 seconds.
+	sleep 3
+	# Gets date and hour of installation.
+	INSTALL_DATE=$(date -u "+%F %T %z")
+	if [ "${VERBOSE_MODE}" = "yes" ]; then
+		(ninstall || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
+		| tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+	else
+		(ninstall || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+	fi
+}
+## Function check_build_package_install(). Checks if install step is all Ok.
+# Usage: check_build_package_install (without arguments)
+function check_build_package_install()
+{
+	# First check is RETVAL file exist.
+	if [[ ! -e "${NHOPKG_TMPDIR}/.RETVAL" ]]; then
+		return 0
+	fi
+	if [[ $(cat "${NHOPKG_TMPDIR}/.RETVAL" 2> /dev/null) != "0" ]]; then
+		echog " * Failed instalation!" >&2
+		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+			mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${CWD}"
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+			echogn " --- You can see compilation log on"
+			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+		fi
+		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
+			mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${CWD}"
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+			echogn " --- You can see instalation log on"
+			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+		fi
+		# Clean up and exits with error.
+		cleanup_tmp_dir
+		cleanup_build_dir
+		exit 1
+	fi
+}
+## Function build_save_log_files(). Save logs on logs/ directory and compress (bzip2).
+# Usage: build_save_log_files (without arguments)
+function build_save_log_files()
+{
+	echogn " --- Saving logs on"
+	echo " ${NHOPKG_LOCALSTATEDIR}/logs"
+	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+		# Compress with bzip2
+		bzip2 "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
+	fi
+	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+		# Compress with bzip2
+		bzip2 "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
+	fi
+}
+## Function build_search_for_files(). Search for files installed by package.
+# Usage: build_search_for_files (without arguments)
+function build_search_for_files()
+{
+	touch "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
+	for searchdir in ${FIND_DIRS};
+	do
+		if [[ -d "${searchdir}" ]]; then
+			find ${searchdir} -type f -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall" \
+			>> "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
+			find ${searchdir} -type l -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall" \
+			>> "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
+		fi
+	done
+	# Delete NoUpgrade files.
+	for noupgrade in ${NOUPGRADE_FILES};
+	do
+		if [[ $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null) ]]; then
+			for noupgrade2 in $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log");
+			do
+				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+				# Remove empty lines.
+				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+			done
+		fi
+	done
+	# Check if files exists and gets package size.
+	PACKAGE_SIZE=0
+	for casefile in $(grep -v '^#' "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log");
+	do
+		if [[ ! -e "${casefile}" ]]; then
+			sed -e "s@^${casefile}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+			sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+		elif [[ -f "${casefile}" ]]; then
+			PACKAGE_SIZE=$(( ${PACKAGE_SIZE} + $(du "${casefile}" | awk '{print $1}') ))
+		fi
+	done
+
+}
+## Function get_build_time(). Calculates time on build and install a package.
+# Usage: get_build_time (without arguments)
+# gives: BUILD_TIME variable.
+function get_build_time()
+{
+	BUILD_TIME=$((${FINAL_DATE} - ${INITIAL_DATE}))
+	BUILD_TIME=$((${BUILD_TIME}/60))
+}
+## Function build_nhoid_to_bin(). Create a new nhoid file for binary packages from nhoid for source packages.
+# Usage: build_nhoid_to_bin (without arguments)
+function build_nhoid_to_bin()
+{
+	# Touch new nhoid.
+	touch "${NHOPKG_TMPDIR}/nhoid"
+	grep '^#%NHO-0.5' "${NHOPKG_TMPDIR}/.nhoid" > "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Package Maintainer:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Name:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Version:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Release:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# License:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Add new arch.
+	echo -e "# Arch:\t${BUILD_ARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Installed-Size:\t${PACKAGE_SIZE} KB" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Build-Duration:\t${BUILD_TIME} min" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Build-Date:\t${BUILD_DATE}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Build-Host:\t${BUILD_HOST}" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Url:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# Description:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Add new MD5
+	echo -e "# MD5:\t${PACKAGEMD5}" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Add dependencies.
+	grep '^# Dep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
+	grep '^# OptionalDep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
+	# Add npostinstall() and npostremove() function to nhoid.
+	echo >> "${NHOPKG_TMPDIR}/nhoid"
+	NPOSTINSTALL_FILE_NUM=$(grep -n "npostinstall() {" "${NHOPKG_TMPDIR}/.nhoid" | sed -e 's@:npostinstall() {@@')
+	tail -n +${NPOSTINSTALL_FILE_NUM} "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+}
+## Function build_make_binary_package(). Creates binary package from builded package.
+# Usage: build_make_binary_package (without arguments)
+function build_make_binary_package()
+{
+	echog " - Building binary package."
+	echog " --- Searching files in the system."
+	build_search_for_files
+	## Configure the new binary package
+	# Package and compress files.
+	echog " --- Compressing package."
+	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
+		tar cpjP --files-from="${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.bz2"
+		# Se dirige al directorio temporal y empaqueta.
+		cd "${NHOPKG_TMPDIR}"
+		# Gets md5 sum from data.tar.bz2
+		PACKAGEMD5=$(md5sum "data.tar.bz2")
+		# Calcule build and install time.
+		get_build_time
+		# Touch new nhoid.
+		build_nhoid_to_bin
+		# Compress package!
+		tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		if [ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" ]; then
+			echogn " --- New package is:"
+			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		else
+			echog " *** Unable to create binary package." >&2
+		fi
+	else
+		echog " *** Unable to create binary package. Nhopkg can't install any file from this package." >&2
+	fi
+	# Returns to initial directory.
+	cd "${CWD}"
+}
+#======================================8
+# Check (packages) functions.
+#======================================8
+# empty at the moment.
+#======================================9
+# Create Source Wizard (csw) functions
+#======================================9
+## Function csw_username(). Asks about user name.
+# Usage: csw_username (without arguments)
+function csw_username()
+{
+	# Ask about username.
+	if [[ -z "${PACKAGERNAME}" ]]; then
+		echog "Enter your username:"
+		read -er PACKAGERNAME
+		while [[ -z "${PACKAGERNAME}" ]]; do
+			echog "You haven't entered your name!"
+			echog "Please, enter your username:"
+			read -er PACKAGERNAME
+		done
+	fi
+}
+## Function csw_usermail(). Asks about user mail.
+# Usage: csw_usermail (without arguments)
+function csw_usermail()
+{
+	# Ask about user mail.
+	if [[ -z "${PACKAGERMAIL}" ]]; then
+		echog "Enter your e-mail:"
+		read -er PACKAGERMAIL
+		while [[ -z "${PACKAGERMAIL}" ]]; do
+			echog "You haven't entered your e-mail!"
+			echog "Please, enter your e-mail:"
+			read -er PACKAGERMAIL
+		done
+	fi
+}
+## Function csw_packagename(). Asks about package name.
+# Usage: csw_packagename (without arguments)
+function csw_packagename()
+{
+	# Ask about package name.
+	if [[ -z "${PACKAGENAME}" ]]; then
+		# Package name for example selected by pragmart ;)
+		echog "Enter package name (Ex: gimp):"
+		read -er PACKAGENAME
+		while [[ -z "${PACKAGENAME}" ]]; do
+			echog "You haven't entered package name!"
+			echog "Please, enter package name (Ex: gimp):"
+			read -er PACKAGENAME
+		done
+	fi
+}
+## Function csw_packageversion(). Asks about package version.
+# Usage: csw_packageversion (without arguments)
+function csw_packageversion()
+{
+	# Ask about package version.
+	if [[ -z "${PACKAGEVERSION}" ]]; then
+		echog "Enter package version (Ex: 2.6.3):"
+		read -er PACKAGEVERSION
+		while [[ -z "${PACKAGEVERSION}" ]]; do
+			echog "You haven't entered package version!"
+			echog "Please, enter package version (Ex: 2.6.3):"
+			read -er PACKAGEVERSION
+		done
+	fi
+}
+## Function csw_packagerelease(). Asks about package release.
+# Usage: csw_packagerelease (without arguments)
+function csw_packagerelease()
+{
+	# Ask about package release.
+	if [[ -z "${PACKAGERELEASE}" ]]; then
+		echog "Enter package release (Ex: 1):"
+		read -er PACKAGERELEASE
+		while [[ -z "${PACKAGERELEASE}" ]]; do
+			echog "You haven't entered package release!"
+			echog "Please, enter package release (Ex: 1):"
+			read -er PACKAGERELEASE
+		done
+	fi
+}
+## Function csw_packagelicense(). Asks about package license.
+# Usage: csw_packagelicense (without arguments)
+function csw_packagelicense()
+{
+	# Ask about package license.
+	if [[ -z "${PACKAGELICENSE}" ]]; then
+		echog "Enter package license (Ex: GPLv3):"
+		read -er PACKAGELICENSE
+		while [[ -z "${PACKAGELICENSE}" ]]; do
+			echog "You haven't entered package license!"
+			echog "Please, enter package license (Ex: GPLv3):"
+			read -er PACKAGELICENSE
+		done
+	fi
+}
+## Function csw_packagegroup(). Asks about package group.
+# Usage: csw_packagegroup (without arguments)
+function csw_packagegroup()
+{
+	# Ask about package group.
+	if [[ -z "${PACKAGEGROUP}" ]]; then
+		echog "Enter package group (Ex: Graphics):"
+		read -er PACKAGEGROUP
+		while [[ -z "${PACKAGEGROUP}" ]]; do
+			echog "You haven't entered package group!"
+			echog "Please, enter package group (Ex: Graphics):"
+			read -er PACKAGEGROUP
+		done
+	fi
+}
+## Function csw_packagearch(). Asks about package architecture.
+# Usage: csw_packagearch (without arguments)
+function csw_packagearch()
+{
+	# Ask about package architecture.
+	if [[ -z "${PACKAGEARCH}" ]]; then
+		echog "Enter package arch (you can enter more than one arch separated by space. Ex: i686):"
+		read -er PACKAGEARCH
+		while [[ -z "${PACKAGEARCH}" ]]; do
+			echog "You haven't entered package arch!"
+			echog "Please, enter package arch (Ex: i686):"
+			read -er PACKAGEARCH
+		done
+	fi
+}
+## Function csw_packageurl(). Asks about package url.
+# Usage: csw_packageurl (without arguments)
+function csw_packageurl()
+{
+	# Ask about package web.
+	if [[ -z "${PACKAGEURL}" ]]; then
+		echog "Enter package web page (Ex: http://gimp.org/):"
+		read -er PACKAGEWEBURL
+		while [[ -z "${PACKAGEWEBURL}" ]]; do
+			echog "You haven't entered package web page (URL)!"
+			echog "Please, enter package web page (Ex: http://gimp.org/):"
+			read -er PACKAGEWEBURL
+		done
+	fi
+}
+## Function csw_packagedescription(). Asks about package description.
+# Usage: csw_packagedescription (without arguments)
+function csw_packagedescription()
+{
+	# Ask about package description.
+	if [[ -z "${PACKAGEDESCRIPTION}" ]]; then
+		echog "Enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
+		read -er PACKAGEDESCRIPTION
+		while [[ -z "${PACKAGEDESCRIPTION}" ]]; do
+			echog "You haven't entered package description!"
+			echog "Please, enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
+			read -er PACKAGEDESCRIPTION
+		done
+	fi
+}
+## Function csw_make_nhoid_file(). Creates nhoid file to .src.nho package.
+# Usage: csw_make_nhoid_file (without arguments)
+function csw_make_nhoid_file()
+{
+	# Check that needed variables exists.
+	if [[ -z "${PACKAGERNAME}" ]] || [[ -z "${PACKAGERMAIL}" ]] \
+	|| [[ -z "${PACKAGENAME}" ]] || [[ -z "${PACKAGEVERSION}" ]] \
+	|| [[ -z "${PACKAGERELEASE}" ]] || [[ -z "${PACKAGEMD5}" ]]; then
+		echog " * Unable to create nhoid file." >&2
+		exit 1
+	fi
+	# Create nhoid file.
+	touch "${NHOPKG_TMPDIR}/nhoid"
+	echo "#%NHO-${NHOID_VERSION}" > "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Package Maintainer:\t${PACKAGERNAME} <${PACKAGERMAIL}>" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Name:\t${PACKAGENAME}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Version:\t${PACKAGEVERSION}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Release:\t${PACKAGERELEASE}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# License:\t${PACKAGELICENSE}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Group:\t${PACKAGEGROUP}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Arch:\t${PACKAGEARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Url:\t${PACKAGEWEBURL}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Description:\t${PACKAGEDESCRIPTION}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# MD5:\t${PACKAGEMD5}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo >> "${NHOPKG_TMPDIR}/nhoid"
+}
+## Function get_csw_build_dependencies(). Asks about build dependencies.
+# Usage: get_csw_build_dependencies (without arguments)
+function get_csw_build_dependencies()
+{
+	# Needed build dependencies.
+	echog "Enter build dependency:"
+	read -er Combo2
+	while [[ -n "${Combo2}" ]]; do
+		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo2}"))
+		# Search on repository database.
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" ]]; then
+			echo -en "# BuildDep:\t${Combo2}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo2} "
+			echog "added like package-dependency."
+			echog "Enter build dependency (if necesary):"
+		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" ]]; then
+			echo -en "# BuildDep:\t${Combo2}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo2} "
+			echog "added like package-dependency."
+			echog "Enter build dependency (if necesary):"
+		elif [[ "${FILEDEPS}" != "0" ]]; then
+			if [[ -f "${Combo2}" ]]; then
+				echo -e "# BuildDep:\t${Combo2}\t${Combo2}" >> "${NHOPKG_TMPDIR}/nhoid"
+				echo -n "${Combo2} "
+				echog "added like file-dependency."
+				echog "Enter build dependency (if necesary):"
+			else
+				echogn "Found"
+				echo -n " $(basename ${Combo2}) "
+				echogn "on this path:"
+				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo2})."
+				echogn "Enter correct path to"
+				echo " $(basename ${Combo2})."
+				echog "Enter build dependency (if necesary):"
+			fi
+		else
+			echo -n " * ${Combo2} " >&2
+			echog "is not present in your system." >&2
+			echog "Enter build dependency (if necesary):"
+		fi
+		read -er Combo2
+	done
+}
+## Function get_csw_optional_build_dependencies(). Asks about optional build dependencies.
+# Usage: get_csw_optional_build_dependencies (without arguments)
+function get_csw_optional_build_dependencies()
+{
+	# Optionals build dependencies.
+	echog "Enter optional build dependency:"
+	read -er Combo3
+	while [[ -n "${Combo3}" ]]; do
+		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo3}"))
+		# Search on repository database.
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" ]]; then
+			echo -en "# OptionalBuildDep:\t${Combo3}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo3} "
+			echog "added like package-dependency."
+			echog "Enter build dependency (if necesary):"
+		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" ]]; then
+			echo -en "# OptionalBuildDep:\t${Combo3}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo3} "
+			echog "added like package-dependency."
+			echog "Enter optional build dependency (if necesary):"
+		elif [[ "${FILEDEPS}" != "0" ]]; then
+			if [[ -f "${Combo3}" ]]; then
+				echo -e "# OptionalBuildDep:\t${Combo3}\t${Combo3}" >> "${NHOPKG_TMPDIR}/nhoid"
+				echo -n "${Combo3} "
+				echog "added like file-dependency."
+				echog "Enter optional build dependency (if necesary):"
+			else
+				echogn "Found"
+				echo -n " $(basename ${Combo3}) "
+				echogn "on this path:"
+				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo3})."
+				echogn "Enter correct path to"
+				echo " $(basename ${Combo3})."
+				echog "Enter optional build dependency (if necesary):"
+			fi
+		else
+			echo -n " * ${Combo3} " >&2
+			echog "is not present in your system." >&2
+			echog "Enter optional build dependency (if necesary):"
+		fi
+		read -er Combo3
+	done
+}
+## Function get_csw_post_dependencies(). Asks about post installation dependencies.
+# Usage: get_csw_post_dependencies (without arguments)
+function get_csw_post_dependencies()
+{
+	# Needed post installation dependencies.
+	echog "Enter post installation dependency:"
+	read -er Combo4
+	while [[ -n "${Combo4}" ]]; do
+		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
+		# Search on repository database.
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
+			echo -en "# Dep(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				if [[ -f "${PACKAGEDEPRAND}" ]]; then
+					echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+				fi
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo4} "
+			echog "added like package-dependency."
+			echog "Enter post installation dependency (if necesary):"
+		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" ]]; then
+			echo -en "# Dep(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo4} "
+			echog "added like package-dependency."
+			echog "Enter post installation dependency (if necesary):"
+		elif [[ "${FILEDEPS}" != "0" ]]; then
+			if [[ -f "${Combo4}" ]]; then
+				echo -e "# Dep(post):\t${Combo4}\t${Combo4}" >> "${NHOPKG_TMPDIR}/nhoid"
+				echo -n "${Combo4} "
+				echog "added like file-dependency."
+				echog "Enter post installation dependency (if necesary):"
+			else
+				echogn "Found"
+				echo -n " $(basename ${Combo4}) "
+				echogn "on this path:"
+				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo4})."
+				echogn "Enter correct path to"
+				echo " $(basename ${Combo4})."
+				echog "Enter post installation dependency (if necesary):"
+			fi
+		else
+			echo -n " * ${Combo4} " >&2
+			echog "is not present in your system." >&2
+			echog "Enter post installation dependency (if necesary):"
+		fi
+		read -er Combo4
+	done
+}
+## Function get_csw_optional_post_dependencies(). Asks about optional post installation dependencies.
+# Usage: get_csw_optional_post_dependencies (without arguments)
+function get_csw_optional_post_dependencies()
+{
+	# Optionals post installation dependencies.
+	echog "Enter optional post installation dependency:"
+	read -er Combo5
+	while [[ -n "${Combo5}" ]]; do
+		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
+		# Search on repository database.
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
+			echo -en "# OptionalDep(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				if [ -f "${PACKAGEDEPRAND}" ]; then
+					echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+				fi
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo5} "
+			echog "added like package-dependency."
+			echog "Enter optional post installation dependency (if necesary):"
+		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" ]]; then
+			echo -en "# OptionalDep(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Completes dependencies.
+			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
+			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
+			do
+				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
+			done
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo -n "${Combo5} "
+			echog "added like package-dependency."
+			echog "Enter post installation dependency (if necesary):"
+		elif [[ "${FILEDEPS}" != "0" ]]; then
+			if [[ -f "${Combo5}" ]]; then
+				echo -e "# OptionalDep(post):\t${Combo5}\t${Combo5}" >> "${NHOPKG_TMPDIR}/nhoid"
+				echo -n "${Combo5} "
+				echog "added like file-dependency."
+				echog "Enter optional post installation dependency (if necesary):"
+			else
+				echogn "Found"
+				echo -n " $(basename ${Combo5}) "
+				echogn "on this path:"
+				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo5})."
+				echogn "Enter correct path to"
+				echo " $(basename ${Combo5})."
+				echog "Enter optional post installation dependency (if necesary):"
+			fi
+		else
+			echo -n " * ${Combo5} " >&2
+			echog "is not present in your system." >&2
+			echog "Enter optional post installation dependency (if necesary):"
+		fi
+		read -er Combo5
+	done
+}
+#======================================9
+# Auto Package functions.
+#======================================9
+## Variables
+CONFIGURE_OPTIONS="--prefix=/usr"
+CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX=/usr"
+#======================================10
+# List (packages) functions.
+#======================================10
+## Function get_list_installed_packages(). Gets installed packages by Nhopkg in the system.
+# Usage: get_list_installed_packages (without arguments)
+# Gives: installedpackages array.
+function get_list_installed_packages()
+{
+	unset installedpackages
+	local f
+	for f in $(ls "${NHOPKG_LOCALSTATEDIR}/packages/");
+	do
+		if [[ ! -h "${NHOPKG_LOCALSTATEDIR}/packages/${f}" ]]; then
+			if [[ -z "${installedpackages[*]}" ]]; then
+				installedpackages=("${f}")
+			else
+				installedpackages=(${installedpackages[*]} "${f}")
+			fi
+		fi
+	done
+}
+#======================================11
+# Info (packages) functions.
+#======================================11
+function get_package_info()
+{
+	package_info_file="${1}"
+	# Get info if package exist in repository database.
+	if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}" ]]; then
+		# Get needed data to get info of package.
+		get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
+		# Show package info.
+		grep "^# Package Maintainer:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+			# Get needed data to get info of installed package.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+			echogn "Lasted version installed:"
+			echo " ${pkgversion}-${pkgrevision}"
+			# Get data other time.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
+		else
+			echog "Lasted version installed: Not installed."
+		fi
+		grep "^# License:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Group:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Duration:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Date:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Host:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Url:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Description:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		# Show dependencies.
+		grep "^# Dep(post):" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# Show optional dependencies.
+		grep "^# OptionalDep(post):" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# End parsing data.
+		return 0
+	# Get info if package exist in local database.
+	elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}" ]]; then
+		# Get needed data to get info of package.
+		get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
+		# Show package info.
+		grep "^# Package Maintainer:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+			# Get needed data to get info of package in repository.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+			echogn "Lasted version avaliable:"
+			echo " ${pkgversion}-${pkgrevision}"
+			# Get data other time.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
+		else
+			echog "Lasted version avaliable: Not avaliable."
+		fi
+		grep "^# License:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Group:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Duration:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Date:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Build-Host:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Url:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# Description:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		# Show dependencies.
+		grep "^# Dep(post):" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# Show optional dependencies.
+		grep "^# OptionalDep(post):" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# End parsing data.
+		return 0
+	# Get info if package exist as .nho (binary) package.
+	elif [[ -f "${package_info_file}" ]] && [[ $(basename "${package_info_file}" .nho) != "${package_info_file}" ]]; then
+		# Check if is a correct package.
+		tar xf "${package_info_file}" "nhoid" 2> /dev/null > /dev/null
+		check_if_ok " * The selected package is not valid."
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Package Maintainer:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Name:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Version:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Release:" \
+		| sed -e 's@^# @@g'
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}" ]]; then
+			# Get needed data to get info of package in repository.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
+			echogn "Lasted version avaliable:"
+			echo " ${pkgversion}-${pkgrevision}"
+		else
+			echog "Lasted version avaliable: Not avaliable."
+		fi
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}" ]]; then
+			# Get needed data to get info of installed package.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
+			echogn "Lasted version installed:"
+			echo " ${pkgversion}-${pkgrevision}"
+		else
+			echog "Lasted version installed: Not installed."
+		fi
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# License:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Group:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Arch:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Installed-Size:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Duration:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Date:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Host:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Url:" \
+		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Description:" \
+		| sed -e 's@^# @@g'
+		# Show dependencies.
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Dep(post):" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# Show optional dependencies.
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# OptionalDep(post):" \
+		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
+		# End parsing data.
+		return 0
+	else
+		# No packages matches.
+		return 1
+	fi
+}
+#==============================================================================
+# Section: Nhopkg trap.
+#==============================================================================
+# Check if Nhopkg is running as root.
+check_if_running
+# If Ctrl+C is pressed, then exits with error.
+trap 'cleanup_all; exit 1' INT
+trap cleanup_all EXIT TERM
+#==============================================================================
+# Section: Nhopkg parse options.
+#==============================================================================
+NHNAME=$(basename "$0")
+SHORTOPTIONS="RiSdrBbklno:wstcg:UeAzhuv"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-md5,force-check-deps,force-check-arch,force-check-md5,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
+NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
+if [[ "${?}" != "0" ]]; then
+	nhopkg_usage
+	exit 1
+fi
+eval set -- $NHPARAMS
+while [[ "${1}" != "--" ]]; do
+	case "${1}" in
+		-R|--recursive)
+			shift
+			# Use recursive mode in Nhopkg.
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				NHOPKG_RECURSIVE="yes"
+			fi
+		;;
+		--root)
+			shift
+			if [[ -d "${1}" ]]; then
+				# Delete '/' at the end.
+				INSTALL_ROOT=$(echo ${1} | sed -e 's@/$@@')
+			else
+				echog " * The selected directory doesn't exist in your system." >&2
+				exit 1
+			fi
+			USE_INSTALL_ROOT="yes"
+			shift
+		;;
+		--no-check-deps)
+			shift
+			# Install package without check dependencies.
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				NHOPKG_CHECKDEPS="no"
+			fi
+		;;
+		--no-check-arch)
+			shift
+			# Install package without check arch.
+			if [[ "${NHOPKG_CHECKARCH}" = "yes" ]]; then
+				NHOPKG_CHECKARCH="no"
+			fi
+		;;
+		--no-check-md5)
+			shift
+			# Install package without check arch.
+			if [[ "${NHOPKG_CHECKMD5}" = "yes" ]]; then
+				NHOPKG_CHECKMD5="no"
+			fi
+		;;
+		--force-check-deps)
+			shift
+			# Force check dependencies.
+			if [[ "${NHOPKG_CHECKDEPS}" != "yes" ]]; then
+				NHOPKG_CHECKDEPS="yes"
+			fi
+		;;
+		--force-check-arch)
+			shift
+			# Force check dependencies.
+			if [[ "${NHOPKG_CHECKARCH}" != "yes" ]]; then
+				NHOPKG_CHECKARCH="yes"
+			fi
+		;;
+		--force-check-md5)
+			shift
+			# Force check dependencies.
+			if [[ "${NHOPKG_CHECKMD5}" != "yes" ]]; then
+				NHOPKG_CHECKMD5="yes"
+			fi
+		;;
+		-i|--install)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="install"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-d|--dios|-S|--super-install)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="super-install"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-r|--remove)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="remove"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-B|--backup)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="backup"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		--purge)
+			shift
+			# Purge deprecated packages in system.
+			if [[ "${NHOPKG_PURGE}" != "yes" ]]; then
+				NHOPKG_PURGE="yes"
+			fi
+		;;
+		-b|--build)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="build"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-k|--check)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="check"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-l|--list)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="list"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-n|--info)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="info"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-o|--output)
+			shift
+			if [[ -d "${1}" ]]; then
+				# Delete '/' at the end.
+				OUTPUT_COMMAND=$(echo ${1} | sed -e 's@/$@@')
+			else
+				echog " * The selected directory doesn't exist in your system." >&2
+				exit 1
+			fi
+			USE_OUTPUT_COMMAND="yes"
+			shift
+		;;
+		-w|--show)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="show"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-s|--search)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="search"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-t|--list-repo)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="list-repo"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-c|--create-source)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="create-source"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-g|--create-repo)
+			shift
+			if [[ -d "${1}" ]]; then
+				# Delete '/' at the end.
+				REPO_DIR="$(echo ${1} | sed -e 's@/$@@')"
+			else
+				echog " * The selected directory doesn't exist in your system." >&2
+				exit 1
+			fi
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="create-repo"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+			shift
+		;;
+		-U|--update)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="update"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-e|--clean)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="clean"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-A|--auto-package)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="auto-package"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-z|--tgz2nho)	
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="tgz2nho"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-h|--help)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="help"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		--license)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="license"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		--license-all)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="license-all"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		--version)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="version"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-u|--update-db)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="update-db"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-v|--verbose)
+			shift
+			if [[ "${VERBOSE_MODE}" != "yes" ]]; then
+				VERBOSE_MODE="yes"
+			fi
+		;;
+		--)
+			shift
+			# Stop parssing arguments.
+			break
+		;;
+#		-)
+#			# Use stdin as input.
+#			break
+#		;;
+		*)
+			shift
+		;;
+	esac
+done
+# Get selected packages.
+shift
+CASEPACKAGES="${@}"
+#==============================================================================
+# Section: Nhopkg Works!
+#==============================================================================
+case "${NHOPKG_OPTION}" in
+	install)
+# ********************************************************************
+#
+# Section: Install (binary package)
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Checks architecture and MD5 Sum.
+# 4. Checks dependencies.
+# 5. Install binary package.
+# 6. Configure installation.
+# 7. Clean up.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to install:"
+			echo " $(basename ${CASEPACKAGE})"
+			check_if_exist_local_package "${CASEPACKAGE}"
+			cleanup_tmp_dir
+			make_tmp_dir
+			# Uncompress package.
+			tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+			# Comprueba que no ha habido error al descomprimir
+			check_if_ok " * Unable to uncompress package."
+			# Get data from package.
+			# Checks that is good package and get data from it.
+			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echog " * The selected package is not valid." >&2
+				# Clean and exits with error.
+				cleanup_tmp_dir
+				exit 1
+			fi
+			# Checks if package is aready installed.
+			if [[ "${USE_INSTALL_ROOT}" != "yes" ]]; then
+				check_if_installed_package
+			fi
+			## 3. Checks architecture and MD5 Sum.
+			check_package_md5sum
+			check_package_arch
+			## 4. Checks dependencies.
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				echog " - Resolving Dependencies."
+				check_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_optional_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				askforinstallrequiredeps
+				askforinstalloptdeps
+			fi
+			echog " - Installing package and dependencies."
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				installrequiredeps
+				installoptdeps
+			fi
+			## 5. Install binary package.
+			bin_install
+			## 6. Configure installation.
+			bin_install_setting_up
+			bin_install_create_config_files
+			# 7. Clean up.
+			cleanup_tmp_dir
+			echog " - Installation finished sucessfuly!"
+		done
+		# Update DB.
+		# If updatedb is here, Nhopkg will be fast.
+		update_local_db
+		exit 0
+	;;
+	super-install)
+## Options for this command line:
+# nhopkg -I | --instrep --> luscus
+# nhopkg -R | --repinstall --> pragmart
+# nhopkg -R | --requete-install --> pragmart
+# nhopkg -F | --free-install --> pragmart
+# nhopkg -F | --freebeer-install --> pragmart
+# nhopkg -a | --add --> pragmart
+# nhopkg -f | --freeadd --> pragmart
+# nhopkg -j | --jotahackers-nhopkg-only-adds-free-software --> pragmart
+# nhopkg -d | --dios --> pragmart
+# ********************************************************************
+#
+# Section: Super Install (from repos)
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Search packages on repository.
+# 4. Checks dependencies.
+# 5. Download and install dependencies.
+# 6. Checks architecture and MD5 Sum.
+# 7. Install binary package.
+# 8. Configure installation.
+# 9. Clean up.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to install:"
+			echo " ${CASEPACKAGE}"
+			## 3. Search packages on repository.
+			# Is possible that package are a package (evident xD) or a file.
+			getpackage
+			# Checks if package is aready installed.
+			if [[ "${USE_INSTALL_ROOT}" != "yes" ]]; then
+				check_if_installed_package
+			fi
+			## 4. Checks dependencies.
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				echog " - Resolving Dependencies."
+				check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+				check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+				askforinstallrequiredeps
+				askforinstalloptdeps
+			fi
+			## 5. Download and install dependencies.
+			# Download package and install it.
+			echog " - Installing package and dependencies."
+			downloadpackage
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				installrequiredeps
+				installoptdeps
+			fi
+			# Now install package.
+			cleanup_tmp_dir
+			make_tmp_dir
+			# Uncompress package.
+			tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.nho" "${NHOPKG_TMPDIR}" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			# Get data from package.
+			# Checks that is good package and get data from it.
+			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echog " * The selected package is not valid." >&2
+				# Clean and exits with error.
+				cleanup_tmp_dir
+				exit 1
+			fi
+			## 6. Checks architecture and MD5 Sum.
+			check_package_md5sum
+			check_package_arch
+			## 7. Install binary package.
+			bin_install
+			## 8. Configure installation.
+			bin_install_setting_up
+			bin_install_create_config_files
+			# 9. Clean up.
+			cleanup_tmp_dir
+			echog " - Installation finished sucessfuly!"
+		done
+		# If updatedb is here, Nhopkg will be fast.
+		update_local_db
+		exit 0
+	;;
+	remove)
+# ********************************************************************
+#
+# Section: Remove (installed packages)
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Check inverse dependencies.
+# 4. Ask if continue removing package.
+# 5. Remove package and inverse dependencies.
+# 6. Clean up .
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to remove:"
+			echo " ${CASEPACKAGE}"
+			# Checks that package is installed by Nhopkg.
+			if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
+				echog " * The selected package is not installed by Nhopkg."
+				exit 1
+			fi
+			# Get data from package.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
+			## 3. Check inverse dependencies.
+			# Check inverse dependencies of package.
+			# The first inverse dependency is the same package.
+			INVERSEDEPS=("${pkgname}-${pkgversion}-${pkgrevision}")
+			if [[ "${NHOPKG_PURGE}" = "yes" ]]; then
+				get_list_installed_packages
+				check_inverse_dependencies "${pkgname}-${pkgversion}-${pkgrevision}"
+			fi
+			## 4. Ask if continue removing package.
+			if [[ -n "${INVERSEDEPS[1]}" ]]; then
+				echogn "The nexts packages will be deleted from your system:"
+				IFS=,
+				echo " ${INVERSEDEPS[*]}."
+				IFS="${OLDIFS}"
+			else
+				echogn "The next package will be deleted from your system:"
+				echo " ${INVERSEDEPS[*]}."
+			fi
+			nhopkg_ask_follow
+			# If NO is select exits.
+			check_if_ok " * Package will not be removed from your sistem."
+			## 5. Remove package and inverse dependencies.
+			echog " - Removing package and inverse dependencies."
+			remove_package_all			
+			## 6. Clean up.
+			echo -n " - ${pkgname}-${pkgversion}-${pkgrevision} "
+			echog "has been removed from your sistem."
+		done
+		# If updatedb is here, Nhopkg will be fast.
+		update_local_db
+		exit 0
+	;;
+	backup)
+# ********************************************************************
+#
+# Section: Backup
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Get package files and data.
+# 4. Compress new package.
+# 5. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to backup:"
+			echo " ${CASEPACKAGE}"
+			# Checks that package is installed by Nhopkg.
+			if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
+				echog " * The selected package is not installed by Nhopkg." >&2
+				exit 1
+			fi
+			# Clean up nhopkg temporal directory.
+			cleanup_tmp_dir
+			make_tmp_dir
+			## 3. Get package files and data.
+			# Get data from package.
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
+			grep "^#" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/nhoid"
+			# Create npostinstall function.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'ldconfig' >> "${NHOPKG_TMPDIR}/nhoid"
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			# Create npostremove function.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" | sed -e 's@:npostremove() {@@')
+			tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" >> "${NHOPKG_TMPDIR}/nhoid"
+			# Compress files in data.tar.bz2
+			bunzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+			# Check that files begin with /.
+			if [[ $(grep -m 1 "^/" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}") ]]; then
+				tar cpjP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null
+			else
+				cd /
+				tar cpjP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null
+				cd ${PWD}
+			fi
+			bzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+			## 4. Compress new package.
+			# Building binary package.
+			cd "${NHOPKG_TMPDIR}"
+			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" 2> /dev/null
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+			cd ${CWD}
+			if [[ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" ]]; then
+				echogn " --- New package is:"
+				echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+			else
+				echog " *** Unable to build package." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			## 5. Clean up.
+			cleanup_tmp_dir
+		done
+		exit 0
+	;;
+	build)
+# ********************************************************************
+#
+# Section: Build
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Checks architecture and MD5 Sum.
+# 4. Checks dependencies.
+# 5. Set build directory and uncompress package.
+# 6. Builds package.
+# 7. Installs package.
+# 8. Builds binary package.
+# 9. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to build:"
+			echo " $(basename ${CASEPACKAGE})"
+			# Clean up nhopkg temporal directory.
+			cleanup_tmp_dir
+			check_if_exist_local_package "${CASEPACKAGE}"
+			make_tmp_dir
+			# Uncompress package.
+			tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			# Checks that is good package and get data from it.
+			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echog " * The selected package is not valid." >&2
+				# Clean and exits with error.
+				cleanup_tmp_dir
+				exit 1
+			fi
+			# Checks if package is aready installed.
+			check_if_installed_package
+			## 3. Checks architecture and MD5 Sum.
+			check_package_md5sum
+			check_package_arch
+			## 4. Checks dependencies.
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				echog " - Resolving Dependencies."
+				check_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_optional_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_optional_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				askforinstallrequiredeps
+				askforinstalloptdeps
+			fi
+			echog " - Installing package and dependencies."
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				installrequiredeps
+				installoptdeps
+			fi
+			## 5. Set build directory and uncompress package.
+			build_prepare
+			## 6. Builds package.
+			# Set initial date.
+			INITIAL_DATE=$(date -u +%s)
+			build_package
+			check_build_package
+			## 7. Installs package.
+			build_package_install
+			# Set final date.
+			FINAL_DATE=$(date -u +%s)
+			check_build_package_install
+			# Returns to initial directory.
+			cd "${CWD}"
+			# Save build and installation logs.
+			build_save_log_files
+			## 8. Builds binary package.
+			build_make_binary_package
+			## 9. Clean up.
+			bin_install_setting_up
+			bin_install_create_config_files
+			# Clean up.
+			cleanup_tmp_dir
+			cleanup_build_dir
+			echog " - Installation finished sucessfuly!"
+		done
+		# If updatedb is here, Nhopkg will be fast.
+		update_local_db
+		exit 0
+	;;
+	check)
+# ********************************************************************
+#
+# Section: Check
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Shows package info and files.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
+				echog " * The selected package is not installed by Nhopkg." >&2
+				continue
+			fi
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
+			echogn " :: Checking for:"
+			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+			# Set the 100% percent.
+			LISTED_FILES_NUM=$(bzgrep -vc '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null)
+			CHECKED_FILES_NUM=0
+			for checked_file in $(bzgrep -v '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null);
+			do
+				if [[ -e "${checked_file}" ]]; then
+					((CHECKED_FILES_NUM++))
+				fi
+			done
+			PERCENT=$((${CHECKED_FILES_NUM} * 100 / ${LISTED_FILES_NUM}))
+			if [[ "${CHECKED_FILES_NUM}" != "${LISTED_FILES_NUM}" ]]; then
+				echog " *** Package check fail!"
+				echo -n "${CHECKED_FILES_NUM} "
+				echogn "of"
+				echo -n " ${LISTED_FILES_NUM} "
+				echogn "files are present."
+				echo " (${PERCENT}%)"
+			else
+				echog " --- Package check ok!"
+				echo -n "${CHECKED_FILES_NUM} "
+				echogn "of"
+				echo -n " ${LISTED_FILES_NUM} "
+				echogn "files are present."
+				echo " (${PERCENT}%)"
+			fi
+		done
+		exit 0
+	;;
+	create-source)
+# ********************************************************************
+#
+# Section: Create Source
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Start the wizard
+# 4. Packaging and compress new source package (original).
+# 5. Add patches.
+# 6. Add external dependencies.
+# 7. Add compilation comands.
+# 8. Add installation comands.
+# 9. Add post installation comands.
+# 10. Add post remove comands.
+# 11. Builds source package (*.src.nho).
+# 12. Clean up.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to create source package:"
+			echo " $(basename ${CASEPACKAGE})"
+			# Clean up nhopkg temporal directory.
+			cleanup_tmp_dir
+			check_if_exist_local_package "${CASEPACKAGE}"
+			# Setting up the wizard.
+			echog " - Loading the wizard..."
+			make_tmp_dir
+			mkdir "${NHOPKG_TMPDIR}/source"
+			# Uncompress package.
+			tar axfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/source" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			clear
+			## 3. Start the wizard
+			#======================================================================================================
+			print_background_title "Nhopkg Create Source Wizard"
+			echog "This wizard helps you to create a (*.src.nho) package from other source package like (*.tar.bz2)."
+			echog "It is very important to complete all the fields correctly."
+			echo
+			#======================================================================================================
+			csw_username
+			csw_usermail
+			csw_packagename
+			csw_packageversion
+			csw_packagerelease
+			csw_packagelicense
+			csw_packagegroup
+			csw_packagearch
+			csw_packageurl
+			csw_packagedescription
+			## 4. Packaging and compress new source package (original).
+			echog " --- Setting up package sources."
+			mv "${NHOPKG_TMPDIR}/source/"*/ "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			# Clean up.
+			rm -Rf "${NHOPKG_TMPDIR}/source"
+			# Compress and clean up.
+			cd "${NHOPKG_TMPDIR}"
+			tar jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			rm -Rf "${PACKAGENAME}-${PACKAGEVERSION}"
+			# Get MD5 sum of package.
+			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2")
+			cd "${CWD}"
+			# Creates nhoid file.
+			csw_make_nhoid_file
+			## 5. Add patches.
+			#======================================================================================================
+			print_background_title "Add patches into package"
+			echog "You can add patches from your system. Enter real path to patch."
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			echog "Enter path to patch:"
+			PATCH_COUNTER="0"
+			read -er Combo1
+			while [[ -n "${Combo1}" ]]; do
+				if [[ -f "${Combo1}" ]]; then
+					cp "${Combo1}" "${NHOPKG_TMPDIR}/"
+					echo -n "${Combo1} "
+					echog "added to the package."
+					# Sumar un parche a la lista!
+					((PATCH_COUNTER++))
+				else
+					echo -n " *** ${Combo1} " >&2
+					echog "not found! Retry." >&2
+				fi
+				echog "Enter path to patch:"
+				read -er Combo1
+			done
+			if [[ "${PATCH_COUNTER}" != "0" ]]; then
+				echogn " --- Added patches:"
+				echo " ${PATCH_COUNTER}."
+			else
+				echog " --- No patches added." >&2
+			fi
+			## 6. Add external dependencies.
+			#======================================================================================================"
+			print_background_title "Add external dependencies"
+			echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
+			echo
+			echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
+			echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			get_csw_build_dependencies
+			get_csw_optional_build_dependencies
+			get_csw_post_dependencies
+			get_csw_optional_post_dependencies
+			## 7. Add compilation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'nbuild() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			#======================================================================================================
+			print_background_title "Add compilation commands"
+			echog "Here you can enter compilation commands. Ex: ./configure, make."
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			echog "Enter compilation commands:"
+			read -er Combo6
+			while [[ -n "${Combo6}" ]]; do
+				echo "${Combo6}" >> "${NHOPKG_TMPDIR}/nhoid"
+				read -er Combo6
+			done
+			# Checks that there are any command, if not then add echo.
+			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "nbuild() {" ]]; then
+				# Si no se añadieron comandos de compilación hay que añadir un echo para que no de error.
+				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 8. Add installation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'ninstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			#======================================================================================================
+			print_background_title "Add installation commands"
+			echog "Here you can enter instalation commands. Ex: make install, install ..., cp -v ... Files that will be installed in this step will be in the binary package."
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			echog "Enter instalation commands:"
+			# Checks that there are any command. Is needed that there are any commands!
+			CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
+			while [[ "${CHECKANYCOMMAND}" = "ninstall() {" ]]; do
+				read -er Combo7
+				while [ -n "${Combo7}" ]; do
+					echo "${Combo7}" >> "${NHOPKG_TMPDIR}/nhoid"
+					read -er Combo7
+					# Reload variable.
+					CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
+				done
+				if [[ "${CHECKANYCOMMAND}" = "ninstall() {" ]]; then
+					echog " * You must add at least one command!" >&2
+				fi
+			done
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 9. Add post installation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			#======================================================================================================
+			print_background_title "Add post installation commands"
+			echog "Here you can enter post instalation commands, as hard links or similar. This commands will be in the binary package too, but not created files by these commands. Ex: ln -sf, ldconfig ..."
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			echog "Enter post instalation commands:"
+			read -er Combo8
+			while [[ -n "${Combo8}" ]]; do
+				echo "${Combo8}" >> "${NHOPKG_TMPDIR}/nhoid"
+				read -er Combo8
+			done
+			# Checks that there are any command, if not then add echo.
+			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostinstall() {" ]]; then
+				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 10. Add post remove comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			#======================================================================================================
+			print_background_title "Add post remove commands"
+			echog "Here you can enter post remove commands, as remove hard links created in post installation commands or similar. This commands will be ejecuted after package has been deleted. Ex: rm /etc/ld.so.conf."
+			echog "To end this step press Enter two times."
+			#======================================================================================================
+			echog "Enter post remove commands:"
+			read -er Combo9
+			while [[ -n "${Combo9}" ]]; do
+				echo "${Combo9}" >> "${NHOPKG_TMPDIR}/nhoid"
+				read -er Combo9
+			done
+			# Checks that there are any command, if not then add echo.
+			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostremove() {" ]]; then
+				# Si no hay comandos de post instalación, inserta echo para que no se error.
+				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 11. Builds source package (*.src.nho).
+			echog " - Building source package."
+			cd "${NHOPKG_TMPDIR}"
+			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" 2> /dev/null
+			cd ${CWD}
+			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" ]]; then
+				echogn " --- New package is:"
+				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho"
+			else
+				echog " *** Unable to build package." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			## 12. Clean up.
+			cleanup_tmp_dir
+		done
+		exit 0
+	;;
+	auto-package)
+# ********************************************************************
+#
+# Section: Auto Package
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Packaging and compress new source package (original).
+# 4. Add external dependencies (manual).
+# 5. Add compilation comands.
+# 6. Add installation comands.
+# 7. Add post installation comands.
+# 8. Builds source package (*.src.nho).
+# 9. Clean up.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Print warning message.
+		echog "Automated package creation."
+		echog "This option don't get any type of dependencies for the package and could fail in some packages. If you want to create a good package you sould use --create-source option."
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Preparing to create source package:"
+			echo " $(basename ${CASEPACKAGE})"
+			# Clean up nhopkg temporal directory.
+			check_if_exist_local_package "${CASEPACKAGE}"
+			cleanup_tmp_dir
+			make_tmp_dir
+			mkdir "${NHOPKG_TMPDIR}/source"
+			# Uncompress package.
+			tar axfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/source" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			echog " --- Getting user and package data."
+			# First of all get user info.
+			PACKAGERNAME=$(id -un)
+			PACKAGERMAIL="${PACKAGERNAME}@$(uname -n)"
+			# Get package info.
+			CASEPACKAGE=$(basename "${CASEPACKAGE}" | sed -e 's@.tar.*@@' | sed -e 's@.tbz2@@' | sed -e 's@.tgz@@')
+			PACKAGENAME=$(echo "${CASEPACKAGE}" | awk -F"-[0-9]" '{print $1}')
+			PACKAGEVERSION=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $1}')
+			PACKAGERELEASE=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $2}')
+			if [[ -z "${PACKAGERELEASE}" ]]; then
+				# Haven't package revision. By default is 1.
+				PACKAGERELEASE="1"
+			fi
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				csw_username
+				csw_usermail
+				csw_packagename
+				csw_packageversion
+				csw_packagerelease
+			fi
+			## 3. Packaging and compress new source package (original).
+			echog " --- Setting up package sources."
+			mkdir "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}"
+			mv "${NHOPKG_TMPDIR}/source/"*/* "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			# Clean up.
+			rm -Rf "${NHOPKG_TMPDIR}/source"
+			# Compress and clean up.
+			cd "${NHOPKG_TMPDIR}"
+			tar jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			# Get package license --> LICENSE or COPYING file.
+			for LICENSE_FILE in COPYING LICENSE COPYING.txt LICENSE.txt;
+			do
+				if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}" ]]; then
+					if [[ $(grep "GNU GENERAL PUBLIC LICENSE" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]] \
+					|| [[ $(grep "GPL" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
+						# Package uses GNU GPL, but what version?
+						if [[ $(grep "Version 2" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
+							PACKAGELICENSE="GPLv2"
+						elif [[ $(grep "Version 3" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
+							PACKAGELICENSE="GPLv3"
+						else
+							PACKAGELICENSE="GPL"
+						fi
+					else
+						if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
+							PACKAGELICENSE="unknown"
+						fi
+					fi
+				fi
+			done
+			# Get a desciption of package.
+			for README_FILE in README README.txt;
+			do
+				if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${README_FILE}" ]]; then
+					PACKAGEDESCRIPTION=$(grep -hiwm 1 "^${PACKAGENAME}" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${README_FILE}")
+				fi
+				if [[ -n ${PACKAGEDESCRIPTION} ]]; then
+					PACKAGEDESCRIPTION="${PACKAGEDESCRIPTION} [...]"
+					break
+				else
+					if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
+						PACKAGEDESCRIPTION="unknown"
+					fi
+				fi
+			done
+			# Get package arch
+			PACKAGEARCH=$(uname -m)
+			# Get MD5 sum of package.
+			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2")
+			cd "${CWD}"
+			# If not selected Recursive option, ask for some data of package.
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				csw_packagelicense
+				csw_packagegroup
+				csw_packagearch
+				csw_packageurl
+				csw_packagedescription
+			else
+				# Get package URL
+				PACKAGEWEBURL="unknown"
+				# Get package group
+				PACKAGEGROUP="unknown"
+			fi
+			# Creates nhoid file.
+			csw_make_nhoid_file
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				## 4. Add external dependencies (manual).
+				#======================================================================================================"
+				print_background_title "Add external dependencies"
+				echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
+				echo
+				echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
+				echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
+				echog "To end this step press Enter two times."
+				#======================================================================================================
+				get_csw_build_dependencies
+				get_csw_optional_build_dependencies
+				get_csw_post_dependencies
+				get_csw_optional_post_dependencies
+			fi
+			## 5. Add compilation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'nbuild() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			# Automated add of compilation commands.
+			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure.ac" ]] \
+			&& [[ ! -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure" ]] ; then
+				echo "autoconf" >> "${NHOPKG_TMPDIR}/nhoid"
+				echo "./configure ${CONFIGURE_OPTIONS}" >> "${NHOPKG_TMPDIR}/nhoid"
+			elif [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure" ]]; then
+				echo "./configure ${CONFIGURE_OPTIONS}" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/CMakeLists.txt" ]]; then
+				echo "cmake ${CMAKE_OPTIONS} ." >> "${NHOPKG_TMPDIR}/nhoid"
+				echo "make" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in" ]] \
+			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile" ]] \
+			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am" ]]; then
+				if [[ "$(grep -s '^all: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in)" ]] || [[ "$(grep -s '^all: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile)" ]]; then
+					echo "make" >> "${NHOPKG_TMPDIR}/nhoid"
+				fi
+			fi
+			# Checks that there are any command, if not then add echo.
+			if [ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "nbuild() {" ]; then
+				# Si no se añadieron comandos de compilación hay que añadir un echo para que no de error.
+				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 6. Add installation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'ninstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in" ]] \
+			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile" ]] \
+			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am" ]]; then
+				if [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in)" ]] \
+				|| [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile)" ]] \
+				|| [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am)" ]]; then
+					echo "make install" >> "${NHOPKG_TMPDIR}/nhoid"
+				fi
+			fi
+			# If needs cmake is needed to use make install too.
+			if [ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/CMakeLists.txt" ]; then
+				echo "make install" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			# Checks that there are any command, if not then exits with error.
+			if [ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "ninstall() {" ]; then
+				echog " *** Unable to add installation comands." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 7. Add post installation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			# By default ldconfig.
+			echo "ldconfig" >> "${NHOPKG_TMPDIR}/nhoid"
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			# Create npostremove function.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 8. Builds source package (*.src.nho).
+			rm -R "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}"
+			echog " - Building source package."
+			cd "${NHOPKG_TMPDIR}"
+			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" 2> /dev/null
+			cd ${CWD}
+			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" ]]; then
+				echogn " --- New package is:"
+				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho"
+			else
+				echog " *** Unable to build package." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			## 9. Clean up.
+			cleanup_tmp_dir
+		done
+		exit 0
+	;;
+	tgz2nho)
+# ********************************************************************
+#
+# Section: TGZ2NHO
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Start the wizard
+# 4. Packaging and compress new source package (original).
+# 5. Add external dependencies.
+# 6. Add post installation comands.
+# 7. Builds binary package (*.nho).
+# 8. Clean up.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			echogn " :: Prepating to convert .tgz package into .nho package:"
+			echo " $(basename ${CASEPACKAGE})"
+			# Clean up nhopkg temporal directory.
+			check_if_exist_local_package "${CASEPACKAGE}"
+			cleanup_tmp_dir
+			make_tmp_dir
+			echog " - Loading the wizard..."
+			mkdir "${NHOPKG_TMPDIR}/data"
+			# Uncompress package.
+			tar zxfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/data" 2> /dev/null
+			check_if_ok " * Unable to uncompress package."
+			if [[ -f "${NHOPKG_TMPDIR}/data/install/slack-desc" ]]; then
+				mv "${NHOPKG_TMPDIR}/data/install/slack-desc" "${NHOPKG_TMPDIR}"
+			fi
+			if [[ -f "${NHOPKG_TMPDIR}/data/install/doinst.sh" ]]; then
+				mv "${NHOPKG_TMPDIR}/data/install/doinst.sh" "${NHOPKG_TMPDIR}"
+			fi
+			clear
+			## 3. Start the wizard
+			#======================================================================================================
+			print_background_title "Nhopkg tgz2nho"
+			echog "This wizard helps you to convert Slackware package (*.tgz) into Nhopkg binary package (*.nho)."
+			echog "It is very important to complete all the fields correctly."
+			echo
+			#======================================================================================================
+			csw_username
+			csw_usermail
+			# Get package info from package label.
+			CASEPACKAGE=$(basename "${CASEPACKAGE}" ".tgz")
+			PACKAGENAME=$(echo "${CASEPACKAGE}" | awk -F"-[0-9]" '{print $1}')
+			PACKAGEVERSION=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $1}')
+			PACKAGEARCH=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $2}')
+			PACKAGERELEASE=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $3}')
+			if [ -z "${PACKAGERELEASE}" ]; then
+				# Haven't package revision. By default is 1.
+				PACKAGERELEASE="1"
+			fi
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				csw_username
+				csw_usermail
+				csw_packagename
+				csw_packageversion
+				csw_packagerelease
+			fi
+			## 4. Packaging and compress new source package (original).
+			echog " --- Setting up package sources."
+			rm -Rf "${NHOPKG_TMPDIR}/data/install"
+			cd "${NHOPKG_TMPDIR}/data"
+			tar cpjP * > ../data.tar.bz2 2> /dev/null
+			cd ../
+			PACKAGEMD5=$(md5sum "data.tar.bz2")
+			# Vuelve al directorio inicial y elimina restos de los sources.
+			cd "${CWD}"
+			rm -R "${NHOPKG_TMPDIR}/data"
+			# Get package description from slack-desc.
+			if [[ -f "${NHOPKG_TMPDIR}/slack-desc" ]]; then
+				PACKAGEDESCRIPTION=$(grep "^${PACKAGENAME}: " "${NHOPKG_TMPDIR}/slack-desc" \
+				| sed -e "s@^${PACKAGENAME}:@@g" | tr -t '\n' ' ')
+			fi
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				csw_packagelicense
+				csw_packagegroup
+				csw_packageurl
+				csw_packagedescription
+			else
+				PACKAGELICENSE="unkown"
+				PACKAGEGROUP="unkown"
+				PACKAGEWEBURL="unkown"
+				PACKAGEDESCRIPTION="unkown"
+			fi
+			# Creates nhoid file.
+			csw_make_nhoid_file
+			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
+				## 5. Add external dependencies.
+				#======================================================================================================"
+				print_background_title "Add external dependencies"
+				echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
+				echo
+				echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
+				echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
+				echog "To end this step press Enter two times."
+				#======================================================================================================
+				get_csw_post_dependencies
+				get_csw_optional_post_dependencies
+			fi
+			## 6. Add post installation comands.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			if [[ -f "${NHOPKG_TMPDIR}/doinst.sh" ]]; then
+				# First is needed to change to dir /.
+				echo "cd /" >> "${NHOPKG_TMPDIR}/nhoid"
+				cat "${NHOPKG_TMPDIR}/doinst.sh" >> "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echo "ldconfig" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			# Create npostremove function.
+			echo >> "${NHOPKG_TMPDIR}/nhoid"
+			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
+			echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
+			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+			## 7. Builds binary package (*.nho).
+			echog " - Building binary package."
+			rm "${NHOPKG_TMPDIR}/doinst.sh"
+			rm "${NHOPKG_TMPDIR}/slack-desc"
+			cd "${NHOPKG_TMPDIR}"
+			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho" 2> /dev/null
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+			cd ${CWD}
+			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho" ]]; then
+				echogn " --- New package is:"
+				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho"
+			else
+				echog " *** Unable to build package." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			## 8. Clean up.
+			cleanup_tmp_dir
+		done
+		exit 0
+	;;
+	create-repo)
+# ********************************************************************
+#
+# Section: Create Repo
+# 1. Basic configurations.
+# 2. Checking directory and prepare it.
+# 3. Creates binary repository.
+# 4. Setting up software repository.
+# 5. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		echogn " :: Creating software repository on:"
+		echo " ${REPO_DIR}"
+		## 2. Checking directory and prepare it.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Clean up nhopkg temporal directory.
+		cleanup_tmp_dir
+		make_tmp_dir
+		## 3. Creates binary repository.
+		# Check there are any .nho package in this directory.
+		if [[ $(ls "${REPO_DIR}" | grep '[0-9].nho$') ]]; then
+			for nhopackage in $(ls "${REPO_DIR}" | grep '[0-9].nho$');
+			do
+				echogn " - Adding"
+				echo " ${nhopackage}..."
+				# Creates core.packages.tar.gz
+				cd "${CWD}"
+				tar xfC "${REPO_DIR}/${nhopackage}" "${NHOPKG_TMPDIR}" "nhoid" 2> /dev/null
+				check_if_ok " * One or more packages aren't valid."
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+				cd "${NHOPKG_TMPDIR}"
+				mv "nhoid" "${pkgname}-${pkgversion}-${pkgrevision}"
+				ln -sf "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}"
+				ln -sf "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}"
+				# Package!
+				tar fr "core.packages.tar" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
+				rm "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
+				# Creates core.files.tar.gz
+				cd "${CWD}"
+				tar xfO "${REPO_DIR}/${nhopackage}" | tar jPt 2> /dev/null > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}"
+				check_if_ok " * One or more packages aren't valid."
+				# Package!
+				cd "${NHOPKG_TMPDIR}"
+				tar fr "core.files.tar" "${pkgname}-${pkgversion}-${pkgrevision}"
+				rm "${pkgname}-${pkgversion}-${pkgrevision}"
+			done
+			## 4. Setting up software repository.
+			cd "${CWD}"
+			# Gzip core.files.tar.gz and core.packages.tar.gz
+			bzip2 "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
+			check_if_ok " *** Unable to create repository."
+			# Move core.files.tar.bz2 and core.packages.tar.bz2 to repository directory.
+			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.bz2" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.bz2" ]]; then
+				mv "${NHOPKG_TMPDIR}/core.files.tar.bz2" "${REPO_DIR}"
+				mv "${NHOPKG_TMPDIR}/core.packages.tar.bz2" "${REPO_DIR}"
+			else
+				echog " *** Unable to create repository." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+			echo $(date -u +%s) > "${REPO_DIR}/lastsync"
+			cd "${REPO_DIR}"
+			du  *[0-9].nho > content.db
+			bzip2 content.db
+			cd "${CWD}"
+			echog " --- Your new repository has been created sucesful."
+		else
+			echog " *** Can't find any .nho package in this directory." >&2
+			cleanup_tmp_dir
+			exit 1
+		fi
+		## 5. Clean up and exit.
+		cleanup_tmp_dir
+		exit 0
+	;;
+	update)
+# ********************************************************************
+#
+# Section: Update (Repository List)
+# 1. Basic configurations.
+# 2. Checking directory and prepare it.
+# 3. Download configure files from repository.
+# 4. Uncompressing files downloaded from server on system.
+# 5. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		echogn " :: Updating from repository:"
+		echo " ${NHOPKG_REPO}"
+		# Delete the final / if there are.
+		NHOPKG_REPO=$(echo "${NHOPKG_REPO}" | sed -e 's@/$@@')
+		## 2. Checking directory and prepare it.
+		if [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo" ]]; then
+			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
+			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
+		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/packages" ]]; then
+			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
+		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/files" ]]; then
+			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
+		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/cache" ]]; then
+			mkdir -p "${NHOPKG_LOCALSTATEDIR}/cache"
+		fi
+		# Check last update.
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync" ]]; then
+			wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			check_if_ok " * Unable to download files from repository."
+			ISYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/repo/lastsync)
+			FSYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/cache/lastsync)
+			if (( ${ISYNC} == ${FSYNC} )) || (( ${ISYNC} > ${FSYNC} )); then
+				echog " * Repository already is updated." >&2
+				exit 1
+			fi
+			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+		else
+			wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			check_if_ok " * Unable to download files from repository."
+			# Clean up the actual repository db.
+			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/files/"*
+			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*
+		fi
+		## 3. Download configure files from repository.
+		echog " - Downloading configuration files from server."
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.bz2"
+		check_if_ok " * Unable to download files from repository."
+		echog " --- Downloading files database."
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.bz2"
+		check_if_ok " *** Unable to download files from repository."
+		echog " --- Downloading packages database."
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.bz2"
+		check_if_ok " *** Unable to download files from repository."
+		## 4. Uncompressing files downloaded from server on system.
+		mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.bz2"
+		tar jxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
+		tar jxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
+		# Bzip2 files on /repo/files
+		for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files")
+		do
+			bzip2 "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+		done
+		mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+		echog " - Repository database updated sucesful."
+		## 5. Clean up and exit.
+		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.bz2"
+		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.bz2"
+		exit 0
+	;;
+	clean)
+# ********************************************************************
+#
+# Section: Clean Cache
+# 1. Basic configurations.
+# 2. Clean up cache data.
+# 3. Clean up build directory.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if nhopkg is running as root.
+		check_if_root_uid
+		echog " - Cleaning up cache data."
+		## 2. Clean up cache data.
+		rm -Rf "${NHOPKG_LOCALSTATEDIR}/cache/"*
+		check_if_ok " * Unable to clean up cache."
+		if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
+			echog " - Cleaning up build directory."
+			## 3. Clean up build directory.
+			rm -Rf "${NHOPKG_BUILDIR}/"*
+			check_if_ok " * Unable to clean up build directory."
+		fi
+		## 4. Clean up and exit.
+		exit 0
+	;;
+	search)
+# ********************************************************************
+#
+# Section: Search
+# 1. Basic configurations.
+# 2. Search for packages.
+# 3. Shows packages.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			## 2. Search for packages.
+			echogn " :: Searching for:"
+			echo " ${CASEPACKAGE}"
+			declare -a RESULTS
+			RESULTS=($(find "${NHOPKG_LOCALSTATEDIR}/repo/packages/" -iname "*${CASEPACKAGE}*" -type f))
+			if [[ "${#RESULTS[@]}" != "0" ]]; then
+				echogn " - Results found:"
+				echo " ${#RESULTS[@]}"
+			else
+				echog " * No results found." >&2
+				exit 1
+			fi
+			## 3. Shows packages.
+			for result in ${RESULTS[*]};
+			do
+				get_basic_data "${result}"
+				echo
+				echogn "Package:"
+				echo " ${pkgname}"
+				echogn "Description:"
+				echo " ${pkgdescription}"
+				echogn "Lasted version avaliable:"
+				echo " ${pkgversion}-${pkgrevision}"
+				if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+					get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+					echogn "Lasted version installed:"
+					echo " ${pkgversion}-${pkgrevision}"
+				else
+					echog "Lasted version installed: Not installed."
+				fi
+			done
+		done
+		## 4. Clean up and exit.
+		exit 0
+	;;
+	list-repo)
+# ********************************************************************
+#
+# Section: List Repo
+# 1. Basic configurations.
+# 2. Get packages on repository.
+# 3. Shows packages.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		echogn " :: Listing packages on repository:"
+		echo " ${NHOPKG_REPO}"
+		## 2. Get packages on repository.
+		if [[ ! $(ls "${NHOPKG_LOCALSTATEDIR}/repo/packages/") ]]; then
+			echog " * No results found" >&2
+			exit 1
+		fi
+		for packagerepo in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/packages/");
+		do
+			if [[ ! -h "${NHOPKG_LOCALSTATEDIR}/repo/packages/${packagerepo}" ]]; then
+				## 3. Shows packages.
+				get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${packagerepo}"
+				echo
+				echogn "Package:"
+				echo " ${pkgname}"
+				echogn "Description:"
+				echo " ${pkgdescription}"
+				echogn "Lasted version avaliable:"
+				echo " ${pkgversion}-${pkgrevision}"
+				if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+					get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+					echogn "Lasted version installed:"
+					echo " ${pkgversion}-${pkgrevision}"
+				else
+					echog "Lasted version installed: Not installed."
+				fi
+			fi
+		done
+		## 4. Clean up and exit.
+		exit 0
+	;;
+	list)
+# ********************************************************************
+#
+# Section: List
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Shows installed packages.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		echog " :: Listing installed packages."
+		LOG_FILE="${OUTPUT_COMMAND}/installed-packages-$(date).log"
+		## 2. Get packages on repository.
+		if [[ ! $(ls "${NHOPKG_LOCALSTATEDIR}/packages/") ]]; then
+			echog " * No results found" >&2
+			exit 1
+		fi
+		for installedpackage in $(ls "${NHOPKG_LOCALSTATEDIR}/packages/");
+		do
+			if [[ ! -h "${NHOPKG_LOCALSTATEDIR}/packages/${installedpackage}" ]]; then
+				get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installedpackage}"
+				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+					echo >> "${LOG_FILE}"
+					echogn "Package:" >> "${LOG_FILE}"
+					echo " ${pkgname}" >> "${LOG_FILE}"
+					echogn "Description:" >> "${LOG_FILE}"
+					echo " ${pkgdescription}" >> "${LOG_FILE}"
+					if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+						get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+						echogn "Lasted version avaliable:" >> "${LOG_FILE}"
+						echo " ${pkgversion}-${pkgrevision}" >> "${LOG_FILE}"
+					else
+						echog "Lasted version avaliable: Not avaliable." >> "${LOG_FILE}"
+					fi
+				else
+					## 3. Shows packages.
+					echo
+					echogn "Package:"
+					echo " ${pkgname}"
+					echogn "Description:"
+					echo " ${pkgdescription}"
+					if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+						get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+						echogn "Lasted version avaliable:"
+						echo " ${pkgversion}-${pkgrevision}"
+					else
+						echog "Lasted version avaliable: Not avaliable."
+					fi
+				fi
+			
+			fi
+		done
+		## 4. Clean up and exit.
+		if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+			if [[ -f "${LOG_FILE}" ]]; then
+				echogn " --- You can see the log on"
+				echo " ${LOG_FILE}"
+			else
+				echog " *** Unable to write log file. Have you write permissions?" >&2
+				exit 1
+			fi
+		fi
+		exit 0
+	;;
+	info)
+# ********************************************************************
+#
+# Section: Info
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Shows package info and files.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			## 3. Shows package info and files.
+			if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+				LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
+				get_package_info "${CASEPACKAGE}" >> "${LOG_FILE}"
+				check_if_ok " * Unable to get info of selected package, seems that doesn't exist."
+				if [[ -f "${LOG_FILE}" ]]; then
+					echogn " --- You can see the log on"
+					echo " ${LOG_FILE}"
+				else
+					echog " *** Unable to write log file. Have you write permissions?" >&2
+					exit 1
+				fi
+			
+			else
+				echogn " :: Package info for:"
+				echo " ${CASEPACKAGE}"
+				get_package_info "${CASEPACKAGE}"
+				check_if_ok " * Unable to get info of selected package, seems that doesn't exist."
+			fi
+		done
+		## 4. Clean up and exit.
+		exit 0
+	;;
+	show)
+# ********************************************************************
+#
+# Section: Show
+# 1. Basic configurations.
+# 2. Checking packages and prepare it.
+# 3. Shows package files.
+# 4. Clean up and exit.
+#
+# ********************************************************************
+		## 1. Basic configurations.
+		# Sets PWD directory.
+		get_pwd_dir
+		# Checks if have selected any package.
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select package." >&2
+			exit 1
+		fi
+		## 2. Checking packages and prepare it.
+		for CASEPACKAGE in ${CASEPACKAGES};
+		do
+			## 3. Shows package files.
+			if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
+				get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
+				if [[ ! $(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null) ]]; then
+					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
+					exit 1
+				fi
+				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
+					bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" >> "${LOG_FILE}"
+					if [[ -f "${LOG_FILE}" ]]; then
+						echogn " --- You can see the log on"
+						echo " ${LOG_FILE}"
+					else
+						echog " *** Unable to write log file. Have you write permissions?" >&2
+						exit 1
+					fi
+				else
+					bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+				fi
+			elif [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" ]]; then
+				get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}"
+				if [[ ! $(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null) ]]; then
+					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
+					exit 1
+				fi
+				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
+					bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" >> "${LOG_FILE}"
+					if [[ -f "${LOG_FILE}" ]]; then
+						echogn " --- You can see the log on"
+						echo " ${LOG_FILE}"
+					else
+						echog " *** Unable to write log file. Have you write permissions?" >&2
+						exit 1
+					fi
+				else
+					bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+				fi
+			# For local .nho packages.
+			elif [[ -f "${CASEPACKAGE}" ]] && [[ $(basename "${CASEPACKAGE}" .nho) != "${CASEPACKAGE}" ]]; then
+				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
+					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
+					tar xfO "${CASEPACKAGE}" | tar jPt 2> /dev/null >> "${LOG_FILE}"
+					if [[ -f "${LOG_FILE}" ]]; then
+						echogn " --- You can see the log on"
+						echo " ${LOG_FILE}"
+					else
+						echog " *** Unable to write log file. Have you write permissions?" >&2
+						exit 1
+					fi
+				else
+					tar xfO "${CASEPACKAGE}" | tar jPt 2> /dev/null
+				fi
+			else
+				echog " * The selected package is not installed by Nhopkg." >&2
+				# Clean up and exits.
+				exit 1
+			fi
+		done
+		## 4. Clean up and exit.
+		exit 0
+	;;
+	update-db)
+		check_if_root_uid
+		update_local_db
+		exit 0
+	;;
+	license)
+		nhopkg_license
+		exit 0
+	;;
+	license-all)
+		cat "${NHOPKG_DATADIR}/COPYING"
+		exit 0
+	;;
+	version)
+		nhopkg_version
+		exit 0
+	;;
+	help)
+		# Shows help pages.
+		nhopkg_help
+		exit 0
+	;;
+	*)
+		# Shows help pages.
+		echog " * You need to give some command." >&2
+		nhopkg_help
+		exit 1
+	;;
+esac

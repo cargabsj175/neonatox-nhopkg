@@ -1,0 +1,91 @@
+#	nhopkg.conf v. @PACKAGE_VERSION@ @RELEASEDATE@
+#
+# This is the nhopkg configuration file. See nhopkg.conf(5) for more information.
+# This file provides default configurations for users, and they can be changed in this file or
+# in the command line.
+#
+# Configuration data is parsed as follows:
+# 1. From command line options.
+# 2. From @sysconfdir@/nhopkg/nhopkg.conf file.
+# 3. From default nhopkg.conf file (@pkgdatadir@/nhopkg.conf).
+# If there are not command line options, defaults are in nhopkg.conf.
+# Configurations from command line options only are sets for this use.
+
+# [main]
+# Default configuration for nhopkg.
+prefix=@prefix@
+datarootdir=@datarootdir@
+SYSCONFDIR=@sysconfdir@
+NHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
+NHOPKG_DATADIR=${datarootdir}/@PACKAGE@
+LOCALSTATEDIR=@localstatedir@
+NHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
+TMPDIR=/tmp
+TEMPLATE_TMPDIR=".nhopkg.XXXXXXXXXX"
+BUILDIR=/usr/src
+NHOPKG_BUILDIR=${BUILDIR}/nhopkg
+NHOPKG_LOCKFILE=/var/lock/nhopkg
+
+# [options]
+# Basic options for nhopkg.
+# Dependency manager for nhopkg (yes OR no):
+NHOPKG_CHECKDEPS=yes
+# Inverse dependency manger for nhopkg (yes OR no):
+NHOPKG_PURGE=no
+# Check package md5sum for nhopkg (yes OR no):
+NHOPKG_CHECKMD5=yes
+# Check package arquitecture for nhopkg (yes OR no):
+NHOPKG_CHECKARCH=yes
+# Verbose mode for nhopkg (yes OR no):
+VERBOSE_MODE=no
+
+# [server]
+# Repository configuration for nhopkg.
+# Default repository of Nhopkg. You can change it.
+NHOPKG_REPO=@NHOPKG_REPO@
+
+# [language suppor]
+# Language suppor for nhopkg (yes OR no):
+NHOPKG_GETTEXT=yes
+# Don't edit!
+TEXTDOMAIN=@PACKAGE_NAME@
+TEXTDOMAINDIR=@localedir@
+
+# [create source package]
+# FIND_DIRS contains directories where nhopkg looking for files installed. This option is needed to install packages from source.
+# The default option is: /bin /boot /etc /lib /opt /sbin /srv /usr
+FIND_DIRS="/bin \
+/boot \
+/etc \
+/lib \
+/opt \
+/sbin \
+/srv \
+/usr"
+# No upgrate files --> /etc/nhopkg/uncompatible.files are deprecated.
+# Add files that you think mustn't be in a binary package in 0.5.x version.
+NOUPGRADE_FILES="mimeinfo.cache \
+info/dir \
+info/dir.old \
+/etc/ld.so.cache \
+${NHOPKG_BUILDIR} \
+/etc/mtab \
+/etc/fstab"
+
+# [database]
+# Nhopkg data base location.
+NHOPKG_DB=${NHOPKG_LOCALSTATEDIR}/nhopkg.db
+# Dirs that you don't want in your DB. You can edit this variable, but the default is best.
+# The default option is: /dev /home /media /mnt /opt /proc /sys /tmp /usr/src ${NHOPKG_BUILDIR} /usr/share/zoneinfo /var
+NO_DIRS_IN_DB="/dev \
+/home \
+/media \
+/mnt \
+/opt \
+/proc \
+/sys \
+/tmp \
+/usr/src \
+/usr/share/zoneinfo \
+/var"
+

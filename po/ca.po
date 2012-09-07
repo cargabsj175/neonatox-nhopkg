@@ -1,0 +1,1187 @@
+# Catalan translation for nhopkg
+# Copyright (c) 2009 Rosetta Contributors and Canonical Ltd 2009
+# This file is distributed under the same license as the nhopkg package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2009.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nhopkg\n"
+"Report-Msgid-Bugs-To: projectnhoax@gmail.com\n"
+"POT-Creation-Date: 2009-04-07 17:03+0200\n"
+"PO-Revision-Date: 2009-04-09 22:05+0000\n"
+"Last-Translator: animarval <animarval@gmail.com>\n"
+"Language-Team: Catalan <ca@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2009-04-24 20:36+0000\n"
+"X-Generator: Launchpad (build Unknown)\n"
+
+#: ../src/nhopkg.in:37 ../src/nhopkg.in:41
+msgid " * Unable to locate Nhopkg configuration file!"
+msgstr " * No s'ha pogut trobar l'arxiu de configuració de Nhopkg!"
+
+#: ../src/nhopkg.in:38
+msgid " - Loading default Nhopkg configuration file..."
+msgstr " - Carregant l'arxiu de configureció per defecte de Nhopkg..."
+
+#: ../src/nhopkg.in:161
+msgid "Great Work your LFS! ;-)"
+msgstr "Bona feina pel teu LFS! ;-)"
+
+#: ../src/nhopkg.in:163
+msgid "Nhopkg version"
+msgstr "versió del Nhopkg"
+
+#: ../src/nhopkg.in:171
+msgid "Usage: nhopkg [command] [options] package"
+msgstr "Ús: nhopkg [command] [options] package"
+
+#: ../src/nhopkg.in:172 ../src/nhopkg.in:180
+msgid "To see the help: nhopkg --help"
+msgstr "Per veure l'ajuda: nhopkg [command] [options] package"
+
+#: ../src/nhopkg.in:179
+msgid "Usage: sudo nhopkg [command] [options] package"
+msgstr "Ús: sudo nhopkg [command] [options] package"
+
+#: ../src/nhopkg.in:188
+msgid "This program comes with ABSOLUTELY NO WARRANTY."
+msgstr "Aquest programa no preveu CAP GARANTIA EN ABSOLUT."
+
+#: ../src/nhopkg.in:189
+msgid ""
+"This is free software, and you are welcome to redistribute it under certain "
+"conditions; for details type nhopkg --license-all."
+msgstr ""
+"Això és programari lliure, i ets benvingut a distribuir-lo sota certes "
+"condicions; per a més detalls escriu: nhopkg --license-all"
+
+#: ../src/nhopkg.in:197
+msgid "Examples:"
+msgstr "Exemples:"
+
+#: ../src/nhopkg.in:198
+#, fuzzy
+msgid " * Install binary package."
+msgstr " * Instal·lar paquet binari."
+
+#: ../src/nhopkg.in:200
+msgid " * Show files on package."
+msgstr " * Mostrar fitxers del paquet."
+
+#: ../src/nhopkg.in:203
+msgid "Commands:"
+msgstr "Ordres:"
+
+#: ../src/nhopkg.in:204
+msgid " -i, --install\tInstalls binary package."
+msgstr " -i, --install\tInstal·la el paquet binari."
+
+#: ../src/nhopkg.in:205
+msgid " -S, --super-install\tInstalls binary package form repository."
+msgstr " -S, --super-install\tInstal·la el paquet binari des del dipòsit."
+
+#: ../src/nhopkg.in:206
+msgid " -d, --dios\tSame as -S, --super-install."
+msgstr " -d, --dios\tÉs igual que -S, --super-install."
+
+#: ../src/nhopkg.in:207
+msgid " -r, --remove\tRemoves package installed by Nhopkg."
+msgstr " -r, --remove\tEsborra el paquet instal·lat per Nhopkg."
+
+#: ../src/nhopkg.in:208
+msgid " -B, --backup\tCreates binary package from installed package."
+msgstr " -B, --backup\tCrea un paquet binari a partir del paquet instal·lat."
+
+#: ../src/nhopkg.in:209
+msgid " -b, --build\tCompiles and installs source package."
+msgstr " -b, --build\tCompila i instal·la el paquet amb el codi font."
+
+#: ../src/nhopkg.in:210
+msgid " -k, --check\tChecks if installed package is correct."
+msgstr " -k, --check\tComprova si el paquet instal·lat és correcte."
+
+#: ../src/nhopkg.in:211
+msgid " -c, --create-source\tCreates source package from tarball."
+msgstr ""
+" -c, --create-source\tCrea un paquet amb el codi font des d'un tarball."
+
+#: ../src/nhopkg.in:212
+msgid " -A, --auto-package\tCreates automatically source package from tarball."
+msgstr ""
+" -A, --auto-package\tCrea automàticament un paquet amb el codi font des del "
+"tarball."
+
+#: ../src/nhopkg.in:213
+msgid " -z, --tgz2nho\tConverts .tgz package to .nho package."
+msgstr " -z, --tgz2nho\tConverteix un paquet .tgz a un paquet .nho."
+
+#: ../src/nhopkg.in:214
+msgid " -g, --create-repo\tCreates software repository on selected directory."
+msgstr ""
+" -g, --create-repo\tCrea un dipòsit de programari en el directori indicat."
+
+#: ../src/nhopkg.in:215
+msgid " -U, --update\tUpdate repository database."
+msgstr " -U, --update\tActualitza la base de dades del dipòsit."
+
+#: ../src/nhopkg.in:216
+msgid " -e, --clean\tRemove cached data."
+msgstr " -e, --clean\tNeteja les dades de la memòria cau."
+
+#: ../src/nhopkg.in:217
+msgid " -s, --search\tSearch for package and its details."
+msgstr " -s, --search\tBuscar un paquet i la seva informació."
+
+#: ../src/nhopkg.in:218
+msgid " -t, --list-repo\tLists packages on repository and their details."
+msgstr " -t, --list-repo\tLlistar paquets en el dipòsit i la seva informació."
+
+#: ../src/nhopkg.in:219
+msgid " -l, --list\tLists installed packages."
+msgstr " -l, --list\tLlistar paquets instal·lats."
+
+#: ../src/nhopkg.in:220
+msgid " -n, --info\tShows package details."
+msgstr " -n, --info\tMostrar informació del paquet."
+
+#: ../src/nhopkg.in:221
+msgid " -w, --show\tShows package files."
+msgstr " -w, --show\tMostra fitxers del paquet."
+
+#: ../src/nhopkg.in:222
+msgid " -u, --update-db\tUpdate Nhopkg database."
+msgstr " -u, --update-db\tActualitzar base de dades de Nhopkg."
+
+#: ../src/nhopkg.in:223
+msgid " --license\tShows Nhopkg license."
+msgstr " --license\tMostrar llicència del Nhopkg."
+
+#: ../src/nhopkg.in:224
+msgid " --license-all\tShows complete Nhopkg license."
+msgstr " --license-all\tMostrar llicència del Nhopkg completa."
+
+#: ../src/nhopkg.in:225
+msgid " --version\tShows Nhopkg version."
+msgstr " --version\tMostrar versió del Nhopkg."
+
+#: ../src/nhopkg.in:226
+msgid " -h, --help\tShows Nhopkg help pages."
+msgstr " -h, --help\tMostrar pàgines d'ajuda de Nhopkg."
+
+#: ../src/nhopkg.in:228
+msgid "Options:"
+msgstr "Opcions:"
+
+#: ../src/nhopkg.in:229
+msgid " -R, --recursive\tNhopkg works recursively."
+msgstr " -R, --recursive\tNhopkg treballa recursivament."
+
+#: ../src/nhopkg.in:230
+msgid " --root\tSets install root."
+msgstr " --root\tSelecciona el directori d'instal·lació."
+
+#: ../src/nhopkg.in:231
+msgid " --no-check-deps\tDon't check dependencies."
+msgstr " --no-check-deps\tNo verifiquis les dependències."
+
+#: ../src/nhopkg.in:232
+msgid " --no-check-arch\tDon't check architecture."
+msgstr " --no-check-arch\tNo revisis l'arquitectura (amd64, i686,...)."
+
+#: ../src/nhopkg.in:233
+msgid " --no-check-md5\tDon't check MD5 Sum."
+msgstr " --no-check-md5\tNo revisar el MD5 Sum."
+
+#: ../src/nhopkg.in:234
+msgid " --force-check-deps\tForce check dependencies."
+msgstr " --force-check-deps\tForçar el revisar les dependències."
+
+#: ../src/nhopkg.in:235
+msgid " --force-check-arch\tForce check architecture."
+msgstr ""
+" --force-check-arch\tForçar el revisar l'arquitectura (amd64, i686,...)."
+
+#: ../src/nhopkg.in:236
+msgid " --force-check-md5\tForce check MD5 Sum."
+msgstr " --force-check-md5\tForçar el revisar el MD5 Sum."
+
+#: ../src/nhopkg.in:237
+msgid " --purge\tRemove inverse dependencies of package."
+msgstr " --purge\tEliminar les dependències inverses del paquet."
+
+#: ../src/nhopkg.in:238
+msgid " -o, --output\tWrite an output log."
+msgstr " -o, --output\tEscriure un registre del procés."
+
+#: ../src/nhopkg.in:239
+msgid " -v, --verbose\tVerbose operations."
+msgstr " -v, --verbose\tOperacions verboses."
+
+#: ../src/nhopkg.in:240
+msgid " --\tStop parssing arguments."
+msgstr " --\tNo obté més arguments."
+
+#: ../src/nhopkg.in:250
+msgid "Nhopkg is already in use..."
+msgstr "Nhopkg segueix estan en ús..."
+
+#: ../src/nhopkg.in:255
+msgid "Exist an older lock file, but seems that is not in use..."
+msgstr ""
+"Existeix un arxiu lock més antic, però no semblar que s'estigui utilitzant..."
+
+#: ../src/nhopkg.in:261
+msgid " * You can't rewrite lock file."
+msgstr " * Pots sobreescriure l'arxiu lock."
+
+#: ../src/nhopkg.in:297
+msgid "To run Nhopkg you need have root powers."
+msgstr "Per fer funcionar el Nhopkg necessites tenir superpoders de root."
+
+#: ../src/nhopkg.in:308
+msgid " * Unable to create temporary directory."
+msgstr " * Incapaç de crear el directori temporal."
+
+#: ../src/nhopkg.in:327
+msgid " --- Updating database:"
+msgstr " --- Actualitzant base de dades:"
+
+#: ../src/nhopkg.in:340
+msgid "Do you want to continue?[yes/NO]: "
+msgstr "Vols continuar?[sí/no]: "
+
+#: ../src/nhopkg.in:347
+msgid "yes"
+msgstr "sí"
+
+#: ../src/nhopkg.in:351
+msgid "no"
+msgstr "no"
+
+#: ../src/nhopkg.in:368
+msgid " --- Deleting temporary directory."
+msgstr " --- Eliminant directori temporal."
+
+#: ../src/nhopkg.in:388
+msgid "Compilation directory will be removed from your system."
+msgstr "El directori de la compilació serà eliminat del teu sistema."
+
+#: ../src/nhopkg.in:392
+msgid " --- Deleting"
+msgstr " --- Eliminant"
+
+#: ../src/nhopkg.in:398
+msgid "will not be deleted."
+msgstr "no serà eliminat."
+
+#: ../src/nhopkg.in:412
+msgid "The selected package doesn't exist."
+msgstr "El paquet seleccionat no existeix."
+
+#: ../src/nhopkg.in:429
+msgid " * Failed to get package info."
+msgstr " * Error al obtenir la informació del paquet."
+
+#: ../src/nhopkg.in:452 ../src/nhopkg.in:1109 ../src/nhopkg.in:1290
+#: ../src/nhopkg.in:1581 ../src/nhopkg.in:2750 ../src/nhopkg.in:2862
+#: ../src/nhopkg.in:3065
+msgid " * The selected package is not valid."
+msgstr " * El paquet sel·leccionat no és vàlid."
+
+#: ../src/nhopkg.in:459
+msgid "The selected package is created in newer version of Nhopkg."
+msgstr ""
+"El paquet sel·leccionat ha estat creat amb una versió més nova de Nhopkg."
+
+#: ../src/nhopkg.in:460 ../src/nhopkg.in:466 ../src/nhopkg.in:473
+msgid ""
+"Nhopkg is on development and can't use packages of other versions. We "
+"working on this."
+msgstr ""
+"Nhopkg encara està en desenvolupament i no pot utilitzar paquets d'altres "
+"versions. Estem treballant en això."
+
+#: ../src/nhopkg.in:465
+msgid "The selected package is created in older version of Nhopkg."
+msgstr "El paquet seleccionat ha estat creat en una versió antiga de Nhopkg."
+
+#: ../src/nhopkg.in:471
+msgid "The selected package is created in other version of Nhopkg:"
+msgstr "El paquet seleccionat ha estat creat en una altra versió de Nhopkg."
+
+#: ../src/nhopkg.in:479
+msgid " * Unable to get data from package."
+msgstr " * Impossible obtenir dades del paquet."
+
+#: ../src/nhopkg.in:489
+msgid " --- Checking MD5 Sum for"
+msgstr " --- Revisant MD5 Sum per a"
+
+#: ../src/nhopkg.in:494
+msgid " *** MD5 checksum of package did not match."
+msgstr " *** El MD5 checksum del paquet no coincideix."
+
+#: ../src/nhopkg.in:505
+msgid " --- Checking package arch for"
+msgstr " --- Comprovant arquitectura per a"
+
+#: ../src/nhopkg.in:540
+msgid " *** Architecture of package is not valid."
+msgstr " *** L'arquitectura del paquet no és vàlida."
+
+#: ../src/nhopkg.in:541
+msgid " --- This package can be installed on the next system:"
+msgstr " --- Aquest paquet pot ser instal·lat en el següent sistema:"
+
+#: ../src/nhopkg.in:570 ../src/nhopkg.in:577
+msgid "is installed in your system, but is deprecated. Package will be UPDATE."
+msgstr ""
+"està instal·lat en el teu sistema, però és molt antic. El paquet serà "
+"ACTUALITZAT."
+
+#: ../src/nhopkg.in:583 ../src/nhopkg.in:596
+msgid "is installed in your system and is newer. Package will be DOWNGRADE."
+msgstr ""
+"està instal·lat en el teu sistema, però és molt nou. El paquet serà "
+"DESACTUALITZAT."
+
+#: ../src/nhopkg.in:589
+msgid "is already installed in your system. Package will be REINSTALL."
+msgstr "està instal·lat en el teu sistema. El paquet serà REINSTAL·LAT."
+
+#: ../src/nhopkg.in:601 ../src/nhopkg.in:1147
+msgid " * Package will not be installed."
+msgstr " * El paquet no serà instal·lat."
+
+#: ../src/nhopkg.in:642 ../src/nhopkg.in:681 ../src/nhopkg.in:1386
+#: ../src/nhopkg.in:1395
+msgid "is not on repository."
+msgstr "no és al dipòsit."
+
+#: ../src/nhopkg.in:705 ../src/nhopkg.in:883
+msgid " --- Processing Dependency:"
+msgstr " --- Dependència del Processament:"
+
+#: ../src/nhopkg.in:707 ../src/nhopkg.in:796 ../src/nhopkg.in:885
+#: ../src/nhopkg.in:974
+msgid "for"
+msgstr "per a"
+
+#: ../src/nhopkg.in:748 ../src/nhopkg.in:759 ../src/nhopkg.in:837
+#: ../src/nhopkg.in:848 ../src/nhopkg.in:926 ../src/nhopkg.in:937
+#: ../src/nhopkg.in:1015 ../src/nhopkg.in:1026
+msgid "\t** OK: Present"
+msgstr "\t** BÉ: Present"
+
+#: ../src/nhopkg.in:751 ../src/nhopkg.in:762 ../src/nhopkg.in:840
+#: ../src/nhopkg.in:851 ../src/nhopkg.in:929 ../src/nhopkg.in:940
+#: ../src/nhopkg.in:1018 ../src/nhopkg.in:1029
+msgid "\t** FAIL: Present"
+msgstr "\t** ERROR: Present"
+
+#: ../src/nhopkg.in:771
+msgid " *** No build deps found on package:"
+msgstr " *** No s'han trobar les dependències necessàries en el paquet:"
+
+#: ../src/nhopkg.in:794 ../src/nhopkg.in:972
+msgid " --- Processing Optional Dependency:"
+msgstr " --- Dependències Opcionals del Processament:"
+
+#: ../src/nhopkg.in:860
+msgid " *** No optional build deps found on package:"
+msgstr " *** No s'han trobat les dependències necessàries en el paquet:"
+
+#: ../src/nhopkg.in:949
+msgid " *** No deps found on package:"
+msgstr " *** No s'han trobat les dependències en el paquet:"
+
+#: ../src/nhopkg.in:1038
+msgid " *** No optional deps found on package:"
+msgstr " No s'han trobat les dependències opcionals en el paquet:"
+
+#: ../src/nhopkg.in:1054 ../src/nhopkg.in:1077 ../src/nhopkg.in:1404
+msgid " --- Downloading"
+msgstr " --- Descarregant"
+
+#: ../src/nhopkg.in:1057 ../src/nhopkg.in:1080 ../src/nhopkg.in:1407
+msgid " *** Failed to download package. Please, retry."
+msgstr " *** Error al descarregar el paquet. Si us plau, torna-ho a intentar."
+
+#: ../src/nhopkg.in:1102 ../src/nhopkg.in:2744 ../src/nhopkg.in:2856
+#: ../src/nhopkg.in:3060 ../src/nhopkg.in:3216 ../src/nhopkg.in:3432
+#: ../src/nhopkg.in:3457 ../src/nhopkg.in:3650 ../src/nhopkg.in:3239
+msgid " * Unable to uncompress package."
+msgstr " * Impossible descomprimir el paquet."
+
+#: ../src/nhopkg.in:1139
+msgid "needs the following dependencies:"
+msgstr "es necessiten les següents dependències:"
+
+#: ../src/nhopkg.in:1141
+msgid "needs this dependency:"
+msgstr "necessita aquestes dependències:"
+
+#: ../src/nhopkg.in:1177
+msgid "needs the following optional dependencies:"
+msgstr "necessita les següents dependències opcionals:"
+
+#: ../src/nhopkg.in:1180
+msgid "needs this optional dependency:"
+msgstr "necessita aquestes dependències opcionals:"
+
+#: ../src/nhopkg.in:1269
+msgid " --- Installing"
+msgstr " --- Instal·lant"
+
+#: ../src/nhopkg.in:1276 ../src/nhopkg.in:1282 ../src/nhopkg.in:1286
+#: ../src/nhopkg.in:1315 ../src/nhopkg.in:1317 ../src/nhopkg.in:1325
+#: ../src/nhopkg.in:1331 ../src/nhopkg.in:1333 ../src/nhopkg.in:1341
+msgid " *** Failed to install package."
+msgstr " *** Error al instal·lar el paquet."
+
+#: ../src/nhopkg.in:1300
+msgid " --- Setting up"
+msgstr " --- Creant"
+
+#: ../src/nhopkg.in:1373
+msgid ""
+"There are more than one package with these arguments, please select one."
+msgstr "Hi ha més d'un paquet amb aquests arguments, si us plau tria'n un."
+
+#: ../src/nhopkg.in:1517
+msgid "file deleted."
+msgstr "fitxer eliminat."
+
+#: ../src/nhopkg.in:1519
+msgid "unable to delete file."
+msgstr "impossible eliminar el fitxer."
+
+#: ../src/nhopkg.in:1529
+msgid "directory deleted."
+msgstr "directori eliminat."
+
+#: ../src/nhopkg.in:1531
+msgid "unable to delete directory."
+msgstr "impossible eliminar el directori."
+
+#: ../src/nhopkg.in:1587
+msgid " --- Additional files in package (patches):"
+msgstr " --- Fitxers adicionals en el paquet (pegats):"
+
+#: ../src/nhopkg.in:1602
+msgid " - Building"
+msgstr " - Construint"
+
+#: ../src/nhopkg.in:1604 ../src/nhopkg.in:1646
+msgid "This step may take some time depending of package and your system."
+msgstr ""
+"Aquest pas pot trigar força temps depenent del paquet i del teu sistema."
+
+#: ../src/nhopkg.in:1625
+msgid " * Failed compilation!"
+msgstr " * La compilació ha fallat!"
+
+#: ../src/nhopkg.in:1629 ../src/nhopkg.in:1671
+msgid " --- You can see compilation log on"
+msgstr " --- Pots veure el registre de la compilació"
+
+#: ../src/nhopkg.in:1644
+msgid " - Installing"
+msgstr " - Instal·lant"
+
+#: ../src/nhopkg.in:1667
+msgid " * Failed instalation!"
+msgstr " * La instal·lació ha fallat!"
+
+#: ../src/nhopkg.in:1677
+msgid " --- You can see instalation log on"
+msgstr " --- Pots veure el registre de la instal·lació"
+
+#: ../src/nhopkg.in:1690
+msgid " --- Saving logs on"
+msgstr " --- Guardant registres"
+
+#: ../src/nhopkg.in:1786 ../src/nhopkg.in:3742
+msgid " - Building binary package."
+msgstr " - Construint paquet binari."
+
+#: ../src/nhopkg.in:1787
+msgid " --- Searching files in the system."
+msgstr " --- Buscant arxius en el sistema."
+
+#: ../src/nhopkg.in:1791
+msgid " --- Compressing package."
+msgstr " --- Comprimint paquet."
+
+#: ../src/nhopkg.in:1806 ../src/nhopkg.in:3012 ../src/nhopkg.in:3382
+#: ../src/nhopkg.in:3603 ../src/nhopkg.in:3750
+msgid " --- New package is:"
+msgstr " --- El nou paquet és:"
+
+#: ../src/nhopkg.in:1809
+msgid " *** Unable to create binary package."
+msgstr " *** Impossible crear el paquet binari."
+
+#: ../src/nhopkg.in:1812
+msgid ""
+" *** Unable to create binary package. Nhopkg can't install any file from "
+"this package."
+msgstr ""
+" *** Impossible crear el paquet binari. Nhopkg no pot instal·lar cap fitxer "
+"amb aquest paquet."
+
+#: ../src/nhopkg.in:1830
+msgid "Enter your username:"
+msgstr "Escriu el teu nom d'usuari:"
+
+#: ../src/nhopkg.in:1833
+msgid "You haven't entered your name!"
+msgstr "No has escrit el teu nom d'usuari!"
+
+#: ../src/nhopkg.in:1834
+msgid "Please, enter your username:"
+msgstr "Si us plau, escriu el teu nom d'usuari:"
+
+#: ../src/nhopkg.in:1845
+msgid "Enter your e-mail:"
+msgstr "Escriu el teu correu electrònic:"
+
+#: ../src/nhopkg.in:1848
+msgid "You haven't entered your e-mail!"
+msgstr "No has escrit el teu correu electrònic!"
+
+#: ../src/nhopkg.in:1849
+msgid "Please, enter your e-mail:"
+msgstr "Si us plau, escriu el teu correu electrònic:"
+
+#: ../src/nhopkg.in:1861
+msgid "Enter package name (Ex: gimp):"
+msgstr "Escriu el nom del paquet (Ex: gimp):"
+
+#: ../src/nhopkg.in:1864
+msgid "You haven't entered package name!"
+msgstr "No has escrit el nom del paquet!"
+
+#: ../src/nhopkg.in:1865
+msgid "Please, enter package name (Ex: gimp):"
+msgstr "Si us plau, escriu el nom del paquet:"
+
+#: ../src/nhopkg.in:1876
+msgid "Enter package version (Ex: 2.6.3):"
+msgstr "Escriu la versió del paquet (Ex: 2.6.3):"
+
+#: ../src/nhopkg.in:1879
+msgid "You haven't entered package version!"
+msgstr "No has escrit la versió del paquet!"
+
+#: ../src/nhopkg.in:1880
+msgid "Please, enter package version (Ex: 2.6.3):"
+msgstr "Si us plau, escriu la versió del paquet:"
+
+#: ../src/nhopkg.in:1891
+msgid "Enter package release (Ex: 1):"
+msgstr "Escriu el llançament del paquet (Ex: 1):"
+
+#: ../src/nhopkg.in:1894
+msgid "You haven't entered package release!"
+msgstr "No has escrit el llançament del paquet!"
+
+#: ../src/nhopkg.in:1895
+msgid "Please, enter package release (Ex: 1):"
+msgstr "Si us plau, escriu el llançament del paquet."
+
+#: ../src/nhopkg.in:1906
+msgid "Enter package license (Ex: GPLv3):"
+msgstr "Escriu la llicència del paquet (Ex: GPLv3):"
+
+#: ../src/nhopkg.in:1909
+msgid "You haven't entered package license!"
+msgstr "No has escrit la llicència del paquet!"
+
+#: ../src/nhopkg.in:1910
+msgid "Please, enter package license (Ex: GPLv3):"
+msgstr "Si us plau, escriu la llicència del paquet (Ex: GPLv3):"
+
+#: ../src/nhopkg.in:1921
+msgid "Enter package group (Ex: Graphics):"
+msgstr "Escriu el grup del paquet (Ex: Graphics):"
+
+#: ../src/nhopkg.in:1924
+msgid "You haven't entered package group!"
+msgstr "No has escrit el grup del paquet!"
+
+#: ../src/nhopkg.in:1925
+msgid "Please, enter package group (Ex: Graphics):"
+msgstr "Si us plau, escriu el grup del paquet (Ex: Graphics):"
+
+#: ../src/nhopkg.in:1936
+msgid ""
+"Enter package arch (you can enter more than one arch separated by space. Ex: "
+"i686):"
+msgstr ""
+"Escriu l'arquitectura del paquet (pots escriure més d'una arquitectura "
+"separada per espais. Ex: i686 amd64):"
+
+#: ../src/nhopkg.in:1939
+msgid "You haven't entered package arch!"
+msgstr "No has escrit l'arquitectura del paquet!"
+
+#: ../src/nhopkg.in:1940
+msgid "Please, enter package arch (Ex: i686):"
+msgstr "Si us plau, escriu l'arquitectura del paquet (Ex: i686):"
+
+#: ../src/nhopkg.in:1951
+msgid "Enter package web page (Ex: http://gimp.org/):"
+msgstr "Escriu la pàgina web del paquet (Ex: http://gimp.org/):"
+
+#: ../src/nhopkg.in:1954
+msgid "You haven't entered package web page (URL)!"
+msgstr "No has escrit la pàgina web del paquet (URL)!"
+
+#: ../src/nhopkg.in:1955
+msgid "Please, enter package web page (Ex: http://gimp.org/):"
+msgstr "Si us plau, escriu la pàgina web del paquet (Ex: http://gimp.org/):"
+
+#: ../src/nhopkg.in:1966
+msgid ""
+"Enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
+msgstr ""
+"Escriu la descripció del paquet (Ex: GIMP és GNU Image Manipulation "
+"Program.):"
+
+#: ../src/nhopkg.in:1969
+msgid "You haven't entered package description!"
+msgstr "No has escrit la descripció del paquet!"
+
+#: ../src/nhopkg.in:1970
+msgid ""
+"Please, enter package description (Ex: GIMP is the GNU Image Manipulation "
+"Program.):"
+msgstr ""
+"Si us plau, escriu la descripció del paquet (Ex: GIMP és GNU Image "
+"Manipulation Program.):"
+
+#: ../src/nhopkg.in:1983
+msgid " * Unable to create nhoid file."
+msgstr " * Impossible crear el fitxer nhoid."
+
+#: ../src/nhopkg.in:2007
+msgid "Enter build dependency:"
+msgstr "Escriu les dependències:"
+
+#: ../src/nhopkg.in:2025 ../src/nhopkg.in:2040 ../src/nhopkg.in:2088
+#: ../src/nhopkg.in:2103 ../src/nhopkg.in:2153 ../src/nhopkg.in:2168
+#: ../src/nhopkg.in:2218 ../src/nhopkg.in:2233
+msgid "added like package-dependency."
+msgstr "afegit com a dependències del paquet."
+
+#: ../src/nhopkg.in:2026 ../src/nhopkg.in:2041 ../src/nhopkg.in:2047
+#: ../src/nhopkg.in:2055 ../src/nhopkg.in:2060 ../src/nhopkg.in:2089
+msgid "Enter build dependency (if necesary):"
+msgstr "Escriu les dependències del paquet (si són necessàries):"
+
+#: ../src/nhopkg.in:2046 ../src/nhopkg.in:2109 ../src/nhopkg.in:2174
+#: ../src/nhopkg.in:2239
+msgid "added like file-dependency."
+msgstr "afegit com a dependències del fitxer"
+
+#: ../src/nhopkg.in:2049 ../src/nhopkg.in:2112 ../src/nhopkg.in:2177
+#: ../src/nhopkg.in:2242
+msgid "Found"
+msgstr "S'ha trobat"
+
+#: ../src/nhopkg.in:2051 ../src/nhopkg.in:2114 ../src/nhopkg.in:2179
+#: ../src/nhopkg.in:2244
+msgid "on this path:"
+msgstr "en aquest directori:"
+
+#: ../src/nhopkg.in:2053 ../src/nhopkg.in:2116 ../src/nhopkg.in:2181
+#: ../src/nhopkg.in:2246
+msgid "Enter correct path to"
+msgstr "Escriu el directori correcte per"
+
+#: ../src/nhopkg.in:2059 ../src/nhopkg.in:2122 ../src/nhopkg.in:2187
+#: ../src/nhopkg.in:2252
+msgid "is not present in your system."
+msgstr "no existeix al teu sistema."
+
+#: ../src/nhopkg.in:2070
+msgid "Enter optional build dependency:"
+msgstr "Escriu una dependència opcional."
+
+#: ../src/nhopkg.in:2104 ../src/nhopkg.in:2110 ../src/nhopkg.in:2118
+#: ../src/nhopkg.in:2123
+msgid "Enter optional build dependency (if necesary):"
+msgstr "Escriu una dependència opcional (si és necessari):"
+
+#: ../src/nhopkg.in:2133
+msgid "Enter post installation dependency:"
+msgstr "Escriu una dependència post-instal·lació:"
+
+#: ../src/nhopkg.in:2154 ../src/nhopkg.in:2169 ../src/nhopkg.in:2175
+#: ../src/nhopkg.in:2183 ../src/nhopkg.in:2188 ../src/nhopkg.in:2234
+msgid "Enter post installation dependency (if necesary):"
+msgstr "Escriu una dependència post-instal·lació (si és necessari):"
+
+#: ../src/nhopkg.in:2198
+msgid "Enter optional post installation dependency:"
+msgstr "Escriu una dependència opcional per a la post-instal·lació:"
+
+#: ../src/nhopkg.in:2219 ../src/nhopkg.in:2240 ../src/nhopkg.in:2248
+#: ../src/nhopkg.in:2253
+msgid "Enter optional post installation dependency (if necesary):"
+msgstr ""
+"Escriu una dependència opcional per a la post-instal·lació (si és necessari):"
+
+#: ../src/nhopkg.in:2300 ../src/nhopkg.in:3980 ../src/nhopkg.in:4022
+#: ../src/nhopkg.in:4066 ../src/nhopkg.in:4080
+msgid "Lasted version avaliable:"
+msgstr "Última versió disponible:"
+
+#: ../src/nhopkg.in:2303 ../src/nhopkg.in:4069 ../src/nhopkg.in:4083
+msgid "Lasted version avaliable: Not avaliable."
+msgstr "Última versió disponible: No accessible."
+
+#: ../src/nhopkg.in:2344 ../src/nhopkg.in:3984 ../src/nhopkg.in:4026
+msgid "Lasted version installed:"
+msgstr "Última versió instal·lada:"
+
+#: ../src/nhopkg.in:2347 ../src/nhopkg.in:3987 ../src/nhopkg.in:4029
+msgid "Lasted version installed: Not installed."
+msgstr "Última versió instal·lada: No accessible."
+
+#: ../src/nhopkg.in:2411 ../src/nhopkg.in:2544 ../src/nhopkg.in:2592
+msgid " * The selected directory doesn't exist in your system."
+msgstr " * El directori sel·leccionat no existeix en el teu sistema."
+
+#: ../src/nhopkg.in:2464 ../src/nhopkg.in:2473 ../src/nhopkg.in:2482
+#: ../src/nhopkg.in:2491 ../src/nhopkg.in:2507 ../src/nhopkg.in:2516
+#: ../src/nhopkg.in:2525 ../src/nhopkg.in:2534 ../src/nhopkg.in:2555
+#: ../src/nhopkg.in:2564 ../src/nhopkg.in:2573 ../src/nhopkg.in:2582
+#: ../src/nhopkg.in:2598 ../src/nhopkg.in:2608 ../src/nhopkg.in:2617
+#: ../src/nhopkg.in:2626 ../src/nhopkg.in:2635 ../src/nhopkg.in:2644
+#: ../src/nhopkg.in:2653 ../src/nhopkg.in:2662 ../src/nhopkg.in:2671
+#: ../src/nhopkg.in:2680
+msgid " * You have selected more than one valid option."
+msgstr " * Has sel·leccionat més d'una opció vàlida."
+
+#: ../src/nhopkg.in:2730 ../src/nhopkg.in:2820 ../src/nhopkg.in:2901
+#: ../src/nhopkg.in:2965 ../src/nhopkg.in:3046 ../src/nhopkg.in:3135
+#: ../src/nhopkg.in:3199 ../src/nhopkg.in:3417 ../src/nhopkg.in:3634
+#: ../src/nhopkg.in:3954 ../src/nhopkg.in:4116 ../src/nhopkg.in:4183
+msgid " * Must select package."
+msgstr " * Has de sel·leccionar el paquet."
+
+#: ../src/nhopkg.in:2736 ../src/nhopkg.in:2826
+msgid " :: Preparing to install:"
+msgstr " :: Preparant per instal·lar"
+
+#: ../src/nhopkg.in:2764 ../src/nhopkg.in:2837 ../src/nhopkg.in:3077
+msgid " - Resolving Dependencies."
+msgstr " - Resolent dependències."
+
+#: ../src/nhopkg.in:2770 ../src/nhopkg.in:2845 ../src/nhopkg.in:3085
+msgid " - Installing package and dependencies."
+msgstr " - Instal·lant paquet i les dependències."
+
+#: ../src/nhopkg.in:2782 ../src/nhopkg.in:2877 ../src/nhopkg.in:3114
+msgid " - Installation finished sucessfuly!"
+msgstr " - La instal·lació ha finalitzat amb èxit."
+
+#: ../src/nhopkg.in:2907
+msgid " :: Preparing to remove:"
+msgstr " :: Preparant per eliminar."
+
+#: ../src/nhopkg.in:2911 ../src/nhopkg.in:2975 ../src/nhopkg.in:3142
+#: ../src/nhopkg.in:4160 ../src/nhopkg.in:4229
+msgid " * The selected package is not installed by Nhopkg."
+msgstr " * El següent no està instà instal·lat per Nhopkg."
+
+#: ../src/nhopkg.in:2926
+msgid "The nexts packages will be deleted from your system:"
+msgstr "Els següents paquets seran eliminats del teu sistema:"
+
+#: ../src/nhopkg.in:2931
+msgid "The next package will be deleted from your system:"
+msgstr "El següent paquet serà eliminats del teu sistema:"
+
+#: ../src/nhopkg.in:2936
+msgid " * Package will not be removed from your sistem."
+msgstr " * El paquet no serà eliminat del teu sistema."
+
+#: ../src/nhopkg.in:2938
+msgid " - Removing package and inverse dependencies."
+msgstr " - Eliminant paquet i les dependències inverses."
+
+#: ../src/nhopkg.in:2942
+msgid "has been removed from your sistem."
+msgstr "ha estat eliminat del teu sistema."
+
+#: ../src/nhopkg.in:2971
+msgid " :: Preparing to backup:"
+msgstr " :: Preparant per copiar:"
+
+#: ../src/nhopkg.in:3015 ../src/nhopkg.in:3385 ../src/nhopkg.in:3606
+#: ../src/nhopkg.in:3753
+msgid " *** Unable to build package."
+msgstr " *** Impossible construir el paquet."
+
+#: ../src/nhopkg.in:3052
+msgid " :: Preparing to build:"
+msgstr " :: Preparant per construir:"
+
+#: ../src/nhopkg.in:3146
+msgid " :: Checking for:"
+msgstr " :: Revisant per a:"
+
+#: ../src/nhopkg.in:3159
+msgid " *** Package check fail!"
+msgstr " *** La revisió del paquet ha fallat!"
+
+#: ../src/nhopkg.in:3161 ../src/nhopkg.in:3168
+msgid "of"
+msgstr "de"
+
+#: ../src/nhopkg.in:3163 ../src/nhopkg.in:3170
+msgid "files are present."
+msgstr "els fitxers són presents."
+
+#: ../src/nhopkg.in:3166
+msgid " --- Package check ok!"
+msgstr " --- Revisió del paquet bé!"
+
+#: ../src/nhopkg.in:3205 ../src/nhopkg.in:3423
+msgid " :: Preparing to create source package:"
+msgstr " :: Preparant per crear el paquet de codi font:"
+
+#: ../src/nhopkg.in:3211 ../src/nhopkg.in:3646
+msgid " - Loading the wizard..."
+msgstr " - Carregant l'asistent..."
+
+#: ../src/nhopkg.in:3220
+msgid "Nhopkg Create Source Wizard"
+msgstr "Nhopkg ha creat l'assistent pel codi font"
+
+#: ../src/nhopkg.in:3221
+msgid ""
+"This wizard helps you to create a (*.src.nho) package from other source "
+"package like (*.tar.bz2)."
+msgstr ""
+"Aquest assistent t'ajudarà a crear el paquet (*.src.nho) des del paquet de "
+"codi font (*.tar.bz2)."
+
+#: ../src/nhopkg.in:3222 ../src/nhopkg.in:3662
+msgid "It is very important to complete all the fields correctly."
+msgstr "És important omplir tots els apartats correctament."
+
+#: ../src/nhopkg.in:3236 ../src/nhopkg.in:3454 ../src/nhopkg.in:3685
+msgid " --- Setting up package sources."
+msgstr " --- Creant el codi font del paquet."
+
+#: ../src/nhopkg.in:3253
+msgid "Add patches into package"
+msgstr "Afegir pegats al paquet"
+
+#: ../src/nhopkg.in:3254
+msgid "You can add patches from your system. Enter real path to patch."
+msgstr "Pots afegir pegats des del teu sistema. Escriu una ruta del directori."
+
+#: ../src/nhopkg.in:3255 ../src/nhopkg.in:3287 ../src/nhopkg.in:3299
+#: ../src/nhopkg.in:3319 ../src/nhopkg.in:3343 ../src/nhopkg.in:3362
+#: ../src/nhopkg.in:3527 ../src/nhopkg.in:3720
+msgid "To end this step press Enter two times."
+msgstr "Per finalitzar aquest pas, apreta dos cops Enter."
+
+#: ../src/nhopkg.in:3257 ../src/nhopkg.in:3271
+msgid "Enter path to patch:"
+msgstr "Escriu la direcció del directori:"
+
+#: ../src/nhopkg.in:3264
+msgid "added to the package."
+msgstr "afegit al paquet."
+
+#: ../src/nhopkg.in:3269
+msgid "not found! Retry."
+msgstr "no s'ha trobat! Tornar a intentar."
+
+#: ../src/nhopkg.in:3275
+msgid " --- Added patches:"
+msgstr " --- Pegats afegits:"
+
+#: ../src/nhopkg.in:3278
+msgid " --- No patches added."
+msgstr " --- No s'han afegit pegats."
+
+#: ../src/nhopkg.in:3282 ../src/nhopkg.in:3522 ../src/nhopkg.in:3715
+msgid "Add external dependencies"
+msgstr "Afegir dependències externes."
+
+#: ../src/nhopkg.in:3283 ../src/nhopkg.in:3523 ../src/nhopkg.in:3716
+msgid ""
+"You can add external dependencies to your package. Dependencies are other "
+"libraries or softwares needed to build, install and run other software. It's "
+"important that they are satisfied."
+msgstr ""
+"Pots afegir dependències externes al paquet. Les dependències són altres "
+"llibreries o programari necessari per construir, instal·lar i fer funcionar "
+"altre programari. És important que siguin satisfetes."
+
+#: ../src/nhopkg.in:3285 ../src/nhopkg.in:3525 ../src/nhopkg.in:3718
+msgid ""
+"To add dependency, enter its name with or without version. Dependency must "
+"be installed by Nhopkg."
+msgstr ""
+"Per afegir dependències, escriu el seu nom amb o sense la versió. Les "
+"dependències han de ser instal·lades pel Nhopkg."
+
+#: ../src/nhopkg.in:3286 ../src/nhopkg.in:3526 ../src/nhopkg.in:3719
+msgid ""
+"You can add too files present in your system needed for the package. Ex: "
+"libc.so.6"
+msgstr ""
+"Pots afegir molts fitxers presents en el teu sistema si són necessàries pel "
+"paquet. Ex: libc.so.6"
+
+#: ../src/nhopkg.in:3297
+msgid "Add compilation commands"
+msgstr "Afegir ordres per a la compilació"
+
+#: ../src/nhopkg.in:3298
+msgid "Here you can enter compilation commands. Ex: ./configure, make."
+msgstr ""
+"Aquí pots escriure les ordres per a la compilació. Ex: ./configure, make."
+
+#: ../src/nhopkg.in:3301
+msgid "Enter compilation commands:"
+msgstr "Escriu les ordres per a la compilació:"
+
+#: ../src/nhopkg.in:3317
+msgid "Add installation commands"
+msgstr "Afegir ordres per a la instal·lació"
+
+#: ../src/nhopkg.in:3318
+msgid ""
+"Here you can enter instalation commands. Ex: make install, install ..., cp -"
+"v ... Files that will be installed in this step will be in the binary "
+"package."
+msgstr ""
+"Aquí pots escriure ordres per a la instal·lació. Ex: make install, "
+"install ..., cp -v ... Els fitxers que seran instal·lats en aquest pas "
+"estaran en l'arxiu binari."
+
+#: ../src/nhopkg.in:3321
+msgid "Enter instalation commands:"
+msgstr "Escriu les ordres d'instal·lació:"
+
+#: ../src/nhopkg.in:3333
+msgid " * You must add at least one command!"
+msgstr " * Escriu alment una comanda d'instal·lació!"
+
+#: ../src/nhopkg.in:3341
+msgid "Add post installation commands"
+msgstr "Afegir ordres per a la post-instal·lació"
+
+#: ../src/nhopkg.in:3342
+msgid ""
+"Here you can enter post instalation commands, as hard links or similar. This "
+"commands will be in the binary package too, but not created files by these "
+"commands. Ex: ln -sf, ldconfig ..."
+msgstr ""
+"Aquí pots escriure les ordres per a la post-instal·lació, com enllaços o "
+"similars. Aquestes ordres estaran en el paquet binari també, però no es "
+"crearan fitxers amb aquestes ordres. Ex: ln -sf, ldconfig ..."
+
+#: ../src/nhopkg.in:3345
+msgid "Enter post instalation commands:"
+msgstr "Escriu ordres per a la post-instal·lació:"
+
+#: ../src/nhopkg.in:3360
+msgid "Add post remove commands"
+msgstr "Afegir ordres post-eliminació"
+
+#: ../src/nhopkg.in:3361
+msgid ""
+"Here you can enter post remove commands, as remove hard links created in "
+"post installation commands or similar. This commands will be ejecuted after "
+"package has been deleted. Ex: rm /etc/ld.so.conf."
+msgstr ""
+"Aquí pots escriure ordres per a la post-eliminació, com enllaços com en les "
+"ordres post-instal·lació o similar. Aquestes ordres seran executades després "
+"que el paquet sigui el·liminat. Ex: rm /etc/ld.so.conf."
+
+#: ../src/nhopkg.in:3364
+msgid "Enter post remove commands:"
+msgstr "Escriu les ordres post-eliminació:"
+
+#: ../src/nhopkg.in:3377 ../src/nhopkg.in:3598
+msgid " - Building source package."
+msgstr " - Construint paquet de codi font."
+
+#: ../src/nhopkg.in:3413
+msgid "Automated package creation."
+msgstr "Creació del paquet automatitzada."
+
+#: ../src/nhopkg.in:3414
+msgid ""
+"This option don't get any type of dependencies for the package and could "
+"fail in some packages. If you want to create a good package you sould use --"
+"create-source option."
+msgstr ""
+"Aquesta opció no obté cap tipus de dependències per al paquet i podria "
+"fallar en alguns paquets. Si vols crear un bon paquet podries utilitzar la "
+"opció --create-source"
+
+#: ../src/nhopkg.in:3433
+msgid " --- Getting user and package data."
+msgstr " --- Obtenint usuari i dades del paquet."
+
+#: ../src/nhopkg.in:3580
+msgid " *** Unable to add installation comands."
+msgstr " *** Impossible d'afegir ordres d'instal·lació."
+
+#: ../src/nhopkg.in:3640
+msgid " :: Prepating to convert .tgz package into .nho package:"
+msgstr " :: Preparant per convertir un paquet .tgz a un paquet .nho:"
+
+#: ../src/nhopkg.in:3660
+msgid "Nhopkg tgz2nho"
+msgstr "Nhopkg tgz2nho"
+
+#: ../src/nhopkg.in:3661
+msgid ""
+"This wizard helps you to convert Slackware package (*.tgz) into Nhopkg "
+"binary package (*.nho)."
+msgstr ""
+"Aquest assistent t'ajudarà a convertir un paquet de Slackware (*.tgz) a un "
+"paquet binari de Nhopkg (*.nho)."
+
+#: ../src/nhopkg.in:3774
+msgid " :: Creating software repository on:"
+msgstr " :: Creant dipòsit de programari a:"
+
+#: ../src/nhopkg.in:3787
+msgid " - Adding"
+msgstr " - Afegint"
+
+#: ../src/nhopkg.in:3792 ../src/nhopkg.in:3804
+msgid " * One or more packages aren't valid."
+msgstr " * Un o més paquets són invàlids."
+
+#: ../src/nhopkg.in:3814 ../src/nhopkg.in:3820
+msgid " *** Unable to create repository."
+msgstr " ***Impossible crear el dipòsit."
+
+#: ../src/nhopkg.in:3829
+msgid " --- Your new repository has been created sucesful."
+msgstr " --- El teu nou dipòsit ha estat creat satisfactòriament."
+
+#: ../src/nhopkg.in:3831
+msgid " *** Can't find any .nho package in this directory."
+msgstr " *** No es pot trobar cap paquet .nho en aquest directori."
+
+#: ../src/nhopkg.in:3855
+msgid " :: Updating from repository:"
+msgstr " :: Actualitzant del dipòsit:"
+
+#: ../src/nhopkg.in:3873 ../src/nhopkg.in:3883 ../src/nhopkg.in:3891
+msgid " * Unable to download files from repository."
+msgstr " * Impossible descarregar fitxers del dipòsit."
+
+#: ../src/nhopkg.in:3877
+msgid " * Repository already is updated."
+msgstr " * El dipòsit ja està actualitzat."
+
+#: ../src/nhopkg.in:3889
+msgid " - Downloading configuration files from server."
+msgstr " - Descarregant fitxers del servidor."
+
+#: ../src/nhopkg.in:3892
+msgid " --- Downloading files database."
+msgstr " --- Descarregant la base de dades dels fitxers."
+
+#: ../src/nhopkg.in:3894 ../src/nhopkg.in:3897
+msgid " *** Unable to download files from repository."
+msgstr " *** Impossible descarregar fitxers del dipòsit."
+
+#: ../src/nhopkg.in:3895
+msgid " --- Downloading packages database."
+msgstr " --- Descarregant base de dades dels paquets."
+
+#: ../src/nhopkg.in:3908
+msgid " - Repository database updated sucesful."
+msgstr " - Base de dades del dipòsit actualitzada satisfactòriament."
+
+#: ../src/nhopkg.in:3929
+msgid " - Cleaning up cache data."
+msgstr " - Netejant les dades de la memòria cau."
+
+#: ../src/nhopkg.in:3932
+msgid " * Unable to clean up cache."
+msgstr " *  Impossible netejar les dades de la memòria cau."
+
+#: ../src/nhopkg.in:3934
+msgid " - Cleaning up build directory."
+msgstr " - Netejant el directori de construcció."
+
+#: ../src/nhopkg.in:3937
+msgid " * Unable to clean up build directory."
+msgstr " * Impossible netejar les dades de la memòria cau."
+
+#: ../src/nhopkg.in:3960
+msgid " :: Searching for:"
+msgstr " :: Buscant:"
+
+#: ../src/nhopkg.in:3965
+msgid " - Results found:"
+msgstr " - Resultats trobats:"
+
+#: ../src/nhopkg.in:3968 ../src/nhopkg.in:4009 ../src/nhopkg.in:4051
+msgid " * No results found."
+msgstr " * No s'ha trobat res."
+
+#: ../src/nhopkg.in:3976 ../src/nhopkg.in:4018 ../src/nhopkg.in:4060
+#: ../src/nhopkg.in:4074
+msgid "Package:"
+msgstr "Paquet:"
+
+#: ../src/nhopkg.in:3978 ../src/nhopkg.in:4020 ../src/nhopkg.in:4062
+#: ../src/nhopkg.in:4076
+msgid "Description:"
+msgstr "Descripció:"
+
+#: ../src/nhopkg.in:4005
+msgid " :: Listing packages on repository:"
+msgstr " :: Llistant paquets del dipòsit:"
+
+#: ../src/nhopkg.in:4047
+msgid " :: Listing installed packages."
+msgstr " :: Llistant paquets instal·lats."
+
+#: ../src/nhopkg.in:4092 ../src/nhopkg.in:4129 ../src/nhopkg.in:4147
+#: ../src/nhopkg.in:4200 ../src/nhopkg.in:4219
+msgid " --- You can see the log on"
+msgstr " --- Pots veure el registre"
+
+#: ../src/nhopkg.in:4095 ../src/nhopkg.in:4132 ../src/nhopkg.in:4150
+#: ../src/nhopkg.in:4203 ../src/nhopkg.in:4222
+msgid " *** Unable to write log file. Have you write permissions?"
+msgstr ""
+" *** Impossible escriure el fitxer de registre. Tens els permisos necessaris?"
+
+#: ../src/nhopkg.in:4137 ../src/nhopkg.in:4155
+msgid " :: Package info for:"
+msgstr " :: Informació per al paquet:"
+
+#: ../src/nhopkg.in:4193 ../src/nhopkg.in:4212
+msgid ""
+" * Muah Muah Muah!! Seems that maintainer of this package don't know how to "
+"create a good package or had a problem during installation."
+msgstr ""
+" * Llamps i trons!! Sembla que el qui manté aquest paquet no sap com crear "
+"un bon paquet o ha tingut problemes durant la instal·lació."
+
+#: ../src/nhopkg.in:4261
+msgid " * You need to give some command."
+msgstr " * Necessites donar algunes ordres."

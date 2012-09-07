@@ -1,0 +1,16 @@
+ToDo List for Nhopkg (the way to Nhopkg 0.6)
+============================================
+
+If you want to contribute with Nhopkg development, send me a mail (projectnhoax@gmail.com).
+
+	* Search package dependencies in configure.ac script or similar file (auto-package option).
+	* Less time to create binary package.
+	* Add support to use local (/home/user/.nhopkg/nhopkg.conf) configuration file.
+	* Progress bar for downloads (without using wget progress bar).
+	* Option to add conflicts packages.
+	* Search orphan, obsolete and newest packages.
+	* rpm2nho
+	* deb2nho
+	* PKGBUILD2nhoid (for archlinux packages)
+	* ...
+	* A lot of things.

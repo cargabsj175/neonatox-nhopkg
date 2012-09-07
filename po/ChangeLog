@@ -1,0 +1,27 @@
+2009-04-29 ====== Nhopkg 0.5 is released ======
+
+* fr.po: Added French translation (from Launchpad).
+* ca.po: Added Catalan translation (from Launchpad).
+* es_ES.po: Added Spanish translation of Spain.
+* es.po: Changed name of nhopkg-es.po.
+* Makefile.in.in: New file, from gettext-0.17.
+* boldquot.sed: New file, from gettext-0.17.
+* en@boldquot.header: New file, from gettext-0.17.
+* en@quot.header: New file, from gettext-0.17.
+* insert-header.sin: New file, from gettext-0.17.
+* quot.sed: New file, from gettext-0.17.
+* remove-potcdate.sin: New file, from gettext-0.17.
+* Rules-quot: New file, from gettext-0.17.
+* POTFILES.in: New file.
+
+2009-02-01 ====== Nhopkg 0.4.2 is released ======
+* no language added.
+
+2009-01-22 ====== Nhopkg 0.4.1 is released ======
+* nhopkg-ca.po: Added Catalan translation.
+
+2008-09-26 ====== Nhopkg 0.4 is released ======
+* no language added.
+
+2008-09-08 ====== Nhopkg 0.4-rc1 is released ======
+* nhopkg-es.po: Added Spanish translation.

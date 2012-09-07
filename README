@@ -1,0 +1,77 @@
+General Information
+===================
+
+This is version 0.5.1 of Nhopkg. Nhopkg is an universal package manager. It can be used in any GNU/linux distribution and uses .nho  packages (binary) and .src.nho  packages (source).
+
+With  Nhopkg  you  can install, build and remove packages. Checks their dependencies and automatically download and install them.
+
+This new version have some features:
+
+	* Fiexd some bugs.
+	* Dependencies manager.
+	* Repository support.
+	* Auto-package option to create automaticaly a source package.
+	* New nhoid file (now is not needed nho.source or nho.binary).
+	* Compression of log files (bzip2).
+	* Compression of files with package files (bzip2).
+	* Added package mime-types support.
+
+Nhopkg is released under the GNU General Public License (GPL) version 3, see the file 'COPYING' for more information.
+
+The official web site is:
+
+	http://www.nhopkg.org
+
+You can download the latest nhopkg tarball from:
+
+	http://sourceforge.net/projects/nhopkg/files/
+
+Information about nhopkg mailing lists can be found at
+
+	http://lists.sourceforge.net/lists/listinfo/nhopkg-svn
+
+Installation
+============
+
+Nhopkg requires bash, du, ln, printf, date, uname, md5sum, wget, basename, cat, bzcat, grep, bzgrep, head, tail, find, locate, updatedb, tar and bzip2.
+
+Simple install procedure:
+
+	$ tar jxvf nhopkg-0.5.1.tar.bz2	# unpack the tarball.
+	$ cd nhopkg-0.5.1		# change to the toplevel directory.
+	$ ./configure			# run the configure script.
+	$ make				# build nhopkg.
+	[ As root ]
+	# make install			# install nhopkg.
+
+After installed, you need to run `nhopkg --update-db` to initialize data base.
+
+See the file 'INSTALL' for more detailed information.
+
+How to report bugs
+==================
+
+Bugs should be reported to the Nhopkg Sourceforge project web page (http://sourceforge.net/tracker/?group_id=223020). You will need to create an account.
+
+In the bug report please include:
+
+* Information about your system.
+
+	- What operating system and version.
+	- What version of needed dependencies by Nhopkg are installed.
+	- Anything else you think is relevant.
+
+* How to reproduce the bug. 
+
+* If the bug was a crash, the exact text that was printed out when the crash occurred.
+
+See the file BUGS for the list of known bugs of Nhopkg.
+
+
+Documentation
+=============
+You can see more documentation on http://nhopkg.org/doc-index.html and http://nhopkg.wiki.sourceforge.net.
+
+
+Nhopkg team.
+

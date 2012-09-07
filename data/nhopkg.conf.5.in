@@ -1,0 +1,125 @@
+.\"----------------------------------------------------------------
+.\" nhopkg.conf.5 - nhopkg.conf man page
+.\"----------------------------------------------------------------
+.\" Copyright (C) 2008-2009 Jaime Gil de Sagredo <projectnhoax@gmail.com>
+.\" For more information visit  http://nhopkg.sourceforge.net
+.\"----------------------------------------------------------------
+.\"
+.TH nhopkg.conf "5" "@RELEASEDATE@" "@PACKAGE@" "System"
+.SH NAME
+\fBnhopkg.conf\fP \- configuration file for
+.B nhopkg(8).
+.SH SYNOPSIS
+/etc/nhopkg/nhopkg.conf
+.SH DESCRIPTION
+.B nhopkg
+uses a configuration file at
+.B /etc/nhopkg/nhopkg.conf.
+
+.B nhopkg.conf
+provides default configurations for users, and they can be changed in this file or in the command line.
+.SH EXAMPLE
+.sp
+.RS 4
+.nf
+
+\.ft C
+# [main]
+prefix=/usr
+SYSCONFDIR=/etc
+NHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
+DATADIR=/usr/share
+NHOPKG_DATADIR=${DATADIR}/nhopkg
+LOCALSTATEDIR=/var/lib
+NHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
+TMPDIR=/tmp
+TEMPLATE_TMPDIR=".nhopkg.XXXXXXXXXX"
+BUILDIR=/usr/src
+NHOPKG_BUILDIR=${BUILDIR}/nhopkg
+NHOPKG_LOCKFILE=/var/lock/nhopkg
+
+[...]
+\.ft
+
+.fi
+.RE
+.SH OPTIONS
+
+.SS [main]
+
+.TP
+\fBprefix=nhopkg_prefix\fR
+Set the nhopkg prefix.
+.TP
+\fBSYSCONFDIR=nhopkg_sysconfdir\fR
+Set the nhopkg configuration directory.
+.TP
+\fBNHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
+Set the nhopkg configuration directory.
+.TP
+\fBDATADIR=nhopkg_datadir
+Set the nhopkg data directory.
+.TP
+\fBNHOPKG_DATADIR=${DATADIR}/nhopkg
+Set the nhopkg data directory.
+.TP
+\fBLOCALSTATEDIR=nhopkg_localstatedir
+Set the nhopkg local state directory.
+.TP
+\fBNHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
+Set the nhopkg local state directory.
+.TP
+\fBTMPDIR=nhopkg_tmpdir
+Set the nhopkg temporal directory.
+.TP
+\fBTEMPLATE_TMPDIR=nhopkg_template_tmpdir
+Set the nhopkg template for temporal directory.
+.TP
+\fBBUILDIR=nhopkg_build_dir
+Set the nhopkg build directory.
+.TP
+\fBNHOPKG_BUILDIR=${BUILDIR}/nhopkg
+Set the nhopkg build directory.
+.TP
+\fBNHOPKG_LOCKFILE=nhopkg_lock_file
+Set the nhopkg lock file.
+
+.SS [server]
+
+.TP
+\fBNHOPKG_REPO=server_repository\fR
+Set default repository for nhopkg.
+
+.SS [language support]
+
+.TP
+\fBNHOPKG_GETTEXT=yes_or_no\fR
+Set if nhopkg will use language support.
+.TP
+\fBTEXTDOMAIN=nhopkg\fR
+Set TEXTDOMAIN for language support with gettext. Don't edit this option.
+.TP
+\fBTEXTDOMAINDIR=/usr/share/locale\fR
+Set TEXTDOMAINDIR for language support with gettext. Don't edit this option.
+
+.SS [create source package]
+
+.TP
+\fBFIND_DIRS=dirs\fR
+FIND_DIRS contains directories where nhopkg looking for files installed.
+.TP
+\fBNOUPGRADE_FILES=files\fR
+Add files that you think mustn't be in a binary package.
+.TP
+\fBNO_DIRS_IN_DB=dirs\fR
+Dirs that you don't want in your Data Base.
+.LP
+.SH SEE ALSO
+nhopkg(8)
+.LP
+.SH BUGS
+If you find a bug, please report it at http://sourceforge.net/tracker2/?group_id=223020.
+.SH AUTHORS
+Jaime Gil de Sagredo (jaimegildesagredo@gmail.com)
+See the AUTHORS file for additional contributors.
+.TP
