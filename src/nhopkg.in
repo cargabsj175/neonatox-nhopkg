@@ -156,31 +156,31 @@ upmime="/usr/bin/update-mime-database"
 upmandb="/usr/bin/mandb"
 if [ -f $gschemas ]; then
 	echo " --- Generating Schemas."
-	$gschemas /usr/share/glib-2.0/schemas
+	$gschemas /usr/share/glib-2.0/schemas 2> /dev/null
 else
 	noemptyfuncs
 fi
 if [ -f $upicon ]; then
-	echo " --- Updating icons database."
-	$upicon  -q -t -f /usr/share/icons/hicolor
+	echog " --- Updating icons database."
+	$upicon  -q -t -f /usr/share/icons/hicolor 2> /dev/null
 else
 	noemptyfuncs
 fi
 if [ -f $updesktop ]; then
-	echo " --- Updating desktop database."
-	$updesktop -q
+	echog " --- Updating desktop database."
+	$updesktop -q 2> /dev/null
 else
 	noemptyfuncs
 fi
 if [ -f $upmime ]; then
-	echo " --- Updating mime database."
-	$upmime /usr/share/mime > /dev/null
+	echog " --- Updating mime database."
+	$upmime /usr/share/mime 2> /dev/null
 else
 	noemptyfuncs
 fi
 if [ -f $upmandb ]; then
-	echo " --- Updating man database."
-	$upmandb -q > /dev/null
+	echog " --- Updating man database."
+	$upmandb -q 2> /dev/null
 else
 	noemptyfuncs
 fi

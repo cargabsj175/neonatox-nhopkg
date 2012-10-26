@@ -24,6 +24,26 @@ msgstr ""
 msgid " - Loading default Nhopkg configuration file..."
 msgstr ""
 
+#: ../src/nhopkg.in:158
+msgid " --- Generating Schemas."
+msgstr ""
+
+#: ../src/nhopkg.in:164
+msgid " --- Updating icons database."
+msgstr ""
+
+#: ../src/nhopkg.in:170
+msgid " --- Updating desktop database."
+msgstr ""
+
+#: ../src/nhopkg.in:176
+msgid " --- Updating mime database."
+msgstr ""
+
+#: ../src/nhopkg.in:182
+msgid " --- Updating man database."
+msgstr ""
+
 #: ../src/nhopkg.in:161
 msgid "Great Work your LFS! ;-)"
 msgstr ""
