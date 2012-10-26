@@ -155,7 +155,7 @@ updesktop="/usr/bin/update-desktop-database"
 upmime="/usr/bin/update-mime-database"
 upmandb="/usr/bin/mandb"
 if [ -f $gschemas ]; then
-	echo " --- Generating Schemas."
+	echog " --- Generating Schemas."
 	$gschemas /usr/share/glib-2.0/schemas 2> /dev/null
 else
 	noemptyfuncs
@@ -3129,13 +3129,13 @@ case "${NHOPKG_OPTION}" in
 			fi
 			nhopkg_ask_follow
 			# If NO is select exits.
-			check_if_ok " * Package will not be removed from your sistem."
+			check_if_ok " * Package will not be removed from your system."
 			## 5. Remove package and inverse dependencies.
 			echog " - Removing package and inverse dependencies."
 			remove_package_all			
 			## 6. Clean up.
 			echo -n " - ${pkgname}-${pkgversion}-${pkgrevision} "
-			echog "has been removed from your sistem."
+			echog "has been removed from your system."
 		done
 		# If updatedb is here, Nhopkg will be fast.
 		update_local_db
