@@ -144,6 +144,48 @@ function noemptyfuncs()
 	return 0 # Best than others.
 }
 # ---------------------------------------------------------
+# shooter_updates()
+# Description: This function generates schemas, update database icons, desktop and mime types.
+# Parameters: updates
+# ---------------------------------------------------------
+shooter_updates(){
+gschemas="/usr/bin/glib-compile-schemas"
+upicon="/usr/bin/gtk-update-icon-cache"
+updesktop="/usr/bin/update-desktop-database"
+upmime="/usr/bin/update-mime-database"
+upmandb="/usr/bin/mandb"
+if [ -f $gschemas ]; then
+	echo " --- Generating Schemas."
+	$gschemas /usr/share/glib-2.0/schemas
+else
+	noemptyfuncs
+fi
+if [ -f $upicon ]; then
+	echo " --- Updating icons database."
+	$upicon  -q -t -f /usr/share/icons/hicolor
+else
+	noemptyfuncs
+fi
+if [ -f $updesktop ]; then
+	echo " --- Updating desktop database."
+	$updesktop -q
+else
+	noemptyfuncs
+fi
+if [ -f $upmime ]; then
+	echo " --- Updating mime database."
+	$upmime /usr/share/mime > /dev/null
+else
+	noemptyfuncs
+fi
+if [ -f $upmandb ]; then
+	echo " --- Updating man database."
+	$upmandb -q > /dev/null
+else
+	noemptyfuncs
+fi
+}
+# ---------------------------------------------------------
 # print_background_title()
 # Description: This function prints a title.
 # Parameters: message
@@ -1378,8 +1420,10 @@ function bin_install_setting_up()
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		npostinstall
+		shooter_updates
 	else
 		npostinstall &> /dev/null
+		shooter_updates
 	fi
 }
 ## Function bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
@@ -1631,8 +1675,10 @@ function remove_package_all()
 	# Configure desinstallation.
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		npostremove
+		shooter_updates
 	else
 		npostremove 2> /dev/null
+		shooter_updates
 	fi
 	
 }
