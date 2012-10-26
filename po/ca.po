@@ -11,6 +11,7 @@ msgstr ""
 "PO-Revision-Date: 2009-04-09 22:05+0000\n"
 "Last-Translator: animarval <animarval@gmail.com>\n"
 "Language-Team: Catalan <ca@li.org>\n"
+"Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -24,6 +25,30 @@ msgstr " * No s'ha pogut trobar l'arxiu de configuració de Nhopkg!"
 #: ../src/nhopkg.in:38
 msgid " - Loading default Nhopkg configuration file..."
 msgstr " - Carregant l'arxiu de configureció per defecte de Nhopkg..."
+
+#: ../src/nhopkg.in:158
+msgid " --- Generating Schemas."
+msgstr ""
+
+#: ../src/nhopkg.in:164
+#, fuzzy
+msgid " --- Updating icons database."
+msgstr " --- Actualitzant base de dades:"
+
+#: ../src/nhopkg.in:170
+#, fuzzy
+msgid " --- Updating desktop database."
+msgstr " --- Actualitzant base de dades:"
+
+#: ../src/nhopkg.in:176
+#, fuzzy
+msgid " --- Updating mime database."
+msgstr " --- Actualitzant base de dades:"
+
+#: ../src/nhopkg.in:182
+#, fuzzy
+msgid " --- Updating man database."
+msgstr " --- Actualitzant base de dades:"
 
 #: ../src/nhopkg.in:161
 msgid "Great Work your LFS! ;-)"
