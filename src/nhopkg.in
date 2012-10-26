@@ -693,9 +693,9 @@ function check_if_repository_package()
 {
 	# Checks if this dependency are on repository.
 	get_good_file_name "$(echo "${FILE_DEP}" | awk '{print $1}')"
-	local MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
+	local MATCHPACKAGE=$(xzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
 	MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
-	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .bz2)
+	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .xz)
 	# Add dependency to install
 	# Check that dependency isn't already in list.
 	if [[ -n "${MATCHPACKAGE}" ]]; then
@@ -732,9 +732,9 @@ function check_if_repository_optional_package()
 {
 	# Checks if this dependency are on repository.
 	get_good_file_name "$(echo "${FILE_DEP}" | awk '{print $1}')"
-	local MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
+	local MATCHPACKAGE=$(xzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"* 2> /dev/null)
 	MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
-	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .bz2)
+	MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .xz)
 	# Add dependency to install
 	# Check that dependency isn't already in list.
 	if [[ -n "${MATCHPACKAGE}" ]]; then
@@ -1280,7 +1280,7 @@ function installoptdeps()
 # Install (binary package) functions
 #======================================4
 ## Function bin_install_progress(). Prints a progress bar for the installation process.
-# Usage: bin_install_progress command (Ex: tar xvfP -) logfile tarfile (Ex: data.tar.bz2) filename (Package name. Ex: ${pkgname}) installedsize (Ex: ${pkginstalledsize})
+# Usage: bin_install_progress command (Ex: tar xvfP -) logfile tarfile (Ex: data.tar.xz) filename (Package name. Ex: ${pkgname}) installedsize (Ex: ${pkginstalledsize})
 bin_install_progress()
 {
 	local COMMAND="${1}"
@@ -1296,7 +1296,7 @@ bin_install_progress()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	(bzcat ${TAR_FILE}) | (
+	(xzcat ${TAR_FILE}) | (
 	while (( ${UNTAR_SIZE} < ${INSTALLED_SIZE} ));
 	do
 		dd bs=512 count=2048 2>/dev/null # || return 1
@@ -1339,26 +1339,26 @@ bin_install_progress()
 	echo >&2
 	) | ${COMMAND}  2>/dev/null > ${LOG_FILE}
 }
-## Funtion bin_install(). Installs binary package form data.tar.bz2.
+## Funtion bin_install(). Installs binary package form data.tar.xz.
 # Usage: bin_install (without arguments)
 function bin_install()
 {
 	echogn " --- Installing"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-	if [ -f "${NHOPKG_TMPDIR}/data.tar.bz2" ]; then
+	if [ -f "${NHOPKG_TMPDIR}/data.tar.xz" ]; then
 		# Checks if --root or --root= option are selected.
 		if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
-			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.xz" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 			# Checks if all is good.
 			check_if_ok " *** Failed to install package."
 		else
-			# Checks if data.tar.bz2 is preceded by / or not.
-			if [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
-				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			# Checks if data.tar.xz is preceded by / or not.
+			if [[ $(tar JtfP "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null | head -1 | grep '^/') ]]; then
+				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.xz" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			else
-				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.bz2" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.xz" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			fi
@@ -1390,7 +1390,7 @@ function bin_install_create_config_files()
 		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		bzip2 "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		xz "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
@@ -1406,7 +1406,7 @@ function bin_install_create_config_files()
 		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		bzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		xz "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
@@ -1435,13 +1435,13 @@ function getpackage()
 		pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 	else
 		get_good_file_name "${CASEPACKAGE}"
-		MATCHPACKAGE=$(bzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.bz2 2> /dev/null)
+		MATCHPACKAGE=$(xzgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.xz 2> /dev/null)
 		for package in ${MATCHPACKAGE};
 		do
 			if [[ -z "${MATCHPACKAGES}" ]]; then
-				MATCHPACKAGES=$(basename "${package}" .bz2)
+				MATCHPACKAGES=$(basename "${package}" .xz)
 			else
-				MATCHPACKAGES="${MATCHPACKAGES} $(basename "${package}" .bz2)"
+				MATCHPACKAGES="${MATCHPACKAGES} $(basename "${package}" .xz)"
 			fi
 		done
 		if [[ -n "${MATCHPACKAGES}" ]]; then
@@ -1537,9 +1537,9 @@ function check_inverse_dependencies()
 			for depfile in ${DEPFILES};
 			do
 				# Could fail.
-				#RETURN=$(bzgrep -c "${depfile#/*/*/}" "${NHOPKG_LOCALSTATEDIR}/files/${1}.bz2")
+				#RETURN=$(xzgrep -c "${depfile#/*/*/}" "${NHOPKG_LOCALSTATEDIR}/files/${1}.xz")
 				get_good_file_name "${depfile}"
-				RETURN=$(bzgrep -c "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/files/${1}.bz2")
+				RETURN=$(xzgrep -c "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/files/${1}.xz")
 				if [[ "${RETURN}" != "0" ]]; then
 					if [[ -z "${INVERSEDEPS[@]}" ]]; then
 						INVERSEDEPS=("${package}")
@@ -1568,7 +1568,7 @@ function check_inverse_dependencies()
 function remove_package()
 {
 	# Progress Bar variables.
-	TOTAL_FILES=$(bzgrep -vc "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2")
+	TOTAL_FILES=$(xzgrep -vc "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz")
 	DELETED_FILES="0"
 	SHELL_COLUMS=$(tput cols)
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-22))
@@ -1578,7 +1578,7 @@ function remove_package()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	for removefiles in $(bzgrep -v "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2")
+	for removefiles in $(xzgrep -v "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz")
 	do
 		# Check that file begin with /.
 		if  [[ $(echo "${removefiles}" | grep "^/") ]]; then
@@ -1644,7 +1644,7 @@ function remove_package_config_files()
 	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
 	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
 	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-	rm -f "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+	rm -f "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz"
 }
 #======================================7
 # Build (packages) functions.
@@ -1654,11 +1654,11 @@ function remove_package_config_files()
 function build_prepare()
 {
 	mkdir -p "${NHOPKG_BUILDIR}"
-	tar jxfC "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" "${NHOPKG_BUILDIR}" &> /dev/null
+	tar JxfC "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" "${NHOPKG_BUILDIR}" &> /dev/null
 	check_if_ok " * The selected package is not valid."
 	# Hide nhoid file.
 	mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
-	rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2"
+	rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz"
 	# Checks if there are any patch.
 	if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
 		echog " --- Additional files in package (patches):"
@@ -1760,7 +1760,7 @@ function check_build_package_install()
 		exit 1
 	fi
 }
-## Function build_save_log_files(). Save logs on logs/ directory and compress (bzip2).
+## Function build_save_log_files(). Save logs on logs/ directory and compress (xz).
 # Usage: build_save_log_files (without arguments)
 function build_save_log_files()
 {
@@ -1768,13 +1768,13 @@ function build_save_log_files()
 	echo " ${NHOPKG_LOCALSTATEDIR}/logs"
 	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
 		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
-		# Compress with bzip2
-		bzip2 "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
+		# Compress with xz
+		xz "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
 	fi
 	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
 		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
-		# Compress with bzip2
-		bzip2 "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
+		# Compress with xz
+		xz "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
 	fi
 }
 ## Function build_search_for_files(). Search for files installed by package.
@@ -1867,11 +1867,11 @@ function build_make_binary_package()
 	# Package and compress files.
 	echog " --- Compressing package."
 	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
-		tar cpjP --files-from="${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.bz2"
+		tar cpJP --files-from="${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.xz"
 		# Se dirige al directorio temporal y empaqueta.
 		cd "${NHOPKG_TMPDIR}"
-		# Gets md5 sum from data.tar.bz2
-		PACKAGEMD5=$(md5sum "data.tar.bz2")
+		# Gets md5 sum from data.tar.xz
+		PACKAGEMD5=$(md5sum "data.tar.xz")
 		# Calcule build and install time.
 		get_build_time
 		# Touch new nhoid.
@@ -2092,7 +2092,7 @@ function get_csw_build_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2107,7 +2107,7 @@ function get_csw_build_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2155,7 +2155,7 @@ function get_csw_optional_build_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2170,7 +2170,7 @@ function get_csw_optional_build_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2218,7 +2218,7 @@ function get_csw_post_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				if [[ -f "${PACKAGEDEPRAND}" ]]; then
@@ -2235,7 +2235,7 @@ function get_csw_post_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2283,7 +2283,7 @@ function get_csw_optional_post_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				if [ -f "${PACKAGEDEPRAND}" ]; then
@@ -2300,7 +2300,7 @@ function get_csw_optional_post_dependencies()
 			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
 			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
-			PACKAGEDEPSRAND=$(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" | sort -R | head -10)
+			PACKAGEDEPSRAND=$(xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" | sort -R | head -10)
 			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
 			do
 				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
@@ -3141,17 +3141,17 @@ case "${NHOPKG_OPTION}" in
 			echo >> "${NHOPKG_TMPDIR}/nhoid"
 			NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" | sed -e 's@:npostremove() {@@')
 			tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" >> "${NHOPKG_TMPDIR}/nhoid"
-			# Compress files in data.tar.bz2
-			bunzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+			# Compress files in data.tar.xz
+			xz -d "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz"
 			# Check that files begin with /.
 			if [[ $(grep -m 1 "^/" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}") ]]; then
-				tar cpjP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null
+				tar cpJP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null
 			else
 				cd /
-				tar cpjP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null
+				tar cpJP --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" > "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null
 				cd ${PWD}
 			fi
-			bzip2 "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+			xz "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 			## 4. Compress new package.
 			# Building binary package.
 			cd "${NHOPKG_TMPDIR}"
@@ -3296,9 +3296,9 @@ case "${NHOPKG_OPTION}" in
 			echogn " :: Checking for:"
 			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
 			# Set the 100% percent.
-			LISTED_FILES_NUM=$(bzgrep -vc '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null)
+			LISTED_FILES_NUM=$(xzgrep -vc '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" 2> /dev/null)
 			CHECKED_FILES_NUM=0
-			for checked_file in $(bzgrep -v '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null);
+			for checked_file in $(xzgrep -v '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" 2> /dev/null);
 			do
 				if [[ -e "${checked_file}" ]]; then
 					((CHECKED_FILES_NUM++))
@@ -3368,7 +3368,7 @@ case "${NHOPKG_OPTION}" in
 			## 3. Start the wizard
 			#======================================================================================================
 			print_background_title "Nhopkg Create Source Wizard"
-			echog "This wizard helps you to create a (*.src.nho) package from other source package like (*.tar.bz2)."
+			echog "This wizard helps you to create a (*.src.nho) package from other source package like (*.tar.xz)."
 			echog "It is very important to complete all the fields correctly."
 			echo
 			#======================================================================================================
@@ -3390,10 +3390,10 @@ case "${NHOPKG_OPTION}" in
 			rm -Rf "${NHOPKG_TMPDIR}/source"
 			# Compress and clean up.
 			cd "${NHOPKG_TMPDIR}"
-			tar jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			tar Jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.xz" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
 			rm -Rf "${PACKAGENAME}-${PACKAGEVERSION}"
 			# Get MD5 sum of package.
-			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2")
+			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.xz")
 			cd "${CWD}"
 			# Creates nhoid file.
 			csw_make_nhoid_file
@@ -3608,7 +3608,7 @@ case "${NHOPKG_OPTION}" in
 			rm -Rf "${NHOPKG_TMPDIR}/source"
 			# Compress and clean up.
 			cd "${NHOPKG_TMPDIR}"
-			tar jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
+			tar Jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.xz" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
 			# Get package license --> LICENSE or COPYING file.
 			for LICENSE_FILE in COPYING LICENSE COPYING.txt LICENSE.txt;
 			do
@@ -3648,7 +3648,7 @@ case "${NHOPKG_OPTION}" in
 			# Get package arch
 			PACKAGEARCH=$(uname -m)
 			# Get MD5 sum of package.
-			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.bz2")
+			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.xz")
 			cd "${CWD}"
 			# If not selected Recursive option, ask for some data of package.
 			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
@@ -3834,9 +3834,9 @@ case "${NHOPKG_OPTION}" in
 			echog " --- Setting up package sources."
 			rm -Rf "${NHOPKG_TMPDIR}/data/install"
 			cd "${NHOPKG_TMPDIR}/data"
-			tar cpjP * > ../data.tar.bz2 2> /dev/null
+			tar cpJP * > ../data.tar.xz 2> /dev/null
 			cd ../
-			PACKAGEMD5=$(md5sum "data.tar.bz2")
+			PACKAGEMD5=$(md5sum "data.tar.xz")
 			# Vuelve al directorio inicial y elimina restos de los sources.
 			cd "${CWD}"
 			rm -R "${NHOPKG_TMPDIR}/data"
@@ -3949,7 +3949,7 @@ case "${NHOPKG_OPTION}" in
 				rm "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
 				# Creates core.files.tar.gz
 				cd "${CWD}"
-				tar xfO "${REPO_DIR}/${nhopackage}" | tar jPt 2> /dev/null > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}"
+				tar xfO "${REPO_DIR}/${nhopackage}" | tar JPt 2> /dev/null > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}"
 				check_if_ok " * One or more packages aren't valid."
 				# Package!
 				cd "${NHOPKG_TMPDIR}"
@@ -3959,12 +3959,12 @@ case "${NHOPKG_OPTION}" in
 			## 4. Setting up software repository.
 			cd "${CWD}"
 			# Gzip core.files.tar.gz and core.packages.tar.gz
-			bzip2 "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
+			xz "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
 			check_if_ok " *** Unable to create repository."
-			# Move core.files.tar.bz2 and core.packages.tar.bz2 to repository directory.
-			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.bz2" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.bz2" ]]; then
-				mv "${NHOPKG_TMPDIR}/core.files.tar.bz2" "${REPO_DIR}"
-				mv "${NHOPKG_TMPDIR}/core.packages.tar.bz2" "${REPO_DIR}"
+			# Move core.files.tar.xz and core.packages.tar.xz to repository directory.
+			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.xz" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.xz" ]]; then
+				mv "${NHOPKG_TMPDIR}/core.files.tar.xz" "${REPO_DIR}"
+				mv "${NHOPKG_TMPDIR}/core.packages.tar.xz" "${REPO_DIR}"
 			else
 				echog " *** Unable to create repository." >&2
 				cleanup_tmp_dir
@@ -3973,7 +3973,7 @@ case "${NHOPKG_OPTION}" in
 			echo $(date -u +%s) > "${REPO_DIR}/lastsync"
 			cd "${REPO_DIR}"
 			du  *[0-9].nho > content.db
-			bzip2 content.db
+			xz content.db
 			cd "${CWD}"
 			echog " --- Your new repository has been created sucesful."
 		else
@@ -4036,28 +4036,28 @@ case "${NHOPKG_OPTION}" in
 		fi
 		## 3. Download configure files from repository.
 		echog " - Downloading configuration files from server."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.bz2"
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.xz"
 		check_if_ok " * Unable to download files from repository."
 		echog " --- Downloading files database."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.bz2"
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.xz"
 		check_if_ok " *** Unable to download files from repository."
 		echog " --- Downloading packages database."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.bz2"
+		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.xz"
 		check_if_ok " *** Unable to download files from repository."
 		## 4. Uncompressing files downloaded from server on system.
-		mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.bz2"
-		tar jxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
-		tar jxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.bz2" "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
-		# Bzip2 files on /repo/files
+		mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.xz" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.xz"
+		tar JxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.xz" "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
+		tar JxfC "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.xz" "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
+		# xz files on /repo/files
 		for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files")
 		do
-			bzip2 "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+			xz "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
 		done
 		mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
 		echog " - Repository database updated sucesful."
 		## 5. Clean up and exit.
-		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.bz2"
-		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.bz2"
+		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.xz"
+		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.xz"
 		exit 0
 	;;
 	clean)
@@ -4315,13 +4315,13 @@ case "${NHOPKG_OPTION}" in
 			## 3. Shows package files.
 			if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
 				get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
-				if [[ ! $(bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null) ]]; then
+				if [[ ! $(xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" 2> /dev/null) ]]; then
 					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
 					exit 1
 				fi
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" >> "${LOG_FILE}"
+					xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4330,17 +4330,17 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					bzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+					xzcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.xz"
 				fi
 			elif [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" ]]; then
 				get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}"
-				if [[ ! $(bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" 2> /dev/null) ]]; then
+				if [[ ! $(xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" 2> /dev/null) ]]; then
 					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
 					exit 1
 				fi
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2" >> "${LOG_FILE}"
+					xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz" >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4349,13 +4349,13 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					bzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.bz2"
+					xzcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.xz"
 				fi
 			# For local .nho packages.
 			elif [[ -f "${CASEPACKAGE}" ]] && [[ $(basename "${CASEPACKAGE}" .nho) != "${CASEPACKAGE}" ]]; then
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					tar xfO "${CASEPACKAGE}" | tar jPt 2> /dev/null >> "${LOG_FILE}"
+					tar xfO "${CASEPACKAGE}" | tar JPt 2> /dev/null >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4364,7 +4364,7 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					tar xfO "${CASEPACKAGE}" | tar jPt 2> /dev/null
+					tar xfO "${CASEPACKAGE}" | tar JPt 2> /dev/null
 				fi
 			else
 				echog " * The selected package is not installed by Nhopkg." >&2
