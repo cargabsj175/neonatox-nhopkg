@@ -1923,11 +1923,11 @@ function build_make_binary_package()
 		# Touch new nhoid.
 		build_nhoid_to_bin
 		# Compress package!
-		tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		if [ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" ]; then
+		tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+		chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+		if [ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" ]; then
 			echogn " --- New package is:"
-			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
 		else
 			echog " *** Unable to create binary package." >&2
 		fi
@@ -3201,12 +3201,12 @@ case "${NHOPKG_OPTION}" in
 			## 4. Compress new package.
 			# Building binary package.
 			cd "${NHOPKG_TMPDIR}"
-			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" 2> /dev/null
-			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" 2> /dev/null
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
 			cd ${CWD}
-			if [[ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho" ]]; then
+			if [[ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" ]]; then
 				echogn " --- New package is:"
-				echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+				echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
 			else
 				echog " *** Unable to build package." >&2
 				cleanup_tmp_dir

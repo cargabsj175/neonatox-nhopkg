@@ -1,6 +1,6 @@
 echo "Nhopkg autogen script"
 echo
-echo "If this script fails, please download a recent source tarball from http://nhopkg.sourceforge.net/downloads.php"
+echo "If this script fails, please download a recent source tarball from https://gitorious.org/~cargabsj175/nhopkg/neonatox-nhopkg"
 echo
 # Cleaning up
 echo "Cleaning previous files..."
@@ -13,7 +13,7 @@ echo "Checking for aclocal..."
 if [[ $(aclocal --version 2> /dev/null) ]]; then
 	aclocal --version | head -1
 else
-	echo "you need aclocal >= 1.10.1 in your sistem."
+	echo "you need aclocal >= 1.10.1 in your system."
 	exit 1
 fi
 echo "done."
@@ -21,7 +21,7 @@ echo "Checking for autoheader..."
 if [[ $(autoheader --version 2> /dev/null) ]]; then
 	autoheader --version | head -1
 else
-	echo "you need autoheader >= 2.63 in your sistem."
+	echo "you need autoheader >= 2.63 in your system."
 	exit 1
 fi
 echo "done."
@@ -29,7 +29,7 @@ echo "Checking for libtoolize..."
 if [[ $(libtoolize --version 2> /dev/null) ]]; then
 	libtoolize --version | head -1
 else
-	echo "you need libtoolize >= 1.5.26 in your sistem."
+	echo "you need libtoolize >= 1.5.26 in your system."
 	exit 1
 fi
 echo "done."
@@ -37,7 +37,7 @@ echo "Checking for autoconf..."
 if [[ $(autoconf --version 2> /dev/null) ]]; then
 	autoconf --version | head -1
 else
-	echo "you need autoconf >= 2.63 in your sistem."
+	echo "you need autoconf >= 2.63 in your system."
 	exit 1
 fi
 echo "done."
@@ -45,7 +45,7 @@ echo "Checking for automake..."
 if [[ $(automake --version 2> /dev/null) ]]; then
 	automake --version | head -1
 else
-	echo "you need automake >= 1.10.1 in your sistem."
+	echo "you need automake >= 1.10.1 in your system."
 	exit 1
 fi
 echo "done."
