@@ -3201,6 +3201,8 @@ case "${NHOPKG_OPTION}" in
 			## 4. Compress new package.
 			# Building binary package.
 			cd "${NHOPKG_TMPDIR}"
+			# Getting the architecture from the nhoid on backup section.
+			arch=$(grep "# Arch:" ${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision} | sed 's@# Arch:\t@@g')
 			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" 2> /dev/null
 			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
 			cd ${CWD}
