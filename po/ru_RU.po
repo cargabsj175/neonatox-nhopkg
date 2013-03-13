@@ -255,7 +255,7 @@ msgstr " * Не могу создать временную директорию.
 
 #: ../src/nhopkg.in:327
 msgid " --- Updating database:"
-msgstr " --- Обновление базы:
+msgstr " --- Обновление базы:"
 
 #: ../src/nhopkg.in:340
 msgid "Do you want to continue?[yes/NO]: "
