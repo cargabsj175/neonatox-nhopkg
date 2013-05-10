@@ -2490,6 +2490,8 @@ function get_package_info()
 		| sed -e 's@^# @@g'
 		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
 		| sed -e 's@^# @@g'
+		grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
 		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
 		| sed -e 's@^# @@g'
 		grep "^# Build-Duration:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
