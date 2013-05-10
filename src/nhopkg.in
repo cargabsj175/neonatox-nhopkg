@@ -1527,6 +1527,8 @@ function getpackage()
 # Gives: Downloaded package on cache/ directory.
 function downloadpackage()
 {
+	local pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
+	local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
 	echogn " --- Downloading"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
@@ -3060,8 +3062,11 @@ case "${NHOPKG_OPTION}" in
 			# Now install package.
 			cleanup_tmp_dir
 			make_tmp_dir
+			# get arch and os package info
+			local pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
+			local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
 			# Uncompress package.
-			tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.nho" "${NHOPKG_TMPDIR}" 2> /dev/null
+			tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2> /dev/null
 			check_if_ok " * Unable to uncompress package."
 			# Get data from package.
 			# Checks that is good package and get data from it.
