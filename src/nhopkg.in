@@ -1886,6 +1886,7 @@ function build_nhoid_to_bin()
 	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add new arch.
 	echo -e "# Arch:\t${BUILD_ARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# OS:\t$(uname -s | awk '{print tolower ($1)}')" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Installed-Size:\t${PACKAGE_SIZE} KB" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Duration:\t${BUILD_TIME} min" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Date:\t${BUILD_DATE}" >> "${NHOPKG_TMPDIR}/nhoid"
