@@ -2545,6 +2545,8 @@ function get_package_info()
 		| sed -e 's@^# @@g'
 		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Arch:" \
 		| sed -e 's@^# @@g'
+		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# OS:"  \
+		| sed -e 's@^# @@g'
 		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Installed-Size:" \
 		| sed -e 's@^# @@g'
 		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Duration:" \
