@@ -1729,6 +1729,7 @@ function build_package()
 	BUILD_DATE=$(date -u "+%F %T %z")
 	BUILD_HOST="$(uname -n)"
 	BUILD_ARCH="$(uname -m)"
+	PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		(nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
 		| tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
@@ -1886,7 +1887,7 @@ function build_nhoid_to_bin()
 	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add new arch.
 	echo -e "# Arch:\t${BUILD_ARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
-	echo -e "# OS:\t$(uname -s | awk '{print tolower ($1)}')" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# OS:\t${PACKAGE_OS}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Installed-Size:\t${PACKAGE_SIZE} KB" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Duration:\t${BUILD_TIME} min" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Date:\t${BUILD_DATE}" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2440,6 +2441,8 @@ function get_package_info()
 		grep "^# Group:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
 		| sed -e 's@^# @@g'
 		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		| sed -e 's@^# @@g'
+		grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
 		| sed -e 's@^# @@g'
 		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
 		| sed -e 's@^# @@g'
