@@ -569,6 +569,7 @@ function get_nhoid_data()
 	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgmd5=$(grep -a "^# MD5:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgos=$(grep "^# OS:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
 	# Checks that is a correct package.
 	if [[ -z "${nhoid}" ]]; then
@@ -1170,15 +1171,17 @@ function downloadrequiredeps()
 		local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		echogn " --- Downloading"
 		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 		check_if_ok " *** Failed to download package. Please, retry."
 		# Adds downloaded packages to list for install.
 		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
-			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.nho")
+			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
 		else
-			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.nho")
+			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
 		fi
 	done
 }
@@ -1193,15 +1196,17 @@ function downloadoptdeps()
 		local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${ORCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
+		local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		echogn " --- Downloading"
 		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 		check_if_ok " *** Failed to download package. Please, retry."
 		# Adds downloaded packages to list for install.
 		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
-			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.nho")
+			DCASEPACKAGES=("${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
 		else
-			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.nho")
+			DCASEPACKAGES=(${DCASEPACKAGES[@]} "${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
 		fi
 	done
 }
@@ -1222,7 +1227,7 @@ function installdownloadedeps()
 		# Get data from package.
 		# Checks that is good package and get data from it.
 		if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
-			local pkgowner pkgname pkgversion pkgrevision pkglicense pkggroup pkgurl pkgdescription pkgmd5 pkgarch pkginstalledsize
+			local pkgowner pkgname pkgversion pkgrevision pkglicense pkggroup pkgurl pkgdescription pkgmd5 pkgarch pkgos pkginstalledsize
 			get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 		else
 			echog " * The selected package is not valid." >&2
@@ -1523,8 +1528,8 @@ function getpackage()
 function downloadpackage()
 {
 	echogn " --- Downloading"
-	echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-	wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
+	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	check_if_ok " *** Failed to download package. Please, retry."
 }
 #======================================6
