@@ -5933,7 +5933,7 @@ $as_echo "no" >&6; }
 fi
 
 
-DEFAULT_NHOPKG_REPOSITORY="http://www.vegnux.org.ve/repo/n06/stable/`uname -m`"
+DEFAULT_NHOPKG_REPOSITORY="http://www.vegnux.org.ve/repo/n2017.1/stable/`uname -m`"
 
 
 # Check whether --with-nhopkg-repo was given.
