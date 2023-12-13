@@ -1439,7 +1439,7 @@ function bin_install_create_config_files()
 		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		zstd "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		zstd --rm "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
@@ -1455,7 +1455,7 @@ function bin_install_create_config_files()
 		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		zstd "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
@@ -1718,19 +1718,21 @@ function build_prepare()
         echo " * Unsupported file type."
         return
     fi
-
     check_if_ok " * The selected package is not valid."
+    # Hide nhoid file.
 
     mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
-    rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz"
+    rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.*"
 
+    # Checks if there are any patch.
     if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
         echo " --- Additional files in package (patches):"
         for patch in $(ls "${NHOPKG_TMPDIR}");
         do
             echo -e "\t> ${patch}"
         done
-        mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
+        # Move files.
+	mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
     fi
 }
 ## Function build_package(). Build package form nhoid functions.
@@ -1833,12 +1835,12 @@ function build_save_log_files()
 	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
 		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
 		# Compress with zstd
-		zstd "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
 	fi
 	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
 		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
 		# Compress with zstd
-		zstd "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
 	fi
 }
 ## Function build_search_for_files(). Search for files installed by package.
@@ -3225,7 +3227,7 @@ case "${NHOPKG_OPTION}" in
 				tar --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" -c -p --zstd > "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null
 				cd ${PWD}
 			fi
-			zstd "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+			zstd --rm "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 			## 4. Compress new package.
 			# Building binary package.
 			cd "${NHOPKG_TMPDIR}"
@@ -4037,7 +4039,7 @@ case "${NHOPKG_OPTION}" in
 			## 4. Setting up software repository.
 			cd "${CWD}"
 			# Zstandard core.files.tar.zst and core.packages.tar.zst
-			zstd "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
+			zstd --rm "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
 			check_if_ok " *** Unable to create repository."
 			# Move core.files.tar.zst and core.packages.tar.zst to repository directory.
 			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.zst" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.zst" ]]; then
@@ -4051,7 +4053,7 @@ case "${NHOPKG_OPTION}" in
 			echo $(date -u +%s) > "${REPO_DIR}/lastsync"
 			cd "${REPO_DIR}"
 			du  *[0-9].nho > content.db
-			zstd content.db
+			zstd --rm content.db
 			cd "${CWD}"
 			echog " --- Your new repository has been created sucesful."
 		else
@@ -4129,7 +4131,7 @@ case "${NHOPKG_OPTION}" in
 		# zstd files on /repo/files
 		for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files")
 		do
-			zstd "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+			zstd --rm "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
 		done
 		mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
 		echog " - Repository database updated sucesful."
