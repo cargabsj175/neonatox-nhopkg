@@ -1706,22 +1706,32 @@ function remove_package_config_files()
 # Usage: build_prepare (without arguments)
 function build_prepare()
 {
-	mkdir -p "${NHOPKG_BUILDIR}"
-	zstdcat "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null
-	check_if_ok " * The selected package is not valid."
-	# Hide nhoid file.
-	mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
-	rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst"
-	# Checks if there are any patch.
-	if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
-		echog " --- Additional files in package (patches):"
-		for patch in $(ls "${NHOPKG_TMPDIR}");
-		do
-			echo -e "\t> ${patch}"
-		done
-		# Move files.
-		mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
-	fi
+    mkdir -p "${NHOPKG_BUILDIR}"
+
+    if [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" ]]; then
+        zstdcat "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null
+    elif [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" ]]; then
+        tar xjf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" -C "${NHOPKG_BUILDIR}" &> /dev/null
+    elif [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" ]]; then
+        tar xJf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" -C "${NHOPKG_BUILDIR}" &> /dev/null
+    else
+        echo " * Unsupported file type."
+        return
+    fi
+
+    check_if_ok " * The selected package is not valid."
+
+    mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
+    rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz"
+
+    if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
+        echo " --- Additional files in package (patches):"
+        for patch in $(ls "${NHOPKG_TMPDIR}");
+        do
+            echo -e "\t> ${patch}"
+        done
+        mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
+    fi
 }
 ## Function build_package(). Build package form nhoid functions.
 # Usage: build_package (without arguments)
