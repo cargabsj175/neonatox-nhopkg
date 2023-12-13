@@ -64,16 +64,16 @@ AC_PATH_PROG(CAT, cat, no)
 if test x"$CAT" == x"no"; then
 	exit 1
 fi
-AC_PATH_PROG(XZCAT, xzcat, no)
-if test x"$XZCAT" == x"no"; then
+AC_PATH_PROG(ZSTDCAT, zstdcat, no)
+if test x"$ZSTDCAT" == x"no"; then
 	exit 1
 fi
 AC_PATH_PROG(GREP, grep, no)
 if test x"$GREP" == x"no"; then
 	exit 1
 fi
-AC_PATH_PROG(XZGREP, xzgrep, no)
-if test x"$XZGREP" == x"no"; then
+AC_PATH_PROG(ZSTDGREP, zstdgrep, no)
+if test x"$ZSTDGREP" == x"no"; then
 	exit 1
 fi
 AC_PATH_PROG(HEAD, head, no)
@@ -105,8 +105,8 @@ AC_PATH_PROG(TAR, tar, no)
 if test x"$TAR" == x"no"; then
 	exit 1
 fi
-AC_PATH_PROG(XZ, xz, no)
-if test x"$XZ" == x"no"; then
+AC_PATH_PROG(ZSTD, zstd, no)
+if test x"$ZSTD" == x"no"; then
 	exit 1
 fi
 
