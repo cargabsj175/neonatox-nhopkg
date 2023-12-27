@@ -1392,20 +1392,20 @@ function bin_install()
 {
 	echogn " --- Installing"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-	if [ -f "${NHOPKG_TMPDIR}/data.tar.zst" ]; then
+	if [ -f "${NHOPKG_TMPDIR}/data.tar.zst" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.xz" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.bz2" ]; then
 		# Checks if --root or --root= option are selected.
 		if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
-			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.zst" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 			# Checks if all is good.
 			check_if_ok " *** Failed to install package."
 		else
 			# Checks if data.tar.zst is preceded by / or not.
-			if [[ $(zstdcat "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null | tar tf - | head -1 | grep '^/') ]]; then
-				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.zst" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			if [[ $(zstdcat "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null | tar tfP - | head -1 | grep '^/') ]] || [[ $(tar JtfP "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null | head -1 | grep '^/') ]] || [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
+				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			else
-				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.zst" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			fi
