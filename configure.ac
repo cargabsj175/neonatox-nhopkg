@@ -14,7 +14,7 @@ PKG_PROG_PKG_CONFIG
 
 dnl Nhopkg repository.
 
-DEFAULT_NHOPKG_REPOSITORY="http://www.vegnux.org.ve/repo/n06/stable/`uname -m`"
+DEFAULT_NHOPKG_REPOSITORY="https://github.com/NeonatoX/NeonatoX.github.io/raw/main/repo/n2023.1/dev/`uname -m`"
 AC_SUBST([NHOPKG_REPO])
 AC_ARG_WITH([nhopkg-repo],
 	[AC_HELP_STRING([--with-repo=DIR],
