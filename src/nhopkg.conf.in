@@ -33,7 +33,7 @@ NHOPKG_CHECKDEPS=yes
 # Inverse dependency manger for nhopkg (yes OR no):
 NHOPKG_PURGE=no
 # Check package md5sum for nhopkg (yes OR no):
-NHOPKG_CHECKMD5=yes
+NHOPKG_CHECKSHA256=yes
 # Check package arquitecture for nhopkg (yes OR no):
 NHOPKG_CHECKARCH=yes
 # Verbose mode for nhopkg (yes OR no):
