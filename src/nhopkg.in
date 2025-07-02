@@ -321,10 +321,10 @@ function nhopkg_help()
 	echog " --root\tSets install root."
 	echog " --no-check-deps\tDon't check dependencies."
 	echog " --no-check-arch\tDon't check architecture."
-	echog " --no-check-md5\tDon't check MD5 Sum."
+	echog " --no-check-sha256\tDon't check SHA256 Sum."
 	echog " --force-check-deps\tForce check dependencies."
 	echog " --force-check-arch\tForce check architecture."
-	echog " --force-check-md5\tForce check MD5 Sum."
+	echog " --force-check-sha256\tForce check SHA256 Sum."
 	echog " --purge\tRemove inverse dependencies of package."
 	echog " -o, --output\tWrite an output log."
 	echog " -v, --verbose\tVerbose operations."
@@ -555,7 +555,7 @@ function get_basic_data()
 }
 ## Function get_nhoid_data(). Get data from package and checks that is a correct package.
 # Usage: get_nhoid_data nhoid_file
-# Gives: nhoid (local), pkgowner, pkgname, pkgversion, pkgrevision, pkglicense, pkggroup, pkgurl, pkgdescription, pkgmd5, pkgarch and pkginstalledsize variables.
+# Gives: nhoid (local), pkgowner, pkgname, pkgversion, pkgrevision, pkglicense, pkggroup, pkgurl, pkgdescription, pkgsha256, pkgarch and pkginstalledsize variables.
 function get_nhoid_data()
 {
 	local nhoid=$(grep "^#%NHO-" "${1}" 2> /dev/null | sed -e 's@^#%NHO-@@')
@@ -567,7 +567,7 @@ function get_nhoid_data()
 	pkggroup=$(grep "^# Group:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgurl=$(grep "^# Url:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
-	pkgmd5=$(grep -a "^# MD5:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgsha256=$(grep -a "^# SHA256:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgos=$(grep "^# OS:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
@@ -602,20 +602,20 @@ function get_nhoid_data()
 	source "${1}" 2> /dev/null
 	check_if_ok " * Unable to get data from package."
 }
-## Function check_package_md5sum(). Check md5 of package.
-# Usage: check_package_md5sum (without arguments)
-function check_package_md5sum()
+## Function check_package_sha256sum(). Check sha256 of package.
+# Usage: check_package_sha256sum (without arguments)
+function check_package_sha256sum()
 {
-	if [[ "${NHOPKG_CHECKMD5}" != "yes" ]]; then
+	if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
 		return 0
 	fi
 	if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-		echogn " --- Checking MD5 Sum for"
+		echogn " --- Checking SHA256 Sum for"
 		echo " ${pkgname}-${pkgversion}-${pkgrevision}"
 	fi
 	cd "${NHOPKG_TMPDIR}"
-	echo "${pkgmd5}" | md5sum -c &> /dev/null
-	check_if_ok " *** MD5 checksum of package did not match."
+	echo "${pkgsha256}" | sha256sum -c &> /dev/null
+	check_if_ok " *** SHA256 checksum of package did not match."
 	cd "${CWD}"
 }
 ## Function check_package_arch(). Check architecture of package and compare it with the system.
@@ -1227,7 +1227,7 @@ function installdownloadedeps()
 		# Get data from package.
 		# Checks that is good package and get data from it.
 		if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
-			local pkgowner pkgname pkgversion pkgrevision pkglicense pkggroup pkgurl pkgdescription pkgmd5 pkgarch pkgos pkginstalledsize
+			local pkgowner pkgname pkgversion pkgrevision pkglicense pkggroup pkgurl pkgdescription pkgsha256 pkgarch pkgos pkginstalledsize
 			get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 		else
 			echog " * The selected package is not valid." >&2
@@ -1235,8 +1235,8 @@ function installdownloadedeps()
 			cleanup_tmp_dir
 			exit 1
 		fi
-		## 3. Checks MD5 sum and architecture.
-		check_package_md5sum
+		## 3. Checks SHA256 sum and architecture.
+		check_package_sha256sum
 		check_package_arch
 		## 6. Install binary package.
 		bin_install
@@ -1913,8 +1913,8 @@ function build_nhoid_to_bin()
 	echo -e "# Build-Host:\t${BUILD_HOST}" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Url:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Description:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	# Add new MD5
-	echo -e "# MD5:\t${PACKAGEMD5}" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Add new SHA256
+	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add dependencies.
 	grep '^# Dep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# OptionalDep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
@@ -1937,8 +1937,8 @@ function build_make_binary_package()
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Se dirige al directorio temporal y empaqueta.
 		cd "${NHOPKG_TMPDIR}"
-		# Gets md5 sum from data.tar.zst
-		PACKAGEMD5=$(md5sum "data.tar.zst")
+		# Gets sha256 sum from data.tar.zst
+		PACKAGESHA256=$(sha256sum "data.tar.zst")
 		# Calcule build and install time.
 		get_build_time
 		# Touch new nhoid.
@@ -2123,7 +2123,7 @@ function csw_make_nhoid_file()
 	# Check that needed variables exists.
 	if [[ -z "${PACKAGERNAME}" ]] || [[ -z "${PACKAGERMAIL}" ]] \
 	|| [[ -z "${PACKAGENAME}" ]] || [[ -z "${PACKAGEVERSION}" ]] \
-	|| [[ -z "${PACKAGERELEASE}" ]] || [[ -z "${PACKAGEMD5}" ]]; then
+	|| [[ -z "${PACKAGERELEASE}" ]] || [[ -z "${PACKAGESHA256}" ]]; then
 		echog " * Unable to create nhoid file." >&2
 		exit 1
 	fi
@@ -2140,7 +2140,7 @@ function csw_make_nhoid_file()
 	echo -e "# Arch:\t${PACKAGEARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Url:\t${PACKAGEWEBURL}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Description:\t${PACKAGEDESCRIPTION}" >> "${NHOPKG_TMPDIR}/nhoid"
-	echo -e "# MD5:\t${PACKAGEMD5}" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
 }
 ## Function get_csw_build_dependencies(). Asks about build dependencies.
@@ -2609,7 +2609,7 @@ trap cleanup_all EXIT TERM
 #==============================================================================
 NHNAME=$(basename "$0")
 SHORTOPTIONS="RiSdrBbklno:wstcg:UeAzhuv"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-md5,force-check-deps,force-check-arch,force-check-md5,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -2651,11 +2651,11 @@ while [[ "${1}" != "--" ]]; do
 				NHOPKG_CHECKARCH="no"
 			fi
 		;;
-		--no-check-md5)
+		--no-check-sha256)
 			shift
 			# Install package without check arch.
-			if [[ "${NHOPKG_CHECKMD5}" = "yes" ]]; then
-				NHOPKG_CHECKMD5="no"
+			if [[ "${NHOPKG_CHECKSHA256}" = "yes" ]]; then
+				NHOPKG_CHECKSHA256="no"
 			fi
 		;;
 		--force-check-deps)
@@ -2672,11 +2672,11 @@ while [[ "${1}" != "--" ]]; do
 				NHOPKG_CHECKARCH="yes"
 			fi
 		;;
-		--force-check-md5)
+		--force-check-sha256)
 			shift
 			# Force check dependencies.
-			if [[ "${NHOPKG_CHECKMD5}" != "yes" ]]; then
-				NHOPKG_CHECKMD5="yes"
+			if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
+				NHOPKG_CHECKSHA256="yes"
 			fi
 		;;
 		-i|--install)
@@ -2937,7 +2937,7 @@ case "${NHOPKG_OPTION}" in
 # Section: Install (binary package)
 # 1. Basic configurations.
 # 2. Checking packages and prepare it.
-# 3. Checks architecture and MD5 Sum.
+# 3. Checks architecture and SHA256 Sum.
 # 4. Checks dependencies.
 # 5. Install binary package.
 # 6. Configure installation.
@@ -2979,8 +2979,8 @@ case "${NHOPKG_OPTION}" in
 			if [[ "${USE_INSTALL_ROOT}" != "yes" ]]; then
 				check_if_installed_package
 			fi
-			## 3. Checks architecture and MD5 Sum.
-			check_package_md5sum
+			## 3. Checks architecture and SHA256 Sum.
+			check_package_sha256sum
 			check_package_arch
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
@@ -3028,7 +3028,7 @@ case "${NHOPKG_OPTION}" in
 # 3. Search packages on repository.
 # 4. Checks dependencies.
 # 5. Download and install dependencies.
-# 6. Checks architecture and MD5 Sum.
+# 6. Checks architecture and SHA256 Sum.
 # 7. Install binary package.
 # 8. Configure installation.
 # 9. Clean up.
@@ -3090,8 +3090,8 @@ case "${NHOPKG_OPTION}" in
 				cleanup_tmp_dir
 				exit 1
 			fi
-			## 6. Checks architecture and MD5 Sum.
-			check_package_md5sum
+			## 6. Checks architecture and SHA256 Sum.
+			check_package_sha256sum
 			check_package_arch
 			## 7. Install binary package.
 			bin_install
@@ -3255,7 +3255,7 @@ case "${NHOPKG_OPTION}" in
 # Section: Build
 # 1. Basic configurations.
 # 2. Checking packages and prepare it.
-# 3. Checks architecture and MD5 Sum.
+# 3. Checks architecture and SHA256 Sum.
 # 4. Checks dependencies.
 # 5. Set build directory and uncompress package.
 # 6. Builds package.
@@ -3297,8 +3297,8 @@ case "${NHOPKG_OPTION}" in
 			fi
 			# Checks if package is aready installed.
 			check_if_installed_package
-			## 3. Checks architecture and MD5 Sum.
-			check_package_md5sum
+			## 3. Checks architecture and SHA256 Sum.
+			check_package_sha256sum
 			check_package_arch
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
@@ -3470,8 +3470,8 @@ case "${NHOPKG_OPTION}" in
 			cd "${NHOPKG_TMPDIR}"
 			tar Jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
 			rm -Rf "${PACKAGENAME}-${PACKAGEVERSION}"
-			# Get MD5 sum of package.
-			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
+			# Get SHA256 sum of package.
+			PACKAGESHA256=$(sha256sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
 			cd "${CWD}"
 			# Creates nhoid file.
 			csw_make_nhoid_file
@@ -3727,8 +3727,8 @@ case "${NHOPKG_OPTION}" in
 			done
 			# Get package arch
 			PACKAGEARCH=$(uname -m)
-			# Get MD5 sum of package.
-			PACKAGEMD5=$(md5sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
+			# Get SHA256 sum of package.
+			PACKAGESHA256=$(sha256sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
 			cd "${CWD}"
 			# If not selected Recursive option, ask for some data of package.
 			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
@@ -3916,7 +3916,7 @@ case "${NHOPKG_OPTION}" in
 			cd "${NHOPKG_TMPDIR}/data"
 			tar --create --preserve-permissions --file=- * 2> /dev/null | zstd -o ../data.tar.zst
 			cd ../
-			PACKAGEMD5=$(md5sum "data.tar.zst")
+			PACKAGESHA256=$(sha256sum "data.tar.zst")
 			# Vuelve al directorio inicial y elimina restos de los sources.
 			cd "${CWD}"
 			rm -R "${NHOPKG_TMPDIR}/data"
