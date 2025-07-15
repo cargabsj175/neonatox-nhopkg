@@ -571,6 +571,8 @@ function get_nhoid_data()
 	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgos=$(grep "^# OS:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	# Set split variable
+	SPLITPACKAGE=$(grep "^# Splitpackage:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	# Checks that is a correct package.
 	if [[ -z "${nhoid}" ]]; then
 		echog " * The selected package is not valid." >&2
@@ -1421,8 +1423,14 @@ function bin_install()
 # Usage: bin_install_setting_up (without arguments)
 function bin_install_setting_up()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+
 	echogn " --- Setting up"
-	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	echo " ${pkgname}${part+-}${part}-${pkgversion}-${pkgrevision}"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		npostinstall
 		shooter_updates
@@ -1435,38 +1443,44 @@ function bin_install_setting_up()
 # Usage: bin_install_create_config_files (without arguments)
 function bin_install_create_config_files()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+	
 	if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
-		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
+		mv "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		zstd --rm "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		zstd --rm "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/files/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
-		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 		# Add npostremove() function to nhoid.
-		echo >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		echo >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
-		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
-		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
+		ln -sf "${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}"
+		ln -sf "${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}"
 	else
-		mv "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" \
+		mv "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		zstd --rm "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" 2> /dev/null
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
-		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 		# Add npostremove() function to nhoid.
-		echo >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		echo >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
-		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
+		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" \
 		2> /dev/null
 		check_if_ok " *** Failed to install package."
-		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
-		ln -sf "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
+		ln -sf "${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}"
+		ln -sf "${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}${part:+-}${part}-${pkgversion}"
 	fi
 }
 #======================================5
@@ -1779,46 +1793,58 @@ function check_build_package()
 	fi
 }
 ## Function build_package_install(). Install source package form nhoid functions.
-# Usage: build_package_install (without arguments)
+# Usage: build_package_install (with/without split arguments)
 function build_package_install()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+
 	# Touch pre installation file.
-	touch "${NHOPKG_TMPDIR}/.nho-preinstall"
+	touch "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}"
 	echogn " - Installing"
-	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	echo " ${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 	echog "This step may take some time depending of package and your system."
 	# Sleep 3 seconds.
 	sleep 3
 	# Gets date and hour of installation.
 	INSTALL_DATE=$(date -u "+%F %T" | sed s@\ @-@g | sed s@:@_@g)
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
-		(ninstall || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
-		| tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+		(ninstall${part:+_}${part} || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
+		| tee -a "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
 	else
-		(ninstall || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+		(ninstall${part:+_}${part} || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
 	fi
 }
 ## Function check_build_package_install(). Checks if install step is all Ok.
-# Usage: check_build_package_install (without arguments)
+# Usage: check_build_package_install (with/without split arguments)
 function check_build_package_install()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+    
 	# First check is RETVAL file exist.
 	if [[ ! -e "${NHOPKG_TMPDIR}/.RETVAL" ]]; then
 		return 0
 	fi
 	if [[ $(cat "${NHOPKG_TMPDIR}/.RETVAL" 2> /dev/null) != "0" ]]; then
 		echog " * Failed instalation!" >&2
-		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
-			mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${CWD}"
-			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+			mv "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${CWD}"
+			chown "${DIROWNER}" "${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
 			echogn " --- You can see compilation log on"
-			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+			echo " ${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
 		fi
-		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
-			mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${CWD}"
-			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+		if [[ -f "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
+			mv "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${CWD}"
+			chown "${DIROWNER}" "${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
 			echogn " --- You can see instalation log on"
-			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
+			echo " ${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
 		fi
 		# Clean up and exits with error.
 		cleanup_tmp_dir
@@ -1827,55 +1853,68 @@ function check_build_package_install()
 	fi
 }
 ## Function build_save_log_files(). Save logs on logs/ directory and compress (zstd).
-# Usage: build_save_log_files (without arguments)
+# Usage: build_save_log_files (with/without split arguments)
 function build_save_log_files()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+    
 	echogn " --- Saving logs on"
 	echo " ${NHOPKG_LOCALSTATEDIR}/logs"
-	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
-		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
 		# Compress with zstd
-		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
 	fi
-	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
-		mv "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+	if [[ -f "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
 		# Compress with zstd
-		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
 	fi
 }
+
 ## Function build_search_for_files(). Search for files installed by package.
-# Usage: build_search_for_files (without arguments)
+# Usage: build_search_for_files (with/without split arguments)
 function build_search_for_files()
 {
-	touch "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+     
+	touch "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log"
 	for searchdir in ${FIND_DIRS};
 	do
 		if [[ -d "${searchdir}" ]]; then
-			find ${searchdir} -type f -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall" \
-			>> "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
-			find ${searchdir} -type l -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall" \
-			>> "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log"
+			find ${searchdir} -type f -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
+			>> "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log"
+			find ${searchdir} -type l -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
+			>> "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log"
 		fi
 	done
 	# Delete NoUpgrade files.
 	for noupgrade in ${NOUPGRADE_FILES};
 	do
-		if [[ $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null) ]]; then
-			for noupgrade2 in $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log");
+		if [[ $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null) ]]; then
+			for noupgrade2 in $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log");
 			do
-				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
 				# Remove empty lines.
-				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
 			done
 		fi
 	done
 	# Check if files exists and gets package size.
 	PACKAGE_SIZE=0
-	for casefile in $(grep -v '^#' "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log");
+	for casefile in $(grep -v '^#' "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log");
 	do
 		if [[ ! -e "${casefile}" ]]; then
-			sed -e "s@^${casefile}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
-			sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+			sed -e "s@^${casefile}@@" -i "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+			sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
 		elif [[ -f "${casefile}" ]]; then
 			PACKAGE_SIZE=$(( ${PACKAGE_SIZE} + $(du "${casefile}" | awk '{print $1}') ))
 		fi
@@ -1894,12 +1933,18 @@ function get_build_time()
 # Usage: build_nhoid_to_bin (without arguments)
 function build_nhoid_to_bin()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+    
 	# Touch new nhoid.
 	touch "${NHOPKG_TMPDIR}/nhoid"
 	grep '^#%NHO-0.5' "${NHOPKG_TMPDIR}/.nhoid" > "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Package Maintainer:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
-	grep '^# Name:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Name:\t${pkgname}${part:+-${part}}" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Version:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Release:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# License:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -1912,7 +1957,7 @@ function build_nhoid_to_bin()
 	echo -e "# Build-Date:\t${BUILD_DATE}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Host:\t${BUILD_HOST}" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Url:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	grep '^# Description:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Description:\t${pkgdescription}${part:+ (${part}) files.}" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add new SHA256
 	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add dependencies.
@@ -1924,31 +1969,37 @@ function build_nhoid_to_bin()
 	tail -n +${NPOSTINSTALL_FILE_NUM} "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 }
 ## Function build_make_binary_package(). Creates binary package from builded package.
-# Usage: build_make_binary_package (without arguments)
+# Usage: build_make_binary_package (with/without split arguments)
 function build_make_binary_package()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+    
 	echog " - Building binary package."
 	echog " --- Searching files in the system."
-	build_search_for_files
+	build_search_for_files ${part}
 	## Configure the new binary package
 	# Package and compress files.
 	echog " --- Compressing package."
-	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
-		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
-		# Se dirige al directorio temporal y empaqueta.
+	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
+		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
+		# Go to the temp directory and package.
 		cd "${NHOPKG_TMPDIR}"
 		# Gets sha256 sum from data.tar.zst
 		PACKAGESHA256=$(sha256sum "data.tar.zst")
 		# Calcule build and install time.
 		get_build_time
 		# Touch new nhoid.
-		build_nhoid_to_bin
+		build_nhoid_to_bin ${part}
 		# Compress package!
-		tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
-		chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
-		if [ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" ]; then
+		tar cp * > "${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+		chown "${DIROWNER}" "${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+		if [ -f "${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" ]; then
 			echogn " --- New package is:"
-			echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+			echo " ${CWD}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
 		else
 			echog " *** Unable to create binary package." >&2
 		fi
@@ -2174,7 +2225,7 @@ function csw_make_nhoid_file()
 	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
 	# Add this line only if SPLITPACKAGE is not empty
 	if [[ -n "${SPLITPACKAGE}" ]]; then
-		echo -e "# SPLITPACKAGE:\t${SPLITPACKAGE}" >> "${NHOPKG_TMPDIR}/nhoid"
+		echo -e "# Splitpackage:\t${SPLITPACKAGE}" >> "${NHOPKG_TMPDIR}/nhoid"
 	fi
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
 }
@@ -3423,87 +3474,147 @@ case "${NHOPKG_OPTION}" in
 # 9. Clean up and exit.
 #
 # ********************************************************************
-		## 1. Basic configurations.
-		# Sets PWD directory.
-		get_pwd_dir
-		# Checks if nhopkg is running as root.
-		check_if_root_uid
-		# Checks if have selected any package.
-		if [[ -z "${CASEPACKAGES}" ]]; then
-			echog " * Must select package." >&2
-			exit 1
-		fi
-		## 2. Checking packages and prepare it.
-		for CASEPACKAGE in ${CASEPACKAGES};
-		do
-			echogn " :: Preparing to build:"
-			echo " $(basename ${CASEPACKAGE})"
-			# Clean up nhopkg temporal directory.
-			cleanup_tmp_dir
-			check_if_exist_local_package "${CASEPACKAGE}"
-			make_tmp_dir
-			# Uncompress package.
-			tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
-			check_if_ok " * Unable to uncompress package."
-			# Checks that is good package and get data from it.
-			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
-				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
-			else
-				echog " * The selected package is not valid." >&2
-				# Clean and exits with error.
-				cleanup_tmp_dir
-				exit 1
-			fi
-			# Checks if package is aready installed.
-			check_if_installed_package
-			## 3. Checks architecture and SHA256 Sum.
-			check_package_sha256sum
-			check_package_arch
-			## 4. Checks dependencies.
-			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
-				echog " - Resolving Dependencies."
-				check_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
-				check_optional_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
-				check_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
-				check_optional_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
-				askforinstallrequiredeps
-				askforinstalloptdeps
-			fi
-			echog " - Installing package and dependencies."
-			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
-				installrequiredeps
-				installoptdeps
-			fi
-			## 5. Set build directory and uncompress package.
-			build_prepare
-			## 6. Builds package.
-			# Set initial date.
-			INITIAL_DATE=$(date -u +%s)
-			build_package
-			check_build_package
-			## 7. Installs package.
-			build_package_install
-			# Set final date.
-			FINAL_DATE=$(date -u +%s)
-			check_build_package_install
-			# Returns to initial directory.
-			cd "${CWD}"
-			# Save build and installation logs.
-			build_save_log_files
-			## 8. Builds binary package.
-			build_make_binary_package
-			## 9. Clean up.
-			bin_install_setting_up
-			bin_install_create_config_files
-			# Clean up.
-			cleanup_tmp_dir
-			cleanup_build_dir
-			echog " - Installation finished sucessfuly!"
-		done
-		# If updatedb is here, Nhopkg will be fast.
-		update_local_db
-		exit 0
-	;;
+
+        ## 1. Basic configurations.
+        # Sets PWD directory.
+        get_pwd_dir
+        # Checks if nhopkg is running as root.
+        check_if_root_uid
+        # Checks if have selected any package.
+        if [[ -z "${CASEPACKAGES}" ]]; then
+            echog " * Must select package." >&2
+            exit 1
+        fi
+
+        for CASEPACKAGE in ${CASEPACKAGES}; do
+            echogn " :: Preparing to build:"
+            echo " $(basename ${CASEPACKAGE})"
+            
+            # Clean up nhopkg temporal directory.
+            cleanup_tmp_dir
+            check_if_exist_local_package "${CASEPACKAGE}"
+            make_tmp_dir
+            
+            # Uncompress package.
+            tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+            check_if_ok " * Unable to uncompress package."
+            
+            # Get data from package.
+            if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+                get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+            else
+                echog " * The selected package is not valid." >&2
+                cleanup_tmp_dir
+                exit 1
+            fi
+
+            # Check if package is already installed.
+            check_if_installed_package
+
+            ## 3. Checks architecture and SHA256 Sum.
+            check_package_sha256sum
+            check_package_arch
+
+            ## 4. Checks dependencies.
+            if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+                echog " - Resolving Dependencies."
+                check_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+                check_optional_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+                check_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+                check_optional_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+                askforinstallrequiredeps
+                askforinstalloptdeps
+            fi
+
+            echog " - Installing package and dependencies."
+
+            if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+                installrequiredeps
+                installoptdeps
+            fi
+
+            ## 5. Set build directory and uncompress package.
+            build_prepare
+
+            ## 6. Builds package.
+            # Set initial date.
+            INITIAL_DATE=$(date -u +%s)
+            build_package
+            check_build_package
+
+            ## 7. Installs package (main one).
+            build_package_install  # Sin parámetro → ninstall()
+
+            # Set final date.
+            FINAL_DATE=$(date -u +%s)
+            check_build_package_install
+            # Returns to initial directory.
+            cd "${CWD}"
+
+            # Save build and installation logs.
+            build_save_log_files
+
+            ## 8. Builds binary package (main one).
+            build_make_binary_package
+
+            ## 9. Clean up after main package.
+            bin_install_setting_up
+            bin_install_create_config_files
+        done
+
+        # Si SPLITPACKAGE no está vacía, crear subpaquetes
+        if [[ -n "${SPLITPACKAGE}" ]]; then
+            IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
+            for part in "${SPLITPARTS[@]}"; do
+                for CASEPACKAGE in ${CASEPACKAGES}; do
+                    echogn " :: Preparing split package:"
+                    echo " ${part}"
+
+                    # Limpiar antes de cada subpaquete
+                    cleanup_tmp_dir
+                    make_tmp_dir
+
+                    # Volver a descomprimir el paquete fuente
+                    tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+                    check_if_ok " * Unable to uncompress package for split."
+
+                    # Recuperar datos del paquete principal
+                    get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+
+                    # 5. Set build directory and uncompress package again.
+                    build_prepare
+
+                    # 6. Builds package (again? Or reuse?)
+                    build_package
+
+                    # 7. Installs package for this part
+                    build_package_install "${part}"
+
+                    # 8. Search files for this part
+                    build_search_for_files "${part}"
+
+                    # Create the binary package for this part
+                    build_make_binary_package "${part}"
+
+                    # Configure post-installation
+                    bin_install_setting_up "${part}"
+                    bin_install_create_config_files "${part}"
+
+                    # Save log files for this part
+                    build_save_log_files "${part}"
+
+                    # Clean up after each part
+                    cleanup_tmp_dir
+                    cleanup_build_dir
+                done
+            done
+        fi
+
+        # Final clean up
+        update_local_db
+        echog " - Installation finished successfully!"
+        exit 0
+;;
 	check)
 # ********************************************************************
 #
