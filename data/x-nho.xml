@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <!-- PAQUETE BINARIO - *.nho -->
   <mime-type type="application/x-nho">
     <comment>Nhopkg package</comment>
     <comment xml:lang="be@latin">Pakunak Nhopkg</comment>
@@ -41,6 +42,48 @@
     <generic-icon name="package-x-generic"/>
     <alias type="application/x-nhopkg"/>
     <glob pattern="*.nho"/>
-    </mime-type>
-</mime-info>
+  </mime-type>
 
+  <!-- PAQUETE FUENTE - *.srcnho -->
+  <mime-type type="application/x-nho-src">
+    <comment>Nhopkg source package</comment>
+    <comment xml:lang="be@latin">Kryničny pakunak Nhopkg</comment>
+    <comment xml:lang="bg">Изходен пакет — Nhopkg</comment>
+    <comment xml:lang="ca">paquet font Nhopkg</comment>
+    <comment xml:lang="cs">Zdrojový balíček Nhopkg</comment>
+    <comment xml:lang="da">Nhopkg-kildepakke</comment>
+    <comment xml:lang="de">Nhopkg-Quellpaket</comment>
+    <comment xml:lang="el">Πακέτο πηγαίου κώδικα Nhopkg</comment>
+    <comment xml:lang="en_GB">Nhopkg source package</comment>
+    <comment xml:lang="eo">Nhopkg-fontpakaĵo</comment>
+    <comment xml:lang="es">paquete fuente Nhopkg</comment>
+    <comment xml:lang="eu">Nhopkg iturburu-paketea</comment>
+    <comment xml:lang="fi">Nhopkg-lähdepaketti</comment>
+    <comment xml:lang="fr">paquet source Nhopkg</comment>
+    <comment xml:lang="ga">pacáiste foinse Nhopkg</comment>
+    <comment xml:lang="hu">Nhopkg forráscsomag</comment>
+    <comment xml:lang="id">Paket sumber Nhopkg</comment>
+    <comment xml:lang="it">Pacchetto sorgente Nhopkg</comment>
+    <comment xml:lang="ja">Nhopkg ソースパッケージ</comment>
+    <comment xml:lang="ko">Nhopkg 소스 꾸러미</comment>
+    <comment xml:lang="lt">Nhopkg šaltinio paketas</comment>
+    <comment xml:lang="lv">Nhopkg pirmkoda paciņa</comment>
+    <comment xml:lang="ms">Pakej sumber Nhopkg</comment>
+    <comment xml:lang="nb">Nhopkg-kildepakke</comment>
+    <comment xml:lang="nl">Nhopkg-bronpakket</comment>
+    <comment xml:lang="nn">Nhopkg-kjeldepakke</comment>
+    <comment xml:lang="pl">Pakiet źródłowy Nhopkg</comment>
+    <comment xml:lang="pt">pacote fonte Nhopkg</comment>
+    <comment xml:lang="pt_BR">Pacote fonte Nhopkg</comment>
+    <comment xml:lang="ru">Исходный пакет Nhopkg</comment>
+    <comment xml:lang="sq">Paketë burimi Nhopkg</comment>
+    <comment xml:lang="sr">Nhopkg изворни пакет</comment>
+    <comment xml:lang="sv">Nhopkg-källkodspaket</comment>
+    <comment xml:lang="uk">Вихідний пакет Nhopkg</comment>
+    <comment xml:lang="vi">Gói mã nguồn Nhopkg</comment>
+    <comment xml:lang="zh_CN">Nhopkg 源代码包</comment>
+    <comment xml:lang="zh_TW">Nhopkg 原始碼套件</comment>
+    <generic-icon name="text-x-generic"/>
+    <glob pattern="*.srcnho"/>
+  </mime-type>
+</mime-info>
