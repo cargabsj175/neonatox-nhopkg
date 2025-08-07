@@ -76,13 +76,14 @@ ${NHOPKG_BUILDIR} \
 # Nhopkg data base location.
 NHOPKG_DB=${NHOPKG_LOCALSTATEDIR}/nhopkg.db
 # Dirs that you don't want in your DB. You can edit this variable, but the default is best.
-# The default option is: /dev /home /media /mnt /opt /proc /sys /tmp /usr/src ${NHOPKG_BUILDIR} /usr/share/zoneinfo /var
+# The default option is: /dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src ${NHOPKG_BUILDIR} /usr/share/zoneinfo /var
 NO_DIRS_IN_DB="/dev \
 /home \
 /media \
 /mnt \
 /opt \
 /proc \
+/run \
 /sys \
 /tmp \
 /usr/src \
