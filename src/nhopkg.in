@@ -4,7 +4,7 @@
 #
 #    Nhopkg is an universal package manager.
 #    It can be used in any GNU/linux distribution and uses .nho  packages
-#    (binary) and  .src.nho  packages (source).
+#    (binary) and  .srcnho  packages (source).
 #
 # Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
 #
@@ -47,6 +47,12 @@ NHOPKG_VERSION="@PACKAGE_VERSION@"
 NHOID_VERSION="0.5"
 # Get default IFS variable.
 OLDIFS="${IFS}"
+# Configuration of the "locate" binary, preferably "mlocate" if available.
+if command -v mlocate &>/dev/null; then
+    export BINLOCATE=$(command -v mlocate | grep -o '[^/]*$')
+elif command -v locate &>/dev/null; then
+    export BINLOCATE=$(command -v locate | grep -o '[^/]*$' )
+fi
 #==============================================================================
 # Section: Nhopkg colorized script.
 #==============================================================================
@@ -853,7 +859,7 @@ function check_build_dependencies()
 				else
 				# File is not in the exact path.
 					get_good_file_name "${CHECK_FILE_DEP}"
-					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
 					if [[ -n "${LOCATE_DEPS}" ]]; then
 						(( CHECK_FILE_DEP_NUM++ ))
 						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
@@ -941,7 +947,7 @@ function check_optional_build_dependencies()
 				else
 				# File is not in the exact path.
 					get_good_file_name "${CHECK_FILE_DEP}"
-					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
 					if [[ -n "${LOCATE_DEPS}" ]]; then
 						(( CHECK_FILE_DEP_NUM++ ))
 						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
@@ -1029,7 +1035,7 @@ function check_post_dependencies()
 				else
 				# File is not in the exact path.
 					get_good_file_name "${CHECK_FILE_DEP}"
-					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILENAME}")
+					local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILENAME}")
 					if [[ -n "${LOCATE_DEPS}" ]]; then
 						(( CHECK_FILE_DEP_NUM++ ))
 						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
@@ -1117,7 +1123,7 @@ function check_optional_post_dependencies()
 				else
 				# File is not in the exact path.
 					get_good_file_name "${CHECK_FILE_DEP}"
-					local LOCATE_DEPS=$(locate -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
+					local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep ${GOOD_FILE_NAME}$)
 					if [[ -n "${LOCATE_DEPS}" ]]; then
 						(( CHECK_FILE_DEP_NUM++ ))
 						if [[ "${VERBOSE_MODE}" = "yes" ]]; then
@@ -2198,7 +2204,7 @@ function csw_splitpackage() {
         SPLITPACKAGE=""
     fi
 }
-## Function csw_make_nhoid_file(). Creates nhoid file to .src.nho package.
+## Function csw_make_nhoid_file(). Creates nhoid file to .srcnho package.
 # Usage: csw_make_nhoid_file (without arguments)
 function csw_make_nhoid_file()
 {
@@ -2237,7 +2243,7 @@ function get_csw_build_dependencies()
 	echog "Enter build dependency:"
 	read -er Combo2
 	while [[ -n "${Combo2}" ]]; do
-		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo2}"))
+		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo2}"))
 		# Search on repository database.
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" ]]; then
 			echo -en "# BuildDep:\t${Combo2}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2279,7 +2285,7 @@ function get_csw_build_dependencies()
 				echogn "Found"
 				echo -n " $(basename ${Combo2}) "
 				echogn "on this path:"
-				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo2})."
+				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo2})."
 				echogn "Enter correct path to"
 				echo " $(basename ${Combo2})."
 				echog "Enter build dependency (if necesary):"
@@ -2300,7 +2306,7 @@ function get_csw_optional_build_dependencies()
 	echog "Enter optional build dependency:"
 	read -er Combo3
 	while [[ -n "${Combo3}" ]]; do
-		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo3}"))
+		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo3}"))
 		# Search on repository database.
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" ]]; then
 			echo -en "# OptionalBuildDep:\t${Combo3}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2342,7 +2348,7 @@ function get_csw_optional_build_dependencies()
 				echogn "Found"
 				echo -n " $(basename ${Combo3}) "
 				echogn "on this path:"
-				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo3})."
+				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo3})."
 				echogn "Enter correct path to"
 				echo " $(basename ${Combo3})."
 				echog "Enter optional build dependency (if necesary):"
@@ -2363,7 +2369,7 @@ function get_csw_post_dependencies()
 	echog "Enter post installation dependency for ${PACKAGENAME} (main):"
 	read -er Combo4
 	while [[ -n "${Combo4}" ]]; do
-		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
+		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
 		# Search on repository database.
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
 			echo -en "# Dep(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2407,7 +2413,7 @@ function get_csw_post_dependencies()
 				echogn "Found"
 				echo -n " $(basename ${Combo4}) "
 				echogn "on this path:"
-				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo4})."
+				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo4})."
 				echogn "Enter correct path to"
 				echo " $(basename ${Combo4})."
 				echog "Enter post installation dependency (if necesary):"
@@ -2429,7 +2435,7 @@ function get_csw_post_dependencies()
             echog "Enter post installation dependency for ${part} (if necessary):"
             read -er Combo4
             while [[ -n "${Combo4}" ]]; do
-                FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
+                FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
                 # Buscar en la base de datos del repositorio.
                 if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
                     echo -en "# Dep_${part}(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2468,7 +2474,7 @@ function get_csw_post_dependencies()
                         echogn "Found"
                         echo -n " $(basename ${Combo4}) "
                         echogn "on this path:"
-                        echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo4})."
+                        echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo4})."
                         echogn "Enter correct path to"
                         echo " $(basename ${Combo4})."
                     fi
@@ -2490,7 +2496,7 @@ function get_csw_optional_post_dependencies()
 	echog "Enter optional post installation dependency for ${PACKAGENAME}:"
 	read -er Combo5
 	while [[ -n "${Combo5}" ]]; do
-		FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
+		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
 		# Search on repository database.
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
 			echo -en "# OptionalDep(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2534,7 +2540,7 @@ function get_csw_optional_post_dependencies()
 				echogn "Found"
 				echo -n " $(basename ${Combo5}) "
 				echogn "on this path:"
-				echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo5})."
+				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo5})."
 				echogn "Enter correct path to"
 				echo " $(basename ${Combo5})."
 				echog "Enter optional post installation dependency (if necesary):"
@@ -2556,7 +2562,7 @@ function get_csw_optional_post_dependencies()
             echog "Enter optional post installation dependency for ${part} (if necessary):"
             read -er Combo5
             while [[ -n "${Combo5}" ]]; do
-                FILEDEPS=$(locate -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
+                FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
                 # Buscar en la base de datos del repositorio.
                 if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
                     echo -en "# OptionalDep_${part}(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2595,7 +2601,7 @@ function get_csw_optional_post_dependencies()
                         echogn "Found"
                         echo -n " $(basename ${Combo5}) "
                         echogn "on this path:"
-                        echo " $(locate -l 1 -d "${NHOPKG_DB}" ${Combo5})."
+                        echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo5})."
                         echogn "Enter correct path to"
                         echo " $(basename ${Combo5})."
                     fi
@@ -3685,7 +3691,7 @@ case "${NHOPKG_OPTION}" in
 # 8. Add installation comands.
 # 9. Add post installation comands.
 # 10. Add post remove comands.
-# 11. Builds source package (*.src.nho).
+# 11. Builds source package (*.srcnho).
 # 12. Clean up.
 #
 # ********************************************************************
@@ -3716,7 +3722,7 @@ case "${NHOPKG_OPTION}" in
 			## 3. Start the wizard
 			#======================================================================================================
 			print_background_title "Nhopkg Create Source Wizard"
-			echog "This wizard helps you to create a (*.src.nho) package from other source package like (*.tar.zst)."
+			echog "This wizard helps you to create a (*.srcnho) package from other source package like (*.tar.zst)."
 			echog "It is very important to complete all the fields correctly."
 			echo
 			#======================================================================================================
@@ -3966,14 +3972,14 @@ case "${NHOPKG_OPTION}" in
             echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
         done
     fi
-			## 11. Builds source package (*.src.nho).
+			## 11. Builds source package (*.srcnho).
 			echog " - Building source package."
 			cd "${NHOPKG_TMPDIR}"
-			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" 2> /dev/null
+			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" 2> /dev/null
 			cd ${CWD}
-			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" ]]; then
+			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" ]]; then
 				echogn " --- New package is:"
-				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho"
+				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho"
 			else
 				echog " *** Unable to build package." >&2
 				cleanup_tmp_dir
@@ -3995,7 +4001,7 @@ case "${NHOPKG_OPTION}" in
 # 5. Add compilation comands.
 # 6. Add installation comands.
 # 7. Add post installation comands.
-# 8. Builds source package (*.src.nho).
+# 8. Builds source package (*.srcnho).
 # 9. Clean up.
 #
 # ********************************************************************
@@ -4188,15 +4194,15 @@ case "${NHOPKG_OPTION}" in
 			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
 			echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
 			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
-			## 8. Builds source package (*.src.nho).
+			## 8. Builds source package (*.srcnho).
 			rm -R "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}"
 			echog " - Building source package."
 			cd "${NHOPKG_TMPDIR}"
-			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" 2> /dev/null
+			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" 2> /dev/null
 			cd ${CWD}
-			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho" ]]; then
+			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" ]]; then
 				echogn " --- New package is:"
-				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.src.nho"
+				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho"
 			else
 				echog " *** Unable to build package." >&2
 				cleanup_tmp_dir
