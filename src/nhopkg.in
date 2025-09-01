@@ -154,43 +154,101 @@ function noemptyfuncs()
 # Description: This function generates schemas, update database icons, desktop and mime types.
 # Parameters: updates
 # ---------------------------------------------------------
-shooter_updates(){
-gschemas="/usr/bin/glib-compile-schemas"
-upicon="/usr/bin/gtk-update-icon-cache"
-updesktop="/usr/bin/update-desktop-database"
-upmime="/usr/bin/update-mime-database"
-upmandb="/usr/bin/mandb"
-if [ -f $gschemas ]; then
-	echog " --- Generating Schemas."
-	$gschemas /usr/share/glib-2.0/schemas 2> /dev/null
-else
-	noemptyfuncs
-fi
-if [ -f $upicon ]; then
-	echog " --- Updating icons database."
-	$upicon  -q -t -f /usr/share/icons/hicolor 2> /dev/null
-else
-	noemptyfuncs
-fi
-if [ -f $updesktop ]; then
-	echog " --- Updating desktop database."
-	$updesktop -q 2> /dev/null
-else
-	noemptyfuncs
-fi
-if [ -f $upmime ]; then
-	echog " --- Updating mime database."
-	$upmime /usr/share/mime 2> /dev/null
-else
-	noemptyfuncs
-fi
-if [ -f $upmandb ]; then
-	echog " --- Updating man database."
-	$upmandb -q 2> /dev/null
-else
-	noemptyfuncs
-fi
+shooter_updates() {
+    local verbose=true
+    local update_count=0
+    local update_errors=0
+
+    # Detectar binarios de forma portable
+    local GLIB_SCHEMAS=$(command -v glib-compile-schemas || true)
+    local ICON_CACHE=$(command -v gtk-update-icon-cache || true)
+    local DESKTOP_DB=$(command -v update-desktop-database || true)
+    local MIME_DB=$(command -v update-mime-database || true)
+    local MANDB=$(command -v mandb || true)
+    local FC_CACHE=$(command -v fc-cache || true)
+    local LDCONFIG=$(command -v ldconfig || true)
+
+    if [[ "$1" == "silent" ]]; then
+        verbose=false
+    fi
+
+    run_update() {
+        local cmd="$1"
+        shift
+        local description="$1"
+        shift
+        local args=("$@")
+
+        if [[ -n "$cmd" && -x "$cmd" ]]; then
+            $verbose && echo " - Updating $description..."
+            if "$cmd" "${args[@]}" &> /dev/null; then
+                ((update_count++))
+                $verbose && echo "   ✓ $description updated successfully"
+                return 0
+            else
+                ((update_errors++))
+                $verbose && echo "   ✗ Failed to update $description" >&2
+                return 1
+            fi
+        else
+            $verbose && echo " - $description tool not found, skipping"
+            return 2
+        fi
+    }
+
+    # 1. Actualizar esquemas GLib
+    run_update "$GLIB_SCHEMAS" "GSettings schemas" /usr/share/glib-2.0/schemas
+
+    # 2. Actualizar caché de iconos (por cada tema en /usr/share/icons)
+    if [[ -n "$ICON_CACHE" && -x "$ICON_CACHE" && -d /usr/share/icons && -w /usr/share/icons ]]; then
+        while IFS= read -r -d '' icon_dir; do
+            run_update "$ICON_CACHE" "icon cache for $(basename "$icon_dir") theme" -q -t -f "$icon_dir"
+        done < <(find /usr/share/icons -mindepth 1 -maxdepth 1 -type d -print0)
+    fi
+
+    # 3. Actualizar base de datos de escritorio
+    run_update "$DESKTOP_DB" "desktop database" /usr/share/applications
+
+    # 4. Actualizar tipos MIME
+    run_update "$MIME_DB" "MIME database" /usr/share/mime
+
+    # 5. Actualizar base de datos de manuales (si hay cambios)
+    if [[ -n "$MANDB" && -x "$MANDB" && -d /usr/share/man ]]; then
+        local mandb_cache="/var/cache/man/index.db"
+        if [[ -e "$mandb_cache" ]] && find /usr/share/man -newer "$mandb_cache" -type f -quit 2>/dev/null; then
+            run_update "$MANDB" "man database" -q
+        fi
+    fi
+
+    # 6. Actualizar caché de fuentes (si hay cambios)
+    if [[ -n "$FC_CACHE" && -x "$FC_CACHE" && -d /usr/share/fonts ]]; then
+        local fc_cache="/var/cache/fontconfig"
+        if [[ -d "$fc_cache" ]] && find /usr/share/fonts -newer "$fc_cache" -type f -quit 2>/dev/null; then
+            run_update "$FC_CACHE" "font cache" -f
+        fi
+    fi
+
+    # 7. Actualizar caché de bibliotecas (si hay cambios)
+    if [[ -n "$LDCONFIG" && -x "$LDCONFIG" ]]; then
+        local ld_cache="/etc/ld.so.cache"
+        if [[ -e "$ld_cache" ]] && find /usr/lib /lib -newer "$ld_cache" -type f -quit 2>/dev/null; then
+            run_update "$LDCONFIG" "shared library cache"
+        fi
+    fi
+
+    # Resumen
+    if $verbose; then
+        if (( update_count > 0 || update_errors > 0 )); then
+            echo -n " - System updates completed: $update_count succeeded"
+            (( update_errors > 0 )) && echo ", $update_errors failed" || echo
+        else
+            echo " - No updates were necessary"
+        fi
+    fi
+
+    return $((update_errors > 0 ? 1 : 0))
 }
+
 # ---------------------------------------------------------
 # print_background_title()
 # Description: This function prints a title.
@@ -579,6 +637,19 @@ function get_nhoid_data()
 	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
 	# Set split variable
 	SPLITPACKAGE=$(grep "^# Splitpackage:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# If there are subpackages, look for specific descriptions
+	if [[ -n "$SPLITPACKAGE" ]]; then
+		for part in $SPLITPACKAGE; do
+			local desc_key="^# Description_${part}:"
+			local part_desc=$(grep "$desc_key" "$1" | awk -F'\t' '{print $2}')
+    # If you don't have a specific description, use the general + note
+			if [[ -z "$part_desc" ]]; then
+				part_desc="${pkgdescription} (${part} files.)"
+			fi
+    # Create dynamic variable: ex. pkgdescription_dev, pkgdescription_docs, etc.
+			eval "pkgdescription_${part}=\"\$part_desc\""
+		done
+	fi
 	# Checks that is a correct package.
 	if [[ -z "${nhoid}" ]]; then
 		echog " * The selected package is not valid." >&2
@@ -1436,7 +1507,7 @@ function bin_install_setting_up()
     fi
 
 	echogn " --- Setting up"
-	echo " ${pkgname}${part+-}${part}-${pkgversion}-${pkgrevision}"
+	echo " ${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		npostinstall
 		shooter_updates
@@ -1759,22 +1830,31 @@ function build_prepare()
 # Usage: build_package (without arguments)
 function build_package()
 {
-	# Go to build directory.
-	cd "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
-	echogn " - Building"
-	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-	echog "This step may take some time depending of package and your system."
-	# Gets date, hour, host and arch of compilation.
-	BUILD_DATE=$(date -u "+%F %T" | sed s@\ @-@g | sed s@:@_@g)
-	BUILD_HOST="$(uname -n)"
-	BUILD_ARCH="$(uname -m)"
-	PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
-	if [ "${VERBOSE_MODE}" = "yes" ]; then
-		(nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
-		| tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
-	else
-		(nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
-	fi
+    # Recibir el argumento opcional $part
+    local part="$1"
+    
+    # Go to build directory.
+    cd "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+    echogn " - Building"
+    echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+    echog "This step may take some time depending of package and your system."
+    
+    # Gets date, hour, host and arch of compilation.
+    BUILD_DATE=$(date -u "+%F %T" | sed s@\ @-@g | sed s@:@_@g)
+    BUILD_HOST="$(uname -n)"
+    BUILD_ARCH="$(uname -m)"
+    PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
+    
+    # Si $part NO está vacía, se salta el bloque if (compilación)
+    # Si $part está vacía, ejecuta la compilación normalmente
+    if [ -z "$part" ]; then
+        if [ "${VERBOSE_MODE}" = "yes" ]; then
+            (nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
+            | tee -a "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+        else
+            (nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log"
+        fi
+    fi
 }
 ## Function check_build_package(). Checks if build step is all Ok.
 # Usage: check_build_package (without arguments)
@@ -1963,16 +2043,87 @@ function build_nhoid_to_bin()
 	echo -e "# Build-Date:\t${BUILD_DATE}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Host:\t${BUILD_HOST}" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Url:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	echo -e "# Description:\t${pkgdescription}${part:+ (${part}) files.}" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Use specific subpackage description if it exists, otherwise use generic + note
+	if [[ -n "${part}" ]]; then
+    # Try to get a variable like pkgdescription_dev, pkgdescription_docs, etc.
+		local specific_desc
+		specific_desc=$(eval echo \$"pkgdescription_${part}")
+			if [[ -n "${specific_desc}" ]]; then
+				echo -e "# Description:\t${specific_desc}" >> "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echo -e "# Description:\t${pkgdescription} (${part} files.)" >> "${NHOPKG_TMPDIR}/nhoid"
+			fi
+		else
+    # Main package: use base description
+			echo -e "# Description:\t${pkgdescription}" >> "${NHOPKG_TMPDIR}/nhoid"
+	fi
 	# Add new SHA256
 	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
+    
+    echo >> "${NHOPKG_TMPDIR}/nhoid"
+	
 	# Add dependencies.
-	grep '^# Dep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
-	grep '^# OptionalDep(post):' "${NHOPKG_TMPDIR}/.nhoid" >>  "${NHOPKG_TMPDIR}/nhoid"
-	# Add npostinstall() and npostremove() function to nhoid.
+	# === Add dependencies: one line per Dep(post):, preserving both fields ===
+    local dep_pattern="^# Dep${part:+_${part}}(post):"
+    local opt_dep_pattern="^# OptionalDep${part:+_${part}}(post):"
+    # Process required dependencies: one line per dependency
+    grep -h "$dep_pattern" "${NHOPKG_TMPDIR}/.nhoid" | \
+        while IFS= read -r line; do
+            local dep_data=$(echo "$line" | sed 's/^#[^:]*:\s*//')
+            if [[ -n "$dep_data" ]]; then
+                echo "# Dep(post):	$dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
+            fi
+        done
+    # Process optional dependencies: one line per dependency
+    grep -h "$opt_dep_pattern" "${NHOPKG_TMPDIR}/.nhoid" | \
+        while IFS= read -r line; do
+            local opt_dep_data=$(echo "$line" | sed 's/^#[^:]*:\s*//')
+            if [[ -n "$opt_dep_data" ]]; then
+                echo "# OptionalDep(post):	$opt_dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
+            fi
+        done
+    
+   	# Add npostinstall() and npostremove() function to nhoid.
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
-	NPOSTINSTALL_FILE_NUM=$(grep -n "npostinstall() {" "${NHOPKG_TMPDIR}/.nhoid" | sed -e 's@:npostinstall() {@@')
-	tail -n +${NPOSTINSTALL_FILE_NUM} "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	
+	# Add npostinstall() or npostinstall_part() function to nhoid, with fallback
+# Determine function names for install and remove
+INSTALL_GENERIC="npostinstall"
+REMOVE_GENERIC="npostremove"
+INSTALL_SPECIFIC="npostinstall${part:+_}${part}"
+REMOVE_SPECIFIC="npostremove${part:+_}${part}"
+
+# === npostinstall logic for splitpackages ===
+if grep -q "^${INSTALL_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
+    sed -n "/^${INSTALL_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Using ${INSTALL_SPECIFIC}() for post-install."
+elif grep -q "^${INSTALL_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
+    sed -n "/^${INSTALL_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Using ${INSTALL_GENERIC}() as fallback for post-install."
+else
+    echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
+    echo '    noemptyfuncs' >> "${NHOPKG_TMPDIR}/nhoid"
+    echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Warning: No ${INSTALL_SPECIFIC}() or npostinstall() found. Using placeholder."
+fi
+
+# === npostremove logic  for splitpackages ===
+if grep -q "^${REMOVE_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
+    sed -n "/^${REMOVE_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Using ${REMOVE_SPECIFIC}() for post-remove."
+elif grep -q "^${REMOVE_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
+    sed -n "/^${REMOVE_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Using ${REMOVE_GENERIC}() as fallback for post-remove."
+else
+    echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
+    echo '    noemptyfuncs' >> "${NHOPKG_TMPDIR}/nhoid"
+    echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
+    echog "Warning: No ${REMOVE_SPECIFIC}() or npostremove() found. Using placeholder."
+fi
+	
+	
+	#NPOSTINSTALL_FILE_NUM=$(grep -n "npostinstall() {" "${NHOPKG_TMPDIR}/.nhoid" | sed -e 's@:npostinstall() {@@')
+	#tail -n +${NPOSTINSTALL_FILE_NUM} "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 }
 ## Function build_make_binary_package(). Creates binary package from builded package.
 # Usage: build_make_binary_package (with/without split arguments)
@@ -3591,7 +3742,7 @@ case "${NHOPKG_OPTION}" in
                     build_prepare
 
                     # 6. Builds package (again? Or reuse?)
-                    build_package
+                    build_package "${part}"
 
                     # 7. Installs package for this part
                     build_package_install "${part}"
