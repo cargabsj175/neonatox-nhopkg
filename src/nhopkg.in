@@ -635,6 +635,8 @@ function get_nhoid_data()
 	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgos=$(grep "^# OS:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+    # Source from URL
+	pkgsrcurl=$(grep "^# Packageurl:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	# Set split variable
 	SPLITPACKAGE=$(grep "^# Splitpackage:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	# If there are subpackages, look for specific descriptions
@@ -685,17 +687,42 @@ function get_nhoid_data()
 # Usage: check_package_sha256sum (without arguments)
 function check_package_sha256sum()
 {
-	if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
-		return 0
-	fi
-	if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-		echogn " --- Checking SHA256 Sum for"
-		echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-	fi
-	cd "${NHOPKG_TMPDIR}"
-	echo "${pkgsha256}" | sha256sum -c &> /dev/null
-	check_if_ok " *** SHA256 checksum of package did not match."
-	cd "${CWD}"
+    if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
+        return 0
+    fi
+    
+    # If pkgsrcurl is defined and it's a Git repository, we don't check SHA256 here.
+    # The verification does not apply because there is no tarball present.
+    if [[ -n "${pkgsrcurl}" && ("${pkgsrcurl}" == git+* || "${pkgsrcurl}" == *".git"*) ]]; then
+        echog " --- Skipping SHA256 check: Git repository detected"
+        return 0
+    fi
+    
+    # If pkgsrcurl is defined but it is a link to a tarball, we do not check here either.
+    # The verification will occur in build_prepare() after downloading the tarball
+    if [[ -n "${pkgsrcurl}" && "${pkgsrcurl}" != git+* && "${pkgsrcurl}" != *".git"* ]]; then
+        echog " --- Deferring SHA256 check: Tarball will be downloaded later"
+        return 0
+    fi
+    
+    # Check if pkgsha256 is defined and not empty
+    if [[ -z "${pkgsha256}" ]]; then
+        echog " *** ERROR: SHA256 checksum not defined for package" >&2
+        echog "     ${pkgname}-${pkgversion}-${pkgrevision}" >&2
+        echog "     This is required for local source packages." >&2
+        echog "     Please define pkgsha256 in your .srcnho package." >&2
+        cleanup_tmp_dir
+        exit 1
+    fi
+    
+    if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+        echogn " --- Checking SHA256 Sum for"
+        echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+    fi
+    cd "${NHOPKG_TMPDIR}"
+    echo "${pkgsha256}" | sha256sum -c &> /dev/null
+    check_if_ok " *** SHA256 checksum of package did not match."
+    cd "${CWD}"
 }
 ## Function check_package_arch(). Check architecture of package and compare it with the system.
 # Usage: check_package_arch (without arguments)
@@ -1799,31 +1826,183 @@ function build_prepare()
 {
     mkdir -p "${NHOPKG_BUILDIR}"
 
-    if [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" ]]; then
-        zstdcat "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null
-    elif [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" ]]; then
-        tar xjf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" -C "${NHOPKG_BUILDIR}" &> /dev/null
-    elif [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" ]]; then
-        tar xJf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" -C "${NHOPKG_BUILDIR}" &> /dev/null
-    else
-        echo " * Unsupported file type."
-        return
-    fi
-    check_if_ok " * The selected package is not valid."
-    # Hide nhoid file.
+    local srcfile_found=false
+    
+    # Search for local source files in multiple formats
+    for ext in zst xz bz2 gz; do
+        if [[ -e "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.${ext}" ]]; then
+            srcfile_found=true
+            case "${ext}" in
+                zst)
+                    zstdcat "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                xz)
+                    tar xJf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                bz2)
+                    tar xjf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                gz)
+                    tar xzf "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.gz" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+            esac
+            break
+        fi
+    done
 
-    mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
-    rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.*"
+    # === Check if nhoid exists before moving it ===
+    if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+        # Hide nhoid file.
+        mv "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid" 2> /dev/null || true
+        echog " - nhoid file prepared for build process."
+    else
+        echog " * ERROR: nhoid file not found in ${NHOPKG_TMPDIR}" >&2
+        echog "   This is critical for the build process." >&2
+        echog "   The nhoid should come from the .srcnho package." >&2
+        return 1
+    fi
+
+    # If no source file was found, try pkgsrcurl
+    if [[ "${srcfile_found}" = false && -n "${pkgsrcurl}" ]]; then
+        # Managing Git repositories
+        if [[ "${pkgsrcurl}" == git+* ]] || [[ "${pkgsrcurl}" == *".git"* ]]; then
+            echog " - Git repository detected. Cloning directly to build directory..."
+            
+            # Parse Git URL and reference
+            local git_url="${pkgsrcurl}"
+            local git_ref=""
+            
+            if [[ "${git_url}" == *"#"* ]]; then
+                git_ref="${git_url#*#}"
+                git_url="${git_url%%#*}"
+            fi
+            
+            if [[ "${git_url}" == git+* ]]; then
+                git_url="${git_url#git+}"
+            fi
+            
+            # Create build directory
+            local build_dir="${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+            mkdir -p "${build_dir}"
+            
+            # Clone directly to the build directory
+            if ! git clone "${git_url}" "${build_dir}"; then
+                echog " * Failed to clone Git repository." >&2
+                return 1
+            fi
+            
+            # Checkout specific reference if specified
+            if [[ -n "${git_ref}" ]]; then
+                cd "${build_dir}" || return 1
+                if ! git fetch --depth 1 origin "${git_ref}"; then
+                    echog " * Failed to fetch reference ${git_ref}." >&2
+                    return 1
+                fi
+                if ! git checkout "${git_ref}"; then
+                    echog " * Failed to checkout reference ${git_ref}." >&2
+                    return 1
+                fi
+            fi
+            echog " - Source code ready for build."
+            srcfile_found=true
+        else
+            # Handling tarball URLs
+            echog " - Downloading source package from URL: ${pkgsrcurl}"
+            
+            # Determine the expected file name
+            local expected_file=""
+            case "${pkgsrcurl}" in
+                *.zst|*.tar.zst) expected_file="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.zst" ;;
+                *.xz|*.tar.xz) expected_file="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.xz" ;;
+                *.bz2|*.tar.bz2) expected_file="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.bz2" ;;
+                *.gz|*.tgz|*.tar.gz) expected_file="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.gz" ;;
+                *) 
+                    # Trying to extract the file name from the URL
+                    local filename=$(basename "${pkgsrcurl}")
+                    if [[ "${filename}" =~ \.tar\.(zst|xz|bz2|gz)$ ]]; then
+                        expected_file="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.${BASH_REMATCH[1]}"
+                    else
+                        echog " * Unsupported archive format in URL." >&2
+                        return 1
+                    fi
+                    ;;
+            esac
+            
+            # Download directly to the expected location
+            local download_success=false
+            if command -v wget > /dev/null; then
+                if wget -c -O "${expected_file}" "${pkgsrcurl}"; then
+                    download_success=true
+                fi
+            elif command -v curl > /dev/null; then
+                if curl -L -o "${expected_file}" "${pkgsrcurl}"; then
+                    download_success=true
+                fi
+            fi
+            
+            # Check download
+            if [[ "${download_success}" = false || ! -f "${expected_file}" || ! -s "${expected_file}" ]]; then
+                echog " * Failed to download source package." >&2
+                rm -f "${expected_file}"
+                return 1
+            fi
+
+# === Specific SHA256 verification for downloaded package ===
+	if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
+		return 0
+	fi
+	if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+		echogn " --- Checking SHA256 Sum for downloaded"
+		echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+	fi
+	cd "${NHOPKG_TMPDIR}"
+	local downloaded_hash=$(sha256sum "${expected_file}" | awk '{print $1}')
+	local expected_hash=$(echo "${pkgsha256}" | awk '{print $1}')
+	Downloaded: ${downloaded_hash}
+	echo "${pkgsha256}" | sha256sum -c &> /dev/null
+	check_if_ok " *** SHA256 checksum of package did not match.\n    Expected hash: ${expected_hash}\n    Downloaded hash: ${downloaded_hash}"
+	cd "${CWD}"
+# === End of specific verification ===
+            
+            # Unpack downloaded package
+            case "${expected_file}" in
+                *.zst)
+                    zstdcat "${expected_file}" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                *.xz)
+                    tar xJf "${expected_file}" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                *.bz2)
+                    tar xjf "${expected_file}" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+                *.gz)
+                    tar xzf "${expected_file}" -C "${NHOPKG_BUILDIR}" &> /dev/null
+                    ;;
+            esac
+            
+            srcfile_found=true
+        fi
+    fi
+
+    # If no source files were found and no Git repository was cloned
+    if [[ "${srcfile_found}" = false ]]; then
+        echog " * No source package found and no valid pkgsrcurl defined." >&2
+        return 1
+    fi
+
+    check_if_ok " * The selected package is not valid."
+
+    # Clean up temporary font files
+    rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar".*
 
     # Checks if there are any patch.
-    if [[ $(ls "${NHOPKG_TMPDIR}") ]]; then
+    if compgen -G "${NHOPKG_TMPDIR}/*" > /dev/null; then
         echo " --- Additional files in package (patches):"
-        for patch in $(ls "${NHOPKG_TMPDIR}");
-        do
-            echo -e "\t> ${patch}"
+        for patch in "${NHOPKG_TMPDIR}"/*; do
+            [[ -f "${patch}" ]] || continue
+            echo -e "\t> $(basename "${patch}")"
+            mv "${patch}" "${NHOPKG_BUILDIR}/"
         done
-        # Move files.
-	mv "${NHOPKG_TMPDIR}/"* "${NHOPKG_BUILDIR}"
     fi
 }
 ## Function build_package(). Build package form nhoid functions.
