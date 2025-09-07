@@ -1872,8 +1872,14 @@ fetch_git_source() {
 fetch_tarball_source() {
     local tarball_url="$1"
     local tarball_file="${NHOPKG_TMPDIR}/$(basename "${tarball_url}")"
-    local build_dir="${NHOPKG_BUILDIR}"
-
+    # This only line creates early the expected directory; 
+    # In some cases, the compressed filename is not ideal or is different from the compressed source.
+    # Ex., capitalization and unusual version numbers (v1.x or libXext, etc)...
+    # Ex., gd-*.tar.* is internally a directory named libgd-gd-*
+    # Also adds support for the zip format. 
+    # Ex., files as sqlite-src-*.zip uses bsdtar whith --strip-components.
+	local build_dir="${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+    
     echog " - Downloading source tarball: ${tarball_url}"
     if wget -q --show-progress "${tarball_url}" -O "${tarball_file}"; then
         echog " - Download completed: ${tarball_file}"
@@ -1882,7 +1888,7 @@ fetch_tarball_source() {
         return 1
     fi
 
-    # Verificar checksum si está definido
+    # Check checksum if defined
     # === Specific SHA256 verification for downloaded package ===
 	if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
 		return 0
@@ -1899,21 +1905,23 @@ fetch_tarball_source() {
 	cd "${CWD}"
     # === End of specific verification ===
 
-    # Crear directorio de build
-    mkdir -p "${build_dir}"
+    # Create build directory (package name + version)
+	mkdir -p ${build_dir}
 
-    # Descomprimir según extensión
+    # Unpacking according to the extension
     case "${tarball_file}" in
         *.tar.zst|*.tar.zst.*)
-            zstdcat "${tarball_file}" | tar xf - -C "${build_dir}" ;;
-        *.tar.xz|*.tar.xz.*)
-            tar xJf "${tarball_file}" -C "${build_dir}" ;;
-        *.tar.bz2|*.tar.bz2.*)
-            tar xjf "${tarball_file}" -C "${build_dir}" ;;
-        *.tar.gz|*.tar.gz.*)
-            tar xzf "${tarball_file}" -C "${build_dir}" ;;
+            zstdcat "${tarball_file}" | tar xf - -C "${build_dir}" --strip-components=1 ;;
+        *.tar.xz|*.tar.xz.*|*.txz)
+            tar xJf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
+        *.tar.bz2|*.tar.bz2.*|*.tbz2)
+            tar xjf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
+        *.tar.gz|*.tar.gz.*|*.tgz)
+            tar xzf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
         *.tar)
-            tar xf "${tarball_file}" -C "${build_dir}" ;;
+            tar xf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
+        *.zip|*.zip.*)
+            bsdtar xf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
         *)
             echog " * Unsupported archive format: ${tarball_file}" >&2
             return 1
@@ -1921,7 +1929,10 @@ fetch_tarball_source() {
     esac
 
     if [[ $? -eq 0 ]]; then
-        echog " - Source extracted to ${build_dir}."
+		echog " - Source extracted to ${build_dir}."
+		# Prevent a copy of the *.tar.* file from being compressed into the final binary package
+		# I have no idea why this happens xD
+        rm -f "${tarball_file}"
         srcfile_found=true
         return 0
     else
