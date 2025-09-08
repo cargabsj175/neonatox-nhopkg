@@ -1821,6 +1821,18 @@ function remove_package_config_files()
 #======================================7
 # Build (packages) functions.
 #======================================7
+# function set_files_and_patches() is required by the functions build_prepare(), fetch_git_source() and fetch_tarball_source()
+# it leaves all patches and other files ready to compile.
+function set_files_and_patches(){
+	if compgen -G "${NHOPKG_TMPDIR}/*" > /dev/null; then
+        echog " - Additional files in package (patches):"
+        for patch in "${NHOPKG_TMPDIR}"/*; do
+            [[ -f "${patch}" ]] || continue
+            echo -e "\t> $(basename "${patch}")"
+            mv "${patch}" "${NHOPKG_BUILDIR}/"
+        done
+    fi
+}
 ## function fetch_git_source() clones a Git repository and optionally checks out a reference (branch, tag, commit).
 # Usage: fetch_git_source <git_url> [git_ref]
 fetch_git_source() {
@@ -1862,6 +1874,9 @@ fetch_git_source() {
             fi
         fi
     fi
+    
+    # Move patches or additional files to the build dir
+    set_files_and_patches
 
     echog " - Source code ready for build."
     srcfile_found=true
@@ -1927,6 +1942,9 @@ fetch_tarball_source() {
             return 1
             ;;
     esac
+    
+    # Move patches or additional files to the build dir
+    set_files_and_patches
 
     if [[ $? -eq 0 ]]; then
 		echog " - Source extracted to ${build_dir}."
@@ -1958,7 +1976,7 @@ function build_prepare() {
         return 1
     fi
 
-    # 1. Si hay pkgsrcurl, intentar con Git o tarball
+    # 1. If there is pkgsrcurl, try Git or tarball
     if [[ -n "${pkgsrcurl}" ]]; then
         if [[ "${pkgsrcurl}" == git+* ]]; then
             local git_url="${pkgsrcurl#git+}"
@@ -1966,13 +1984,13 @@ function build_prepare() {
         elif [[ "${pkgsrcurl}" == *".git"* ]]; then
             fetch_git_source "${pkgsrcurl}" "${pkggitref}"
         else
-            # Asumimos que es un tarball
+            # We assume it's a tarball
             fetch_tarball_source "${pkgsrcurl}"
         fi
         return $(( srcfile_found == false ))
     fi
 
-    # 2. Buscar archivos fuente locales (comportamiento original)
+    # 2. Find local source files (original behavior)
     for ext in zst xz bz2 gz; do
         local srcfile="${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar.${ext}"
         if [[ -e "${srcfile}" ]]; then
@@ -1991,24 +2009,17 @@ function build_prepare() {
         fi
     done
 
-    # 3. Verificar si se encontró algo
+    # 3. Check if anything was found
     if [[ "${srcfile_found}" = false ]]; then
         echog " * No source package found and no valid pkgsrcurl defined." >&2
         return 1
     fi
 
-    # 4. Limpiar archivos temporales de fuentes
+    # 4. Clean up temporary font files
     rm -f "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}.tar".*
 
-    # 5. Mover parches o archivos adicionales al build dir
-    if compgen -G "${NHOPKG_TMPDIR}/*" > /dev/null; then
-        echog " - Additional files in package (patches):"
-        for patch in "${NHOPKG_TMPDIR}"/*; do
-            [[ -f "${patch}" ]] || continue
-            echo -e "\t> $(basename "${patch}")"
-            mv "${patch}" "${NHOPKG_BUILDIR}/"
-        done
-    fi
+    # 5. Move patches or additional files to the build dir
+    set_files_and_patches
 
     return 0
 }
