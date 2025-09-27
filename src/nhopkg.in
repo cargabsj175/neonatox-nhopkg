@@ -1537,10 +1537,10 @@ function bin_install_setting_up()
 	echogn " --- Setting up"
 	echo " ${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
-		npostinstall
+		npostinstall${part:+_}${part}
 		shooter_updates
 	else
-		npostinstall &> /dev/null
+		npostinstall${part:+_}${part} &> /dev/null
 		shooter_updates
 	fi
 }
@@ -2292,7 +2292,7 @@ REMOVE_SPECIFIC="npostremove${part:+_}${part}"
 
 # === npostinstall logic for splitpackages ===
 if grep -q "^${INSTALL_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
-    sed -n "/^${INSTALL_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    sed -n "/^${INSTALL_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" | sed  "s|_${part}||g" >> "${NHOPKG_TMPDIR}/nhoid"
     echog "Using ${INSTALL_SPECIFIC}() for post-install."
 elif grep -q "^${INSTALL_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${INSTALL_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2306,7 +2306,7 @@ fi
 
 # === npostremove logic  for splitpackages ===
 if grep -q "^${REMOVE_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
-    sed -n "/^${REMOVE_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+    sed -n "/^${REMOVE_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" | sed  "s|_${part}||g" >> "${NHOPKG_TMPDIR}/nhoid"
     echog "Using ${REMOVE_SPECIFIC}() for post-remove."
 elif grep -q "^${REMOVE_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${REMOVE_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
