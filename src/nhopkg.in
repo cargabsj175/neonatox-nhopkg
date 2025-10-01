@@ -2,24 +2,25 @@
 ###############################################################################
 #	nhopkg v. @PACKAGE_VERSION@ @RELEASEDATE@  <http://nhopkg.sourceforge.net>
 #
-#    Nhopkg is an universal package manager.
-#    It can be used in any GNU/linux distribution and uses .nho  packages
-#    (binary) and  .srcnho  packages (source).
+#	Nhopkg is an universal package manager.
+#	It can be used in any GNU/linux distribution and uses .nho  packages
+#	(binary) and  .srcnho  packages (source).
 #
-# Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+#	Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+#	Copyright (C) 2009-2025  Carlos Sánchez <cargabsj175@gmail.com>
 #
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+#	This program is free software: you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation, either version 3 of the License, or
+#	(at your option) any later version.
 #
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
 #
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#	You should have received a copy of the GNU General Public License
+#	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
 #
@@ -296,6 +297,7 @@ function nhopkg_version()
 	echogn "Nhopkg version"
 	echo " ${NHOPKG_VERSION}"
 	echo "Nhopkg  Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>"
+	echo "Nhopkg  Copyright (C) 2009-2025  Carlos Sánchez <cargabsj175@gmail.com>"
 	return 0
 }
 # ---------------------------------------------------------
@@ -333,6 +335,7 @@ function nhopkg_usage_with_sudo()
 function nhopkg_license()
 {
 	echo "Nhopkg  Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <projectnhoax@gmail.com>"
+	echo "Nhopkg  Copyright (C) 2009-2025  Carlos Sánchez <cargabsj175@gmail.com>"
 	echo
 	echog "This program comes with ABSOLUTELY NO WARRANTY."
 	echog "This is free software, and you are welcome to redistribute it under certain conditions; for details type nhopkg --license-all."
@@ -350,46 +353,48 @@ function nhopkg_help()
 	nhopkg_usage_with_sudo
 	echo
 	echog "Examples:"
-	echog " * Install binary package."
-	echo "sudo nhopkg -i /home/user/gimp-2.6.3-2.nho"
+	echog " * Install binary package.1"
+	echo "sudo nhopkg -i /home/${HOME}/gimp-3.0.4-n2025.linux-x86_64.nho"
 	echog " * Show files on package."
-	echo "nhopkg --show gimp-2.6.3-2"
+	echo "nhopkg --show gimp-3.0.4-n2025"
 	echo
 	echog "Commands:"
-	echog " -i, --install\tInstalls binary package."
-	echog " -S, --super-install\tInstalls binary package form repository."
-	echog " -d, --dios\tSame as -S, --super-install."
-	echog " -r, --remove\tRemoves package installed by Nhopkg."
-	echog " -B, --backup\tCreates binary package from installed package."
-	echog " -b, --build\tCompiles and installs source package."
-	echog " -k, --check\tChecks if installed package is correct."
-	echog " -c, --create-source\tCreates source package from tarball."
 	echog " -A, --auto-package\tCreates automatically source package from tarball."
-	echog " -z, --tgz2nho\tConverts .tgz package to .nho package."
-	echog " -g, --create-repo\tCreates software repository on selected directory."
+	echog " -B, --backup\tCreates binary package from installed package."
+	echog " -S, --super-install\tInstalls binary package form repository."
 	echog " -U, --update\tUpdate repository database."
+	echo
+	echog " -b, --build\tCompiles and installs source package."
+	echog " -c, --create-source\tCreates source package from tarball."
+	echog " -d, --dios\tSame as -S, --super-install."
 	echog " -e, --clean\tRemove cached data."
-	echog " -s, --search\tSearch for package and its details."
-	echog " -t, --list-repo\tLists packages on repository and their details."
+	echog " -g, --create-repo\tCreates software repository on selected directory."
+	echog " -i, --install\tInstalls binary package."
+	echog " -k, --check\tChecks if installed package is correct."
 	echog " -l, --list\tLists installed packages."
 	echog " -n, --info\tShows package details."
-	echog " -w, --show\tShows package files."
+	echog " -r, --remove\tRemoves package installed by Nhopkg."
+	echog " -s, --search\tSearch for package and its details."
+	echog " -t, --list-repo\tLists packages on repository and their details."
 	echog " -u, --update-db\tUpdate Nhopkg database."
-	echog " --license\tShows Nhopkg license."
+	echog " -w, --show\tShows package files."
+	echog " -x, --update-shooters\tUpdates all system data and schemas."
+	echog " -z, --tgz2nho\tConverts .tgz package to .nho package."
 	echog " --license-all\tShows complete Nhopkg license."
+	echog " --license\tShows Nhopkg license."
 	echog " --version\tShows Nhopkg version."
-	echog " -h, --help\tShows Nhopkg help pages."
+	echog " -h, --help\tShows this help page."
 	echo
 	echog "Options:"
-	echog " -R, --recursive\tNhopkg works recursively."
-	echog " --root\tSets install root."
-	echog " --no-check-deps\tDon't check dependencies."
-	echog " --no-check-arch\tDon't check architecture."
-	echog " --no-check-sha256\tDon't check SHA256 Sum."
-	echog " --force-check-deps\tForce check dependencies."
 	echog " --force-check-arch\tForce check architecture."
+	echog " --force-check-deps\tForce check dependencies."
 	echog " --force-check-sha256\tForce check SHA256 Sum."
+	echog " --no-check-arch\tDon't check architecture."
+	echog " --no-check-deps\tDon't check dependencies."
+	echog " --no-check-sha256\tDon't check SHA256 Sum."
 	echog " --purge\tRemove inverse dependencies of package."
+	echog " --root\tSets install root."
+	echog " -R, --recursive\tNhopkg works recursively."
 	echog " -o, --output\tWrite an output log."
 	echog " -v, --verbose\tVerbose operations."
 	echog " --\tStop parssing arguments."
@@ -3339,6 +3344,15 @@ while [[ "${1}" != "--" ]]; do
 				exit 1
 			fi
 		;;
+		-x|--update-shooters)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="update-shooters"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
 		-s|--search)
 			shift
 			if [[ -z "${NHOPKG_OPTION}" ]]; then
@@ -5177,6 +5191,11 @@ case "${NHOPKG_OPTION}" in
 			fi
 		done
 		## 4. Clean up and exit.
+		exit 0
+	;;
+	update-shooters)
+		check_if_root_uid
+		shooter_updates
 		exit 0
 	;;
 	update-db)
