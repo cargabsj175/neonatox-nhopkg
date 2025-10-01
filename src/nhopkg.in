@@ -354,7 +354,7 @@ function nhopkg_help()
 	echo
 	echog "Examples:"
 	echog " * Install binary package.1"
-	echo "sudo nhopkg -i /home/${HOME}/gimp-3.0.4-n2025.linux-x86_64.nho"
+	echo "sudo nhopkg -i ${HOME}/gimp-3.0.4-n2025.linux-x86_64.nho"
 	echog " * Show files on package."
 	echo "nhopkg --show gimp-3.0.4-n2025"
 	echo
@@ -3173,8 +3173,8 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdrBbklno:wstcg:UeAzhuv"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
+SHORTOPTIONS="RiSdrBbklno:wxstcg:UeAzhuv"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
