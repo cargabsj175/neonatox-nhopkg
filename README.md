@@ -1,6 +1,8 @@
 Nhopkg – Gestor de paquetes universal para Linux
 ================================================
 
+<img width="512" height="512" alt="imagen" src="https://github.com/user-attachments/assets/e4da8c40-22eb-42f1-a361-3761afb3965b" />
+
  [![License: GPLv3+](https://img.shields.io/badge/license-GPLv3%2B-blue.svg)](COPYING)[![Language: Bash](https://img.shields.io/badge/language-Bash-green.svg) ](https://www.gnu.org/software/bash/)[![Build system: Meson](https://img.shields.io/badge/build-Meson-orange.svg)](https://mesonbuild.com/)
 
 **Nhopkg** es un gestor de paquetes universal diseñado para funcionar en cualquier distribución GNU/Linux. Utiliza paquetes binarios (`.nho`) y paquetes fuente (`.srcnho`), permitiendo crear, instalar, convertir y gestionar software de forma sencilla, consistente y portable.
@@ -120,8 +122,8 @@ Nhopkg ya no usa Autotools. Ahora se construye con **Meson**, un sistema de comp
       --prefix=/usr \
       --sysconfdir=/etc \
       --localstatedir=/var \
-      -D i18n=true \
       -D binlocate=plocate
+      -D repo-url=https://sitio.web.com/repo/n2025/x86_64
     
 
 > Cambia `-D binlocate=locate` si usas `mlocate` o `slocate`.
