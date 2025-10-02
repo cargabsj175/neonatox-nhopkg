@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nhopkg – Gestor de paquetes universal para Linux</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem;
+      background-color: #fff;
+    }
+    h1, h2, h3 {
+      margin-top: 1.8rem;
+      margin-bottom: 1rem;
+      color: #2c3e50;
+    }
+    h1 {
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 0.5rem;
+    }
+    a {
+      color: #2980b9;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    code, pre, kbd {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background-color: #f8f9fa;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+    pre {
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      background-color: #f6f8fa;
+      border: 1px solid #e1e4e8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.2rem 0;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      background-color: #f1f3f5;
+    }
+    ul, ol {
+      padding-left: 1.5rem;
+    }
+    blockquote {
+      margin: 1rem 0;
+      padding: 0.8rem 1.2rem;
+      background-color: #f9f9f9;
+      border-left: 4px solid #3498db;
+    }
+    .badge {
+      display: inline-block;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #eee;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Nhopkg – Gestor de paquetes universal para Linux</h1>
+
+  <p>
+    <a class="badge" href="COPYING">
+      <img src="https://img.shields.io/badge/license-GPLv3%2B-blue.svg" alt="License: GPLv3+">
+    </a>
+    <a class="badge" href="https://www.gnu.org/software/bash/">
+      <img src="https://img.shields.io/badge/language-Bash-green.svg" alt="Language: Bash">
+    </a>
+    <a class="badge" href="https://mesonbuild.com/">
+      <img src="https://img.shields.io/badge/build-Meson-orange.svg" alt="Build system: Meson">
+    </a>
+  </p>
+
+  <p>
+    <strong>Nhopkg</strong> es un gestor de paquetes universal diseñado para funcionar en cualquier distribución GNU/Linux.
+    Utiliza paquetes binarios (<code>.nho</code>) y paquetes fuente (<code>.srcnho</code>), permitiendo crear, instalar, convertir y gestionar software de forma sencilla, consistente y portable.
+  </p>
+  <p>
+    Desarrollado originalmente en 2010, Nhopkg combina simplicidad, potencia y control total sobre el empaquetado, siendo especialmente útil en sistemas tipo Slackware o en entornos minimalistas.
+  </p>
+
+  <h2>📜 Historia y mantenimiento</h2>
+  <ul>
+    <li><strong>Creador original (2010):</strong> <a href="https://github.com/jaimegildesagredo">Jaime Gil de Sagredo Luna</a></li>
+    <li><strong>Mantenimiento y evolución (2010 – presente):</strong> <a href="https://github.com/cargabsj175">Carlos Sánchez</a> para la distribución <strong>NeonatoX</strong></li>
+  </ul>
+  <p>
+    Este proyecto ha sido mantenido activamente durante más de una década, adaptándose a nuevas herramientas, estándares y necesidades del empaquetado moderno.
+  </p>
+
+  <h2>🧰 Características principales</h2>
+  <ul>
+    <li>✅ Soporte para paquetes binarios (<code>.nho</code>) y fuente (<code>.srcnho</code>)</li>
+    <li>✅ Conversión automática de paquetes Slackware (<code>.tgz</code> → <code>.nho</code>)</li>
+    <li>✅ Gestión avanzada de dependencias (requeridas y opcionales)</li>
+    <li>✅ Compilación e instalación automática desde código fuente</li>
+    <li>✅ Creación y gestión de repositorios locales</li>
+    <li>✅ Internacionalización (i18n) con <code>gettext</code></li>
+    <li>✅ Integración con el sistema: MIME, iconos, esquemas, fuentes, etc.</li>
+    <li>✅ Creación de paquetes desde software ya instalado (<code>--backup</code>)</li>
+    <li>✅ Compatible con <strong>cualquier distribución Linux</strong></li>
+    <li>✅ Construcción moderna con <strong>Meson/Ninja</strong></li>
+  </ul>
+
+  <h2>📦 Formatos de paquete</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Extensión</th>
+        <th>Tipo</th>
+        <th>Contenido</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>.nho</code></td>
+        <td>Paquete binario</td>
+        <td>Archivos listos para instalar, metadatos (<code>nhoid</code>) y scripts de postinstalación.</td>
+      </tr>
+      <tr>
+        <td><code>.srcnho</code></td>
+        <td>Paquete fuente</td>
+        <td>Código fuente, configuración de compilación (<code>nbuild</code>, <code>ninstall</code>) y dependencias.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>🔧 Dependencias del sistema</h2>
+  <p>Nhopkg requiere las siguientes herramientas instaladas:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Herramienta</th>
+        <th>Propósito</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>bash</code></td><td>Intérprete del script principal</td></tr>
+      <tr><td><code>tar</code>, <code>zstd</code></td><td>Empaquetado y compresión (Zstandard)</td></tr>
+      <tr><td><code>sha256sum</code></td><td>Verificación de integridad</td></tr>
+      <tr><td><code>make</code>, <code>autoconf</code></td><td>Compilación de paquetes fuente</td></tr>
+      <tr><td><code>gettext</code></td><td>Soporte de traducciones (opcional pero recomendado)</td></tr>
+      <tr><td><code>ldconfig</code></td><td>Actualización de caché de bibliotecas compartidas</td></tr>
+      <tr><td><code>grep</code>, <code>awk</code>, <code>sed</code>, <code>find</code></td><td>Procesamiento de texto y rutas</td></tr>
+      <tr><td><code>wget</code> o <code>curl</code></td><td>Descarga de paquetes y repositorios</td></tr>
+      <tr><td><code>plocate</code> / <code>mlocate</code></td><td>Búsqueda de archivos para resolución de dependencias</td></tr>
+    </tbody>
+  </table>
+  <blockquote>
+    💡 <strong>Recomendación</strong>: Usa <code>plocate</code> en sistemas modernos (Arch, Fedora), o <code>mlocate</code> en Debian/Ubuntu.
+  </blockquote>
+
+  <h2>🛠️ Instalación con Meson</h2>
+  <p>Nhopkg ya no usa Autotools. Ahora se construye con <strong>Meson</strong>, un sistema de compilación moderno, rápido y portable.</p>
+
+  <h3>1. Requisitos previos</h3>
+  <pre><code># Debian / Ubuntu
+sudo apt install meson ninja-build
+
+# Arch Linux / Manjaro
+sudo pacman -S meson ninja
+
+# Fedora / RHEL
+sudo dnf install meson ninja-build
+</code></pre>
+
+  <h3>2. Configurar el proyecto</h3>
+  <pre><code>meson setup builddir \
+  --prefix=/usr \
+  --sysconfdir=/etc \
+  --localstatedir=/var \
+  -D i18n=true \
+  -D binlocate=plocate
+</code></pre>
+  <blockquote>
+    Cambia <code>-D binlocate=locate</code> si usas <code>mlocate</code> o <code>slocate</code>.
+  </blockquote>
+
+  <h3>3. Compilar (opcional)</h3>
+  <pre><code>ninja -C builddir</code></pre>
+
+  <h3>4. Instalar</h3>
+  <pre><code>sudo ninja -C builddir install</code></pre>
+  <p>Esto instalará:</p>
+  <ul>
+    <li><code>/usr/bin/nhopkg</code></li>
+    <li><code>/etc/nhopkg/nhopkg.conf</code></li>
+    <li><code>/usr/share/nhopkg/</code> (documentación, iconos, licencia)</li>
+    <li>Páginas de manual: <code>/usr/share/man/man8/nhopkg.8</code></li>
+    <li>Registro MIME: <code>/usr/share/mime/packages/x-nho.xml</code></li>
+    <li>Directorios en <code>/var/nhopkg/</code> (paquetes, caché, logs, base de datos)</li>
+  </ul>
+  <blockquote>
+    ⚠️ Nota: El directorio por defecto es </code>/var/nhopkg</code>, según <code>nhopkg.conf.in</code>.
+  </blockquote>
+
+  <h2>📁 Estructura de directorios en <code>/var/nhopkg/</code></h2>
+  <pre><code>/var/nhopkg/
+├── cache/          # Paquetes descargados y temporales
+├── files/          # Lista comprimida de archivos por paquete instalado
+├── logs/           # Registros de compilación e instalación
+├── packages/       # Metadatos de paquetes instalados
+└── repo/
+    ├── files/      # Base de datos de archivos del repositorio
+    └── packages/   # Metadatos de paquetes disponibles
+</code></pre>
+
+  <h2>🌐 Integración con el sistema</h2>
+  <p>Tras la instalación, actualiza las bases de datos del sistema:</p>
+  <pre><code>sudo update-mime-database /usr/share/mime
+sudo update-desktop-database /usr/share/applications  # si aplica
+</code></pre>
+  <p>Nhopkg también ejecuta automáticamente <code>shooter_updates()</code> tras instalaciones, actualizando:</p>
+  <ul>
+    <li>Esquemas GSettings</li>
+    <li>Caché de iconos</li>
+    <li>Tipos MIME</li>
+    <li>Fuentes</li>
+    <li>Manuales</li>
+    <li>Bibliotecas compartidas</li>
+  </ul>
+
+  <h2>📚 Uso básico</h2>
+  <pre><code># Instalar paquete local
+sudo nhopkg -i paquete-1.0-1.nho
+
+# Instalar desde repositorio
+sudo nhopkg -S nombre-del-paquete
+
+# Compilar e instalar desde fuente
+sudo nhopkg -b paquete.srcnho
+
+# Crear paquete desde software instalado
+sudo nhopkg -B nombre-del-paquete
+
+# Convertir paquete Slackware
+sudo nhopkg -z paquete.tgz
+
+# Crear repositorio local
+sudo nhopkg -g /ruta/al/repositorio
+
+# Buscar paquetes
+nhopkg -s nombre
+
+# Listar paquetes instalados
+nhopkg -l
+
+# Mostrar ayuda completa
+nhopkg --help
+</code></pre>
+
+  <h2>🌍 Traducciones</h2>
+  <p>Nhopkg soporta múltiples idiomas gracias a <code>gettext</code>:</p>
+  <ul>
+    <li>Español (<code>es</code>, <code>es_ES</code>)</li>
+    <li>Catalán (<code>ca</code>)</li>
+    <li>Francés (<code>fr</code>)</li>
+    <li>Ruso (<code>ru_RU</code>)</li>
+    <li>Portugués brasileño (<code>pt_BR</code>)</li>
+  </ul>
+  <p>Las traducciones se gestionan con gettext. Puedes contribuir con nuevas traducciones en el directorio <code>po/</code>.</p>
+
+  <h2>📄 Licencia</h2>
+  <p>Este software está bajo la <strong>Licencia Pública General de GNU v3 o posterior (GPL-3.0+)</strong>.</p>
+  <blockquote>
+    Nhopkg viene SIN NINGUNA GARANTÍA. Es software libre y puedes redistribuirlo bajo ciertas condiciones.<br>
+    Ver archivo <code>COPYING</code> para más detalles.
+  </blockquote>
+
+  <h2>🤝 Contribuir</h2>
+  <p>¡Bienvenidos contribuidores! Puedes:</p>
+  <ul>
+    <li>Reportar errores</li>
+    <li>Añadir traducciones</li>
+    <li>Mejorar el empaquetado</li>
+    <li>Optimizar el script</li>
+  </ul>
+  <ul>
+    <li>Proyecto original: <a href="https://github.com/jaimegildesagredo">https://github.com/jaimegildesagredo</a></li>
+    <li>Mantenimiento actual: <a href="https://github.com/cargabsj175">https://github.com/cargabsj175</a></li>
+  </ul>
+
+  <h2>📬 Contacto</h2>
+  <ul>
+    <li><a href="https://github.com/jaimegildesagredo">Jaime Gil de Sagredo Luna</a></li>
+    <li><a href="https://github.com/cargabsj175">Carlos Sánchez</a></li>
+    <li><a href="https://neonatox.github.io">Web de GNU NeonatoX</a></li>
+  </ul>
+
+  <footer>
+    <p><strong>Nhopkg – Porque empaquetar debería ser fácil, universal y libre.</strong></p>
+  </footer>
+
+</body>
+</html>

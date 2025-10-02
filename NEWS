@@ -1,3 +1,50 @@
+---- nhopkg git 2025-10-01 20:59:36 ----
+
+Changes since the start of the project:
+-------------------------------------
+- Update nhopkg.in (9eb1295) - 2025-10-01
+- Update nhopkg.in (-x & --update-shooters as arguments) (ec08b78) - 2025-10-01
+- Update nhopkg.in (shooter_updates function) (0b0bd1b) - 2025-10-01
+- Update nhopkg.in (8328369) - 2025-09-27
+- Update nhopkg.in (e92c718) - 2025-09-08
+- Update nhopkg.in (1a980d2) - 2025-09-07
+- Update nhopkg.in (2f55439) - 2025-09-05
+- Update nhopkg.in (8651c20) - 2025-09-04
+- Update nhopkg.in (b249bf3) - 2025-09-01
+- Update nhopkg.conf.in (f56d662) - 2025-08-07
+- Update x-nho.xml (4020f8b) - 2025-08-07
+- Update nhopkg.in (7649a74) - 2025-08-07
+- Update nhopkg.in (Nhopkg finally creates split packages! Yeah!) (1a582e2) - 2025-07-15
+- Update nhopkg.in (First implementations for building split packages) (a88344d) - 2025-07-03
+- Update nhopkg.conf.in (2482115) - 2025-07-02
+- Update nhopkg.in (799f198) - 2025-07-02
+- Update LINGUAS (699dd49) - 2024-10-13
+- Create pt_BR.po (ea9d840) - 2024-10-13
+- Update configure.ac - functional default repository via GIT ;-) (6d793d8) - 2023-12-27
+- Update nhopkg.in - Allows installing old versions of binaries (bz2 and xz) (354b15b) - 2023-12-27
+- Minor debugs (cb80bd5) - 2023-12-13
+- Update nhopkg.in (167c8e5) - 2023-12-13
+- Replace XZ for Zstandard - this fix DATE variables for build and install (3ca8c4e) - 2023-12-13
+- update repo url to n2017.1 (063e135) - 2016-07-05
+- fix os and arch variables on super-install section. (75aae5c) - 2013-05-10
+- more OS tag implementation. (069a414) - 2013-05-10
+- complete implementation of OS tag (0ba2940) - 2013-05-10
+- add OS tag to repository binary info (320543b) - 2013-05-10
+- add OS tag to local binary info (22c822e) - 2013-05-10
+- add OS tag to installed binary info (66c66b1) - 2013-05-10
+- add OS tag to binary nhoid (8461e68) - 2013-05-10
+- ru_RU.po fixes at line 259. (567aaff) - 2013-03-13
+- ru_RU.po: Added Russian translation (Thanks Ilya Murav’jov). (2e213ad) - 2013-03-13
+- fix architecture from the nhoid on backup section. (5733eb5) - 2013-02-22
+- architecture and so was added to the name of the binary package. other minor fixes. (6668d87) - 2013-02-22
+- fix gettext version. (4682433) - 2012-10-26
+- use neonatox's official repo.. (114d9b7) - 2012-10-26
+- nhopkg depends of xz instead of bzip. (2ff1739) - 2012-10-26
+- shooters and language fixes. (8ee1ea7) - 2012-10-26
+- add shooters for desktop, icons, mime types and schemas updates. (30c9d69) - 2012-10-26
+- XZ support instead BZIP2. (81652c3) - 2012-10-26
+- Initial commit from nhopkg-0.5.1 (7d5baf1) - 2012-09-07
+
 ---- nhopkg 0.5 2009-04-29 13:07:30 ----
 Fiexd some bugs.
 Dependencies manager.

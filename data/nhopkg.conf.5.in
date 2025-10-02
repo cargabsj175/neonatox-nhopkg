@@ -1,125 +1,212 @@
-.\"----------------------------------------------------------------
-.\" nhopkg.conf.5 - nhopkg.conf man page
-.\"----------------------------------------------------------------
-.\" Copyright (C) 2008-2009 Jaime Gil de Sagredo <projectnhoax@gmail.com>
-.\" For more information visit  http://nhopkg.sourceforge.net
-.\"----------------------------------------------------------------
-.\"
-.TH nhopkg.conf "5" "@RELEASEDATE@" "@PACKAGE@" "System"
+.TH NHOPKG.CONF 5 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
 .SH NAME
-\fBnhopkg.conf\fP \- configuration file for
-.B nhopkg(8).
+nhopkg.conf \- configuration file for the nhopkg package manager
 .SH SYNOPSIS
-/etc/nhopkg/nhopkg.conf
+.I /etc/nhopkg/nhopkg.conf
+.br
+.I /usr/share/nhopkg/nhopkg.conf
 .SH DESCRIPTION
-.B nhopkg
-uses a configuration file at
-.B /etc/nhopkg/nhopkg.conf.
-
+The
 .B nhopkg.conf
-provides default configurations for users, and they can be changed in this file or in the command line.
-.SH EXAMPLE
-.sp
-.RS 4
+file defines the default behavior of the
+.B nhopkg
+universal package manager. It is read at startup unless overridden by command-line options.
+.PP
+If
+.I /etc/nhopkg/nhopkg.conf
+does not exist, nhopkg falls back to the system-provided default at
+.I /usr/share/nhopkg/nhopkg.conf
+.
+.SH FILE FORMAT
+The file uses standard Bash syntax. Each line sets a shell variable. Comments start with
+.B #
+.
+.SH CONFIGURATION VARIABLES
+.SS [Main paths]
+These variables define the core directories used by nhopkg.
+
+.TP
+.B NHOPKG_LOCALSTATEDIR
+Directory for nhopkg runtime data (packages, files, logs, cache).  
+Default:
+.I /var/lib/nhopkg
+
+.TP
+.B NHOPKG_BUILDIR
+Base directory for building source packages.  
+Default:
+.I /usr/src/nhopkg
+
+.TP
+.B NHOPKG_LOCKFILE
+Path to the lock file that prevents concurrent nhopkg instances.  
+Default:
+.I /var/lock/nhopkg
+
+.TP
+.B TMPDIR
+Temporary directory for general use.  
+Default:
+.I /tmp
+
+.TP
+.B TEMPLATE_TMPDIR
+Template for temporary directories created by nhopkg.  
+Default:
+.I .nhopkg.XXXXXXXXXX
+
+.SS [Repository]
+.TP
+.B NHOPKG_REPO
+URL of the default remote repository used by
+.BR -S ", " --super-install .
+.br
+Default value is set at build time (e.g.,
+.I https://repo.example.com
+).
+
+.SS [Behavior options]
+.TP
+.B NHOPKG_CHECKDEPS
+Enable dependency resolution and installation.  
+Values:
+.I yes
+(default) or
+.I no
+
+.TP
+.B NHOPKG_PURGE
+When removing a package, also remove packages that depend on it.  
+Values:
+.I no
+(default) or
+.I yes
+
+.TP
+.B NHOPKG_CHECKSHA256
+Verify SHA256 checksums of packages.  
+Values:
+.I yes
+(default) or
+.I no
+
+.TP
+.B NHOPKG_CHECKARCH
+Reject packages with incompatible architecture.  
+Values:
+.I yes
+(default) or
+.I no
+
+.TP
+.B VERBOSE_MODE
+Enable verbose output during operations.  
+Values:
+.I no
+(default) or
+.I yes
+
+.TP
+.B NHOPKG_GETTEXT
+Enable internationalization (i18n) via gettext.  
+Values:
+.I yes
+(default) or
+.I no
+
+.SS [File tracking (for .srcnho builds)]
+.TP
+.B FIND_DIRS
+Space-separated list of directories scanned to detect files installed by a source package.  
+Default:
+.I "/bin /boot /etc /lib /opt /sbin /srv /usr"
+
+.TP
+.B NOUPGRADE_FILES
+Files that should never be overwritten during package upgrades (e.g., auto-generated caches).  
+Default includes:
+.RS
 .nf
-
-\.ft C
-# [main]
-prefix=/usr
-SYSCONFDIR=/etc
-NHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
-DATADIR=/usr/share
-NHOPKG_DATADIR=${DATADIR}/nhopkg
-LOCALSTATEDIR=/var/lib
-NHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
-TMPDIR=/tmp
-TEMPLATE_TMPDIR=".nhopkg.XXXXXXXXXX"
-BUILDIR=/usr/src
-NHOPKG_BUILDIR=${BUILDIR}/nhopkg
-NHOPKG_LOCKFILE=/var/lock/nhopkg
-
-[...]
-\.ft
-
+mimeinfo.cache
+info/dir
+info/dir.old
+/etc/ld.so.cache
+${NHOPKG_BUILDIR}
+/etc/mtab
+/etc/fstab
 .fi
 .RE
-.SH OPTIONS
 
-.SS [main]
-
+.SS [Database]
 .TP
-\fBprefix=nhopkg_prefix\fR
-Set the nhopkg prefix.
-.TP
-\fBSYSCONFDIR=nhopkg_sysconfdir\fR
-Set the nhopkg configuration directory.
-.TP
-\fBNHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
-Set the nhopkg configuration directory.
-.TP
-\fBDATADIR=nhopkg_datadir
-Set the nhopkg data directory.
-.TP
-\fBNHOPKG_DATADIR=${DATADIR}/nhopkg
-Set the nhopkg data directory.
-.TP
-\fBLOCALSTATEDIR=nhopkg_localstatedir
-Set the nhopkg local state directory.
-.TP
-\fBNHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
-Set the nhopkg local state directory.
-.TP
-\fBTMPDIR=nhopkg_tmpdir
-Set the nhopkg temporal directory.
-.TP
-\fBTEMPLATE_TMPDIR=nhopkg_template_tmpdir
-Set the nhopkg template for temporal directory.
-.TP
-\fBBUILDIR=nhopkg_build_dir
-Set the nhopkg build directory.
-.TP
-\fBNHOPKG_BUILDIR=${BUILDIR}/nhopkg
-Set the nhopkg build directory.
-.TP
-\fBNHOPKG_LOCKFILE=nhopkg_lock_file
-Set the nhopkg lock file.
-
-.SS [server]
+.B NHOPKG_DB
+Path to the locate-style database used for dependency resolution.  
+Default:
+.I /var/lib/nhopkg/nhopkg.db
 
 .TP
-\fBNHOPKG_REPO=server_repository\fR
-Set default repository for nhopkg.
+.B NO_DIRS_IN_DB
+Directories excluded from the nhopkg database (for performance and security).  
+Default:
+.RS
+.nf
+/dev /home /media /mnt /opt /proc /run /sys /tmp \\
+/usr/src /usr/share/zoneinfo /var
+.fi
+.RE
 
-.SS [language support]
+.SS [Localization]
+.TP
+.B TEXTDOMAIN
+Gettext domain name (should not be modified).  
+Default:
+.I nhopkg
 
 .TP
-\fBNHOPKG_GETTEXT=yes_or_no\fR
-Set if nhopkg will use language support.
-.TP
-\fBTEXTDOMAIN=nhopkg\fR
-Set TEXTDOMAIN for language support with gettext. Don't edit this option.
-.TP
-\fBTEXTDOMAINDIR=/usr/share/locale\fR
-Set TEXTDOMAINDIR for language support with gettext. Don't edit this option.
+.B TEXTDOMAINDIR
+Directory containing translation files (.mo).  
+Default:
+.I /usr/share/locale
 
-.SS [create source package]
+.SH EXAMPLE
+.nf
+# Main paths
+NHOPKG_LOCALSTATEDIR="/var/lib/nhopkg"
+NHOPKG_BUILDIR="/usr/src/nhopkg"
+NHOPKG_LOCKFILE="/var/lock/nhopkg"
 
+# Repository
+NHOPKG_REPO="https://packages.nhopkg.org/repo"
+
+# Behavior
+NHOPKG_CHECKDEPS="yes"
+NHOPKG_CHECKSHA256="yes"
+NHOPKG_CHECKARCH="yes"
+VERBOSE_MODE="no"
+NHOPKG_GETTEXT="yes"
+
+# File tracking
+FIND_DIRS="/bin /sbin /usr /etc /opt"
+NOUPGRADE_FILES="/etc/ld.so.cache /var/cache/fontconfig"
+
+# Database
+NHOPKG_DB="/var/lib/nhopkg/nhopkg.db"
+NO_DIRS_IN_DB="/tmp /proc /sys /dev /home"
+.fi
+
+.SH FILES
 .TP
-\fBFIND_DIRS=dirs\fR
-FIND_DIRS contains directories where nhopkg looking for files installed.
+.I /etc/nhopkg/nhopkg.conf
+User-editable configuration file (takes precedence).
 .TP
-\fBNOUPGRADE_FILES=files\fR
-Add files that you think mustn't be in a binary package.
-.TP
-\fBNO_DIRS_IN_DB=dirs\fR
-Dirs that you don't want in your Data Base.
-.LP
+.I /usr/share/nhopkg/nhopkg.conf
+Fallback default configuration (installed by nhopkg itself).
+
 .SH SEE ALSO
-nhopkg(8)
-.LP
-.SH BUGS
-If you find a bug, please report it at http://sourceforge.net/tracker2/?group_id=223020.
-.SH AUTHORS
-Jaime Gil de Sagredo (jaimegildesagredo@gmail.com)
-See the AUTHORS file for additional contributors.
-.TP
+.BR nhopkg (8),
+.BR updatedb (1),
+.BR gettext (1)
+
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>  
+Carlos Sánchez <cargabsj175@gmail.com>

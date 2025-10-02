@@ -1,0 +1,12 @@
+option('binlocate',
+  type: 'combo',
+  choices: ['plocate', 'locate'],
+  value: 'plocate',
+  description: 'Herramienta de búsqueda de archivos'
+)
+
+option('repo-url',
+  type: 'string',
+  value: 'https://neonatox.vegnux.com/repo/n2025/x86_64',
+  description: 'URL del repositorio por defecto'
+)

@@ -184,11 +184,11 @@ shooter_updates() {
             $verbose && echo " - Updating $description..."
             if "$cmd" "${args[@]}" &> /dev/null; then
                 ((update_count++))
-                $verbose && echo "   ✓ $description updated successfully"
+                $verbose && echo "   [OK] $description updated successfully"
                 return 0
             else
                 ((update_errors++))
-                $verbose && echo "   ✗ Failed to update $description" >&2
+                $verbose && echo "   [X] Failed to update $description" >&2
                 return 1
             fi
         else
@@ -353,7 +353,7 @@ function nhopkg_help()
 	nhopkg_usage_with_sudo
 	echo
 	echog "Examples:"
-	echog " * Install binary package.1"
+	echog " * Install binary package"
 	echo "sudo nhopkg -i ${HOME}/gimp-3.0.4-n2025.linux-x86_64.nho"
 	echog " * Show files on package."
 	echo "nhopkg --show gimp-3.0.4-n2025"

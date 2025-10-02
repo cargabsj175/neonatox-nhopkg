@@ -1,154 +1,116 @@
-.\"----------------------------------------------------------------
-.\" nhopkg.8 - nhopkg-0.5 man page
-.\"----------------------------------------------------------------
-.\" Copyright (C) 2008-2009 Jaime Gil de Sagredo <projectnhoax@gmail.com>
-.\" For more information visit  http://nhopkg.sourceforge.net
-.\"----------------------------------------------------------------
-.\"
-.TH NHOPKG "8" "@RELEASEDATE@" "@PACKAGE@" "System"
+.TH NHOPKG 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
 .SH NAME
-\fBnhopkg\fP \- universal package manager.
-
+nhopkg \- universal package manager for GNU/Linux
 .SH SYNOPSIS
 .B nhopkg
-.RI [command]
-.RI [options]
-.RI package
+[\fIOPTIONS\fR] [\fICOMMAND\fR] [\fIPACKAGE...\fR]
 .SH DESCRIPTION
 .B nhopkg
-is an universal package manager. It can be used in any GNU/linux distribution and uses .nho packages (binary) and .src.nho packages (source).
-
-With
-.B nhopkg
-you can install, build and remove packages. Checks their dependencies and automatically download and install them.
-.LP
+is a universal package manager that works on any GNU/Linux distribution.
+It supports binary packages (`.nho`) and source packages (`.srcnho`).
+.PP
+Packages can be installed locally or fetched from remote repositories.
+.SH COMMANDS
+.TP
+.B \-i, \-\-install
+Install a local binary package (`.nho`).
+.TP
+.B \-S, \-\-super-install, \-d, \-\-dios
+Install a package from configured repository.
+.TP
+.B \-b, \-\-build
+Build and install a source package (`.srcnho`).
+.TP
+.B \-r, \-\-remove
+Remove an installed package.
+.TP
+.B \-\-purge
+Also remove packages that depend on the one being removed.
+.TP
+.B \-l, \-\-list
+List all installed packages.
+.TP
+.B \-n, \-\-info
+Show detailed information about a package.
+.TP
+.B \-w, \-\-show
+List files contained in a package.
+.TP
+.B \-s, \-\-search
+Search for packages in the repository.
+.TP
+.B \-t, \-\-list-repo
+List all packages available in the repository.
+.TP
+.B \-c, \-\-create-source
+Launch interactive wizard to create a `.srcnho` package.
+.TP
+.B \-A, \-\-auto-package
+Automatically create a `.srcnho` package from a tarball.
+.TP
+.B \-z, \-\-tgz2nho
+Convert a Slackware `.tgz` package to `.nho`.
+.TP
+.B \-g, \-\-create-repo
+Create a local repository from `.nho` files in a directory.
+.TP
+.B \-U, \-\-update
+Update local repository metadata.
+.TP
+.B \-u, \-\-update-db
+Update the internal file database used for dependency resolution.
+.TP
+.B \-x, \-\-update-shooters
+Run system-wide cache updates (icons, MIME, schemas, fonts, etc.).
+.TP
+.B \-e, \-\-clean
+Clear download and build caches.
+.TP
+.B \-\-version
+Show version information.
+.TP
+.B \-\-help
+Show this help.
 .SH OPTIONS
-
 .TP
-\fB\-i, --install\fR
-Installs binary package.
+.B \-\-root=DIR
+Install package into an alternate root directory.
 .TP
-\fB\-S, --super-install\fR
-Installs binary package form repository.
+.B \-R, \-\-recursive
+Do not prompt for confirmation; answer "yes" automatically.
 .TP
-\fB\-d, --dios\fR
-Same as -S, --super-install.
+.B \-v, \-\-verbose
+Enable verbose output.
 .TP
-\fB\-r, --remove\fR
-Removes package installed by Nhopkg.
+.B \-\-no-check-deps
+Skip dependency checking.
 .TP
-\fB\-B, --backup\fR
-Creates binary package from installed package.
+.B \-\-force-check-deps
+Force dependency checking (default behavior).
 .TP
-\fB\-b, --build\fR
-Compiles and installs source package.
+.B \-\-no-check-arch
+Skip architecture verification.
 .TP
-\fB\-k, --check\fR
-Checks if installed package is correct.
+.B \-\-no-check-sha256
+Skip SHA256 checksum verification.
 .TP
-\fB\-c, --create-source\fR
-Creates source package from tarball.
+.B \-o, \-\-output=DIR
+Write logs or output to specified directory.
+.SH FILES
 .TP
-\fB\-A, --auto-package\fR
-Creates automatically source package from tarball.
+.I /etc/nhopkg/nhopkg.conf
+Main configuration file.
 .TP
-\fB\-z, --tgz2nho\fR
-Converts .tgz package to .nho package.
+.I /var/lib/nhopkg/packages/
+Database of installed packages.
 .TP
-\fB\-g, --create-repo\fR
-Creates software repository on selected directory.
+.I /var/lib/nhopkg/files/
+List of files installed by each package (compressed).
 .TP
-\fB\-U, --update\fR
-Update repository database.
-.TP
-\fB\-e, --clean\fR
-Remove cached data.
-.TP
-\fB\-s, --search\fR
-Search for package and its details.
-.TP
-\fB\-t, --list-repo\fR
-Lists packages on repository and their details.
-.TP
-\fB\-l, --list\fR
-Lists installed packages.
-.TP
-\fB\-n, --info\fR
-Shows package details.
-.TP
-\fB\-w, --show\fR
-Shows package files.
-.TP
-\fB\-u, --update-db\fR
-Update Nhopkg database.
-.TP
-\fB\--license\fR
-Shows Nhopkg license.
-.TP
-\fB\--license-all\fR
-Shows complete Nhopkg license.
-.TP
-\fB\--version\fR
-Shows Nhopkg version.
-.TP
-\fB\-h, --help\fR
-Shows Nhopkg help pages.
-
-.LP
-.SH GENERAL OPTIONS
-
-.TP
-\fB\-R, --recursive\fR
-Nhopkg works recursively.
-.TP
-\fB\--root\fR
-Sets install root.
-.TP
-\fB\--no-check-deps\fR
-Don't check dependencies.
-.TP
-\fB\--no-check-arch\fR
-Don't check architecture.
-.TP
-\fB\--no-check-md5\fR
-Don't check MD5 Sum.
-.TP
-\fB\--force-check-deps\fR
-Force check dependencies.
-.TP
-\fB\--force-check-arch\fR
-Force check architecture.
-.TP
-\fB\--force-check-md5\fR
-Force check MD5 Sum.
-.TP
-\fB\--purge\fR
-Remove inverse dependencies of package.
-.TP
-\fB\-o, --output\fR
-Write an output log.
-.TP
-\fB\-v, --verbose\fR
-Verbose operations.
-.TP
-\fB\--\fR
-Stop parssing arguments.
-
-.LP
-.SH EXAMPLES
-.TP
-\fBInstall binary pacakge.\fR
-nhopkg -i /home/user/gimp-2.6.3-2.nho
-.TP
-\fBShow files on package.\fR
-nhopkg --show gimp-2.6.3-2
-.LP
+.I /var/cache/nhopkg/
+Downloaded packages and temporary files.
 .SH SEE ALSO
-nhopkg.conf(5)
-.LP
-.SH BUGS
-If you find a bug, please report it at http://sourceforge.net/tracker2/?group_id=223020.
-.SH AUTHORS
-Jaime Gil de Sagredo (jaimegildesagredo@gmail.com)
-See the AUTHORS file for additional contributors.
-.TP
+.BR nhopkg.conf (5)
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>  
+Carlos Sánchez <cargabsj175@gmail.com>
