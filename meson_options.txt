@@ -10,3 +10,9 @@ option('repo-url',
   value: 'https://neonatox.vegnux.com/repo/n2025/x86_64',
   description: 'URL del repositorio por defecto'
 )
+
+option('repo-git-url',
+  type: 'string',
+  value: 'https://gitlab.com/neonatox-sources',
+  description: 'URL del repositorio fuente GIT por defecto'
+)
