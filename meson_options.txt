@@ -2,17 +2,17 @@ option('binlocate',
   type: 'combo',
   choices: ['plocate', 'locate'],
   value: 'plocate',
-  description: 'Herramienta de búsqueda de archivos'
+  description: 'File search tool'
 )
 
 option('repo-url',
   type: 'string',
   value: 'https://neonatox.vegnux.com/repo/n2025/x86_64',
-  description: 'URL del repositorio por defecto'
+  description: 'Default repository URL'
 )
 
-option('repo-git-sources',
+option('git-url',
   type: 'string',
   value: 'https://gitlab.com/neonatox-sources',
-  description: 'URL del repositorio fuente GIT por defecto'
+  description: 'Default GIT source repository URL'
 )
