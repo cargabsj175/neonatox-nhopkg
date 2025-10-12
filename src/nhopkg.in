@@ -758,8 +758,8 @@ function check_package_arch()
 			;;
 			i?86)
 				# Checking for ix86 architectures.
-				xarch=$(echo "${arch}" | sed -e 's@i@@' -e 's@86@@')
-				xHOST_ARCH=$(echo "${HOST_ARCH}" | sed -e 's@i@@' -e 's@86@@')
+				xarch=$(echo "${arch}" | sed -e 's/i//' -e 's/86//')
+                xHOST_ARCH=$(echo "${HOST_ARCH}" | sed -e 's/i//' -e 's/86//')
 				# Check if xHOST_ARCH is larger than xarch
 				if (( "${xHOST_ARCH}" > "${xarch}" )); then
 					VALID_ARCH="yes"
