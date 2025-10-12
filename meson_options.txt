@@ -11,7 +11,7 @@ option('repo-url',
   description: 'URL del repositorio por defecto'
 )
 
-option('repo-git-url',
+option('repo-git-sources',
   type: 'string',
   value: 'https://gitlab.com/neonatox-sources',
   description: 'URL del repositorio fuente GIT por defecto'
