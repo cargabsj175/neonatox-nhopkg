@@ -30,16 +30,12 @@ conf.set('localedir', join_paths(get_option('prefix'), 'share', 'locale'))
 conf.set('datarootdir', join_paths(get_option('prefix'), get_option('datadir')))
 conf.set('PACKAGE', meson.project_name())
 conf.set('NHOPKG_REPO', repo_url)
-
-# Variables para nhopkg.conf.in
-conf.set('datarootdir', join_paths(get_option('prefix'), get_option('datadir')))
-conf.set('PACKAGE', meson.project_name())
-conf.set('NHOPKG_GIT_SOURCES', repo_git_sources)
+conf.set('NHOPKG_GIT_SOURCES', repo_url)
 
 # Variables para nhopkg.in
 conf.set('PACKAGE_NAME', meson.project_name())
 conf.set('PACKAGE_VERSION', meson.project_version())
-conf.set('RELEASEDATE', '2026')
+conf.set('RELEASEDATE', '2025')
 
 # === Verificación de dependencias del sistema ===
 required_tools = [
