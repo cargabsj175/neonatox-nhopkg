@@ -43,6 +43,7 @@ VERBOSE_MODE=no
 # Repository configuration for nhopkg.
 # Default repository of Nhopkg. You can change it.
 NHOPKG_REPO=@NHOPKG_REPO@
+NHOPKG_GIT_SOURCES=@NHOPKG_GIT_SOURCES@
 
 # [language suppor]
 # Language suppor for nhopkg (yes OR no):
