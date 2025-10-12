@@ -361,6 +361,7 @@ function nhopkg_help()
 	echog "Commands:"
 	echog " -A, --auto-package\tCreates automatically source package from tarball."
 	echog " -B, --backup\tCreates binary package from installed package."
+	echog " -C, --super-build\tCompiles and installs source package from Git repo."
 	echog " -S, --super-install\tInstalls binary package form repository."
 	echog " -U, --update\tUpdate repository database."
 	echo
@@ -3173,8 +3174,8 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdrBbklno:wxstcg:UeAzhuv"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose"
+SHORTOPTIONS="RiSdrBbklno:wxstcg:UeAzhuvC"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose,super-build"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -3291,6 +3292,15 @@ while [[ "${1}" != "--" ]]; do
 			shift
 			if [[ -z "${NHOPKG_OPTION}" ]]; then
 				NHOPKG_OPTION="build"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-C|--super-build)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="super-build"
 			else
 				echog " * You have selected more than one valid option." >&2
 				exit 1
@@ -3985,7 +3995,176 @@ case "${NHOPKG_OPTION}" in
         update_local_db
         echog " - Installation finished successfully!"
         exit 0
-;;
+    ;;
+	super-build)
+# ********************************************************************
+#
+# Section: Super Build (source from Git repository)
+# 1. Basic configurations.
+# 2. Clone Git repository using NHOPKG_GIT_SOURCES and package name.
+# 3. Read nhoid to extract version and release.
+# 4. Reconstruct CASEPACKAGE as pkgname-pkgversion-pkgrevision.
+# 5. Prepare build environment like a .srcnho package (nhoid, others/, patches/).
+# 6. Checks architecture and SHA256 Sum (if applicable).
+# 7. Checks and installs build and runtime dependencies.
+# 8. Builds, installs, and creates binary package(s) (including split packages).
+# 9. Clean up and exit.
+#
+# ********************************************************************
+		get_pwd_dir
+		check_if_root_uid
+		if [[ -z "${CASEPACKAGES}" ]]; then
+			echog " * Must select a package name." >&2
+			exit 1
+		fi
+
+		# Guardamos los nombres originales (solo nombres, sin versión)
+		ORIGINAL_CASEPACKAGES="${CASEPACKAGES}"
+
+		for CASEPACKAGE in ${ORIGINAL_CASEPACKAGES}; do
+			pkgname="${CASEPACKAGE}"
+			echogn " :: Preparing to super-build:"
+			echo " ${pkgname}"
+
+			cleanup_tmp_dir
+			make_tmp_dir
+
+			# 1. Construir URL del repo
+			git_url="${NHOPKG_GIT_SOURCES}${pkgname}.git"
+
+			# 2. Clonar repo en directorio temporal
+			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
+			echog " - Cloning ${git_url}..."
+			git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+				echog " * Failed to clone ${git_url}" >&2
+				cleanup_tmp_dir
+				exit 1
+			}
+
+			# 3. Verificar que exista nhoid
+			if [[ ! -f "${build_clone_dir}/nhoid" ]]; then
+				echog " * nhoid not found in repository!" >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+
+			# 4. Imitar descompresión de .srcnho
+			mv "${build_clone_dir}/nhoid" "${NHOPKG_TMPDIR}/"
+
+			if [[ -d "${build_clone_dir}/others" ]]; then
+				cp -r "${build_clone_dir}/others"/* "${NHOPKG_TMPDIR}/" 2>/dev/null || true
+			fi
+
+			if [[ -d "${build_clone_dir}/patches" ]]; then
+				cp -r "${build_clone_dir}/patches"/* "${NHOPKG_TMPDIR}/" 2>/dev/null || true
+			fi
+
+			rm -rf "${build_clone_dir}"
+
+			# 5. Cargar datos reales del nhoid
+			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+			else
+				echog " * Invalid source package." >&2
+				cleanup_tmp_dir
+				exit 1
+			fi
+
+			# REDEFINIR CASEPACKAGE con formato completo
+			CASEPACKAGE="${pkgname}-${pkgversion}-${pkgrevision}"
+			# También actualizamos CASEPACKAGES para que subpaquetes lo usen
+			CASEPACKAGES="${CASEPACKAGE}"
+
+			check_if_installed_package
+			check_package_sha256sum
+			check_package_arch
+
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				echog " - Resolving Dependencies."
+				check_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_optional_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				check_optional_post_dependencies "${NHOPKG_TMPDIR}/nhoid"
+				askforinstallrequiredeps
+				askforinstalloptdeps
+			fi
+
+			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
+				installrequiredeps
+				installoptdeps
+			fi
+
+			build_prepare
+			INITIAL_DATE=$(date -u +%s)
+			build_package
+			check_build_package
+			build_package_install
+			FINAL_DATE=$(date -u +%s)
+			check_build_package_install
+			cd "${CWD}"
+			build_save_log_files
+			build_make_binary_package
+			bin_install_setting_up
+			bin_install_create_config_files
+		done
+
+		# Soporte para subpaquetes (igual que en --build)
+		if [[ -n "${SPLITPACKAGE}" ]]; then
+			IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
+			for part in "${SPLITPARTS[@]}"; do
+				for CASEPACKAGE in ${CASEPACKAGES}; do
+					echogn " :: Preparing split package:"
+					echo " ${part}"
+
+					cleanup_tmp_dir
+					make_tmp_dir
+
+					# Aquí CASEPACKAGE ya es "nombre-version-revision"
+					# Extraemos solo el nombre base para la URL
+					pkg_base_name=$(echo "${CASEPACKAGE}" | awk -F'-' '{print $1}')
+					git_url="${NHOPKG_GIT_SOURCES}${pkg_base_name}.git"
+
+					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
+					git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+						echog " * Failed to clone ${git_url}" >&2
+						cleanup_tmp_dir
+						exit 1
+					}
+
+					if [[ ! -f "${build_clone_dir}/nhoid" ]]; then
+						echog " * nhoid not found in repository!" >&2
+						cleanup_tmp_dir
+						exit 1
+					fi
+
+					mv "${build_clone_dir}/nhoid" "${NHOPKG_TMPDIR}/"
+					if [[ -d "${build_clone_dir}/others" ]]; then
+						cp -r "${build_clone_dir}/others"/* "${NHOPKG_TMPDIR}/" 2>/dev/null || true
+					fi
+					if [[ -d "${build_clone_dir}/patches" ]]; then
+						cp -r "${build_clone_dir}/patches"/* "${NHOPKG_TMPDIR}/" 2>/dev/null || true
+					fi
+					rm -rf "${build_clone_dir}"
+
+					get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+					build_prepare
+					build_package "${part}"
+					build_package_install "${part}"
+					build_search_for_files "${part}"
+					build_make_binary_package "${part}"
+					bin_install_setting_up "${part}"
+					bin_install_create_config_files "${part}"
+					build_save_log_files "${part}"
+					cleanup_tmp_dir
+				done
+			done
+		fi
+
+		shooter_updates
+		update_local_db
+		echog " - Super-build finished successfully!"
+		exit 0
+	;;
 	check)
 # ********************************************************************
 #
