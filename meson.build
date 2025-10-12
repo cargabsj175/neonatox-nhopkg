@@ -34,7 +34,7 @@ conf.set('NHOPKG_REPO', repo_url)
 # Variables para nhopkg.conf.in
 conf.set('datarootdir', join_paths(get_option('prefix'), get_option('datadir')))
 conf.set('PACKAGE', meson.project_name())
-conf.set('NHOPKG_GIT_REPO', repo_url)
+conf.set('NHOPKG_GIT_REPO', repo_git_url)
 
 # Variables para nhopkg.in
 conf.set('PACKAGE_NAME', meson.project_name())
