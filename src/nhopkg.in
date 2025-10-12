@@ -786,13 +786,19 @@ function check_package_arch()
 # Usage: check_if_installed_package (without arguments)
 function check_if_installed_package()
 {
+	local part="$1"  # Accepts an optional parameter for subpackages
+    # If there is no part, we use the main package
+    if [[ -z "${part}" ]]; then
+        part=""
+    fi
+	
 	# Checks that exist other versión of package.
 	if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
 		return 0
 	fi
 	# Get data from old package.
 	local newpkgname newpkgversion newpkgrevision
-	newpkgname="${pkgname}"
+	newpkgname="${pkgname}${part:+-}${part}"
 	newpkgversion="${pkgversion}"
 	newpkgrevision="${pkgrevision}"
 	local pkgname pkgversion pkgrevision
@@ -3961,6 +3967,9 @@ case "${NHOPKG_OPTION}" in
                     # Recuperar datos del paquete principal
                     get_basic_data "${NHOPKG_TMPDIR}/nhoid"
 
+					# Check that the split package is installed
+					check_if_installed_package "${part}"
+
                     # 5. Set build directory and uncompress package again.
                     build_prepare
 
@@ -4147,6 +4156,10 @@ case "${NHOPKG_OPTION}" in
 					rm -rf "${build_clone_dir}"
 
 					get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+
+					# Check that the split package is installed
+			        check_if_installed_package "${part}"
+			
 					build_prepare
 					build_package "${part}"
 					build_package_install "${part}"
