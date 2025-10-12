@@ -2038,7 +2038,7 @@ function build_package()
     echog "This step may take some time depending of package and your system."
     
     # Gets date, hour, host and arch of compilation.
-    BUILD_DATE=$(date -u "+%F %T" | sed s@\ @-@g | sed s@:@_@g)
+    BUILD_DATE=$(date -u "+%F %T" | sed 's/ /-/g' | sed 's/:/_/g')
     BUILD_HOST="$(uname -n)"
     BUILD_ARCH="$(uname -m)"
     PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
@@ -2094,7 +2094,7 @@ function build_package_install()
 	# Sleep 3 seconds.
 	sleep 3
 	# Gets date and hour of installation.
-	INSTALL_DATE=$(date -u "+%F %T" | sed s@\ @-@g | sed s@:@_@g)
+	INSTALL_DATE=$(date -u "+%F %T" | sed 's/ /-/g' | sed 's/:/_/g')
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		(ninstall${part:+_}${part} || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
 		| tee -a "${NHOPKG_BUILDIR}/${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
