@@ -4039,7 +4039,7 @@ case "${NHOPKG_OPTION}" in
 			make_tmp_dir
 
 			# 1. Construir URL del repo
-			git_url="${NHOPKG_GIT_SOURCES}${pkgname}.git"
+			git_url="${NHOPKG_GIT_SOURCES}/${pkgname}.git"
 
 			# 2. Clonar repo en directorio temporal
 			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
