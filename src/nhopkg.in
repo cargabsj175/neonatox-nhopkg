@@ -1549,9 +1549,17 @@ function bin_install_setting_up()
 	echogn " --- Setting up"
 	echo " ${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}"
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
-		npostinstall${part:+_}${part}
+		if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
+			npostinstall${part:+_}${part}
+		else
+			noemptyfuncs
+		fi
 	else
-		npostinstall${part:+_}${part} &> /dev/null
+		if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
+			npostinstall${part:+_}${part} &> /dev/null
+		else
+			noemptyfuncs
+		fi
 	fi
 }
 ## Function bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
