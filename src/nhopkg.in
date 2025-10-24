@@ -160,7 +160,7 @@ shooter_updates() {
     local update_count=0
     local update_errors=0
 
-    # Detectar binarios de forma portable
+    # Detect binaries in a portable way
     local GLIB_SCHEMAS=$(command -v glib-compile-schemas || true)
     local ICON_CACHE=$(command -v gtk-update-icon-cache || true)
     local DESKTOP_DB=$(command -v update-desktop-database || true)
@@ -197,23 +197,23 @@ shooter_updates() {
         fi
     }
 
-    # 1. Actualizar esquemas GLib
+    # 1. Update GLib Schemes
     run_update "$GLIB_SCHEMAS" "GSettings schemas" /usr/share/glib-2.0/schemas
 
-    # 2. Actualizar caché de iconos (por cada tema en /usr/share/icons)
+    # 2. Update icon cache (per theme in /usr/share/icons)
     if [[ -n "$ICON_CACHE" && -x "$ICON_CACHE" && -d /usr/share/icons && -w /usr/share/icons ]]; then
         while IFS= read -r -d '' icon_dir; do
             run_update "$ICON_CACHE" "icon cache for $(basename "$icon_dir") theme" -q -t -f "$icon_dir"
         done < <(find /usr/share/icons -mindepth 1 -maxdepth 1 -type d -print0)
     fi
 
-    # 3. Actualizar base de datos de escritorio
+    # 3. Update desktop database
     run_update "$DESKTOP_DB" "desktop database" /usr/share/applications
 
-    # 4. Actualizar tipos MIME
+    # 4. Update MIME types
     run_update "$MIME_DB" "MIME database" /usr/share/mime
 
-    # 5. Actualizar base de datos de manuales (si hay cambios)
+    # 5. Update manual database (if there are changes)
     if [[ -n "$MANDB" && -x "$MANDB" && -d /usr/share/man ]]; then
         local mandb_cache="/var/cache/man/index.db"
         if [[ -e "$mandb_cache" ]] && find /usr/share/man -newer "$mandb_cache" -type f -quit 2>/dev/null; then
@@ -221,7 +221,7 @@ shooter_updates() {
         fi
     fi
 
-    # 6. Actualizar caché de fuentes (si hay cambios)
+    # 6. Update font cache (if there are changes)
     if [[ -n "$FC_CACHE" && -x "$FC_CACHE" && -d /usr/share/fonts ]]; then
         local fc_cache="/var/cache/fontconfig"
         if [[ -d "$fc_cache" ]] && find /usr/share/fonts -newer "$fc_cache" -type f -quit 2>/dev/null; then
@@ -229,7 +229,7 @@ shooter_updates() {
         fi
     fi
 
-    # 7. Actualizar caché de bibliotecas (si hay cambios)
+    # 7. Update library cache (if there are changes)
     if [[ -n "$LDCONFIG" && -x "$LDCONFIG" ]]; then
         local ld_cache="/etc/ld.so.cache"
         if [[ -e "$ld_cache" ]] && find /usr/lib /lib -newer "$ld_cache" -type f -quit 2>/dev/null; then
@@ -237,7 +237,7 @@ shooter_updates() {
         fi
     fi
 
-    # Resumen
+    # Summary
     if $verbose; then
         if (( update_count > 0 || update_errors > 0 )); then
             echo -n " - System updates completed: $update_count succeeded"
@@ -1861,10 +1861,10 @@ fetch_git_source() {
         echog "   Reference: ${git_ref}"
     fi
 
-    # Asegurarse del directorio de build
+    # Make sure of the build directory
     mkdir -p "${build_dir}"
 
-    # Detectar si ya existe el repositorio
+    # Detect if the repository already exists
     if [[ -d "${build_dir}/.git" ]]; then
         echog "   Repository already exists. Updating..."
         cd "${build_dir}" || return 1
@@ -1873,7 +1873,7 @@ fetch_git_source() {
             git checkout "${git_ref}" || return 1
         fi
     else
-        # Clonar directamente al directorio de build
+        # Clone directly to the build directory
         if ! git clone "${git_url}" "${build_dir}"; then
             echog " * Failed to clone Git repository." >&2
             return 1
@@ -2043,7 +2043,7 @@ function build_prepare() {
 # Usage: build_package (without arguments)
 function build_package()
 {
-    # Recibir el argumento opcional $part
+    # Receive the optional $part argument
     local part="$1"
     
     # Go to build directory.
@@ -2058,8 +2058,8 @@ function build_package()
     BUILD_ARCH="$(uname -m)"
     PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
     
-    # Si $part NO está vacía, se salta el bloque if (compilación)
-    # Si $part está vacía, ejecuta la compilación normalmente
+    # If $part is NOT empty, the if block is skipped (compilation)
+    # If $part is empty, run the compilation normally
     if [ -z "$part" ]; then
         if [ "${VERBOSE_MODE}" = "yes" ]; then
             (nbuild || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
@@ -2333,10 +2333,6 @@ else
     echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
     echog "Warning: No ${REMOVE_SPECIFIC}() or npostremove() found. Using placeholder."
 fi
-	
-	
-	#NPOSTINSTALL_FILE_NUM=$(grep -n "npostinstall() {" "${NHOPKG_TMPDIR}/.nhoid" | sed -e 's@:npostinstall() {@@')
-	#tail -n +${NPOSTINSTALL_FILE_NUM} "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 }
 ## Function build_make_binary_package(). Creates binary package from builded package.
 # Usage: build_make_binary_package (with/without split arguments)
@@ -2800,10 +2796,10 @@ function get_csw_post_dependencies()
             read -er Combo4
             while [[ -n "${Combo4}" ]]; do
                 FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
-                # Buscar en la base de datos del repositorio.
+                # Search the repository database.
                 if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
                     echo -en "# Dep_${part}(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
-                    # Completar dependencias.
+                    # Complete dependencies.
                     local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -2818,7 +2814,7 @@ function get_csw_post_dependencies()
                     echog "added like package-dependency for ${PACKAGENAME}-${part}."
                 elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" ]]; then
                     echo -en "# Dep_${part}(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
-                    # Completar dependencias.
+                    # Complete dependencies.
                     local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -2927,10 +2923,10 @@ function get_csw_optional_post_dependencies()
             read -er Combo5
             while [[ -n "${Combo5}" ]]; do
                 FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
-                # Buscar en la base de datos del repositorio.
+                # Search the repository database.
                 if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
                     echo -en "# OptionalDep_${part}(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
-                    # Completar dependencias.
+                    # Complete dependencies.
                     local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -2945,7 +2941,7 @@ function get_csw_optional_post_dependencies()
                     echog "added like package-dependency for ${part}."
                 elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" ]]; then
                     echo -en "# OptionalDep_${part}(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
-                    # Completar dependencias.
+                    # Complete dependencies.
                     local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
                     local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -4035,7 +4031,7 @@ case "${NHOPKG_OPTION}" in
 			exit 1
 		fi
 
-		# Guardamos los nombres originales (solo nombres, sin versión)
+		# We keep the original names (only names, no version)
 		ORIGINAL_CASEPACKAGES="${CASEPACKAGES}"
 
 		for CASEPACKAGE in ${ORIGINAL_CASEPACKAGES}; do
@@ -4046,10 +4042,10 @@ case "${NHOPKG_OPTION}" in
 			cleanup_tmp_dir
 			make_tmp_dir
 
-			# 1. Construir URL del repo
+			# 1. Set repo URL
 			git_url="${NHOPKG_GIT_SOURCES}/${pkgname}.git"
 
-			# 2. Clonar repo en directorio temporal
+			# 2. Clone repo to temporary directory
 			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
 			echog " - Cloning ${git_url}..."
 			git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
@@ -4058,14 +4054,14 @@ case "${NHOPKG_OPTION}" in
 				exit 1
 			}
 
-			# 3. Verificar que exista nhoid
+			# 3. Verify that nhoid file exists
 			if [[ ! -f "${build_clone_dir}/nhoid" ]]; then
 				echog " * nhoid not found in repository!" >&2
 				cleanup_tmp_dir
 				exit 1
 			fi
 
-			# 4. Imitar descompresión de .srcnho
+			# 4. Imitate decompression of .srcnho
 			mv "${build_clone_dir}/nhoid" "${NHOPKG_TMPDIR}/"
 
 			if [[ -d "${build_clone_dir}/others" ]]; then
@@ -4078,7 +4074,7 @@ case "${NHOPKG_OPTION}" in
 
 			rm -rf "${build_clone_dir}"
 
-			# 5. Cargar datos reales del nhoid
+			# 5. Load real data from the nhoid
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
 				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 			else
@@ -4087,9 +4083,9 @@ case "${NHOPKG_OPTION}" in
 				exit 1
 			fi
 
-			# REDEFINIR CASEPACKAGE con formato completo
+			# Redefine CASEPACKAGE with full format
 			CASEPACKAGE="${pkgname}-${pkgversion}-${pkgrevision}"
-			# También actualizamos CASEPACKAGES para que subpaquetes lo usen
+			# We also updated CASEPACKAGES so that subpackages can use it
 			CASEPACKAGES="${CASEPACKAGE}"
 
 			check_if_installed_package
@@ -4125,7 +4121,7 @@ case "${NHOPKG_OPTION}" in
 			bin_install_create_config_files
 		done
 
-		# Soporte para subpaquetes (igual que en --build)
+		# Support for subpackages (same as --build)
 		if [[ -n "${SPLITPACKAGE}" ]]; then
 			IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
 			for part in "${SPLITPARTS[@]}"; do
@@ -4136,8 +4132,8 @@ case "${NHOPKG_OPTION}" in
 					cleanup_tmp_dir
 					make_tmp_dir
 
-					# Aquí CASEPACKAGE ya es "nombre-version-revision"
-					# Extraemos solo el nombre base para la URL
+					# Here CASEPACKAGE is already "version-name-revision"
+					# We extract only the base name for the URL
 					pkg_base_name=$(echo "${CASEPACKAGE}" | awk -F'-' '{print $1}')
 					git_url="${NHOPKG_GIT_SOURCES}${pkg_base_name}.git"
 
