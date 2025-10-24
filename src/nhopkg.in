@@ -1294,7 +1294,7 @@ function downloadrequiredeps()
 		local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		echogn " --- Downloading"
 		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+		wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 		check_if_ok " *** Failed to download package. Please, retry."
 		# Adds downloaded packages to list for install.
 		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
@@ -1319,7 +1319,7 @@ function downloadoptdeps()
 		local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${RCASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
 		echogn " --- Downloading"
 		echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-		wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+		wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 		check_if_ok " *** Failed to download package. Please, retry."
 		# Adds downloaded packages to list for install.
 		if [[ -z "${DCASEPACKAGES[*]}" ]]; then
@@ -1668,7 +1668,7 @@ function downloadpackage()
 	local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
 	echogn " --- Downloading"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
-	wget -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	check_if_ok " *** Failed to download package. Please, retry."
 }
 #======================================6
@@ -1912,7 +1912,7 @@ fetch_tarball_source() {
 	local build_dir="${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
     
     echog " - Downloading source tarball: ${tarball_url}"
-    if wget -q --show-progress "${tarball_url}" -O "${tarball_file}"; then
+    if wget --https-only -q --show-progress "${tarball_url}" -O "${tarball_file}"; then
         echog " - Download completed: ${tarball_file}"
     else
         echog " * Failed to download tarball from ${tarball_url}" >&2
@@ -5031,7 +5031,7 @@ case "${NHOPKG_OPTION}" in
 		fi
 		# Check last update.
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync" ]]; then
-			wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
 			check_if_ok " * Unable to download files from repository."
 			ISYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/repo/lastsync)
 			FSYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/cache/lastsync)
@@ -5041,7 +5041,7 @@ case "${NHOPKG_OPTION}" in
 			fi
 			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
 		else
-			wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
 			check_if_ok " * Unable to download files from repository."
 			# Clean up the actual repository db.
 			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/files/"*
@@ -5049,13 +5049,13 @@ case "${NHOPKG_OPTION}" in
 		fi
 		## 3. Download configure files from repository.
 		echog " - Downloading configuration files from server."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.zst"
+		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.zst"
 		check_if_ok " * Unable to download files from repository."
 		echog " --- Downloading files database."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
+		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
 		check_if_ok " *** Unable to download files from repository."
 		echog " --- Downloading packages database."
-		wget -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
+		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
 		check_if_ok " *** Unable to download files from repository."
 		## 4. Uncompressing files downloaded from server on system.
 		mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.zst" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.zst"
