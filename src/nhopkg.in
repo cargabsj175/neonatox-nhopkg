@@ -4022,7 +4022,7 @@ case "${NHOPKG_OPTION}" in
 					# Here CASEPACKAGE is already "version-name-revision"
 					# We extract only the base name for the URL
 					pkg_base_name=$(echo "${CASEPACKAGE}" | awk -F'-' '{print $1}')
-					git_url="${NHOPKG_GIT_SOURCES}${pkg_base_name}.git"
+					git_url="${NHOPKG_GIT_SOURCES}/${pkg_base_name}.git"
 
 					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
 					git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
