@@ -1033,424 +1033,138 @@ function check_if_repository_optional_package()
         fi
     fi
 }
+## Function check_dependencies(). Generic function to check dependencies.
+# Usage: check_dependencies file_to_check dep_type repo_check_func
+# dep_type: The grep pattern to identify dependencies (e.g., "^# BuildDep:", "^# OptionalBuildDep:")
+# repo_check_func: The function to call for repository checks (e.g., check_if_repository_package)
+function check_dependencies()
+{
+    local file_to_check="$1"
+    local dep_type="$2"
+    local repo_check_func="$3"
+    local pkgname pkgversion pkgrevision
+    get_basic_data "${file_to_check}"
+    local CASE_DEPS=$(grep "${dep_type}" "${file_to_check}" 2> /dev/null)
+    if [[ -n "${CASE_DEPS}" ]]; then
+        local IFS=$'\n'
+        local buildeps
+        for buildeps in ${CASE_DEPS}; do
+            local IFS="${OLDIFS}"
+            # Gets name and files from dependency.
+            local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
+            local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
+            # Support new format: if no files are listed, treat NAME_DEP as the dependency spec
+            if [[ -z "${FILE_DEP}" ]]; then
+                FILE_DEP="${NAME_DEP}"
+            fi
+            # Shows dependency for check.
+            echogn " --- Processing Dependency:"
+            echo -n " ${NAME_DEP} "
+            echogn "for"
+            echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+            # Check dependency!
+            # Count dependency files.
+            local CHECK_FILE_DEP_NUM="0"
+            local FILE_DEP_NUM="0"
+            local FILE_DEP_COUNT
+            for FILE_DEP_COUNT in ${FILE_DEP}; do
+                (( FILE_DEP_NUM++ ))
+            done
+            local CHECK_FILE_DEP
+            for CHECK_FILE_DEP in ${FILE_DEP}; do
+                # If CHECK_FILE_DEP is an absolute path, use the old method
+                if [[ "${CHECK_FILE_DEP}" == /* ]]; then
+                    if [[ -f "${CHECK_FILE_DEP}" ]]; then
+                        ((CHECK_FILE_DEP_NUM++))
+                        if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                            echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+                        fi
+                    else
+                        get_good_file_name "${CHECK_FILE_DEP}"
+                        local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
+                        if [[ -n "${LOCATE_DEPS}" ]]; then
+                            (( CHECK_FILE_DEP_NUM++ ))
+                            if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                                echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
+                            fi
+                        else
+                            if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                                echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+                            fi
+                        fi
+                    fi
+                else
+                    # New format: package name (with or without version)
+                    if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
+                        ((CHECK_FILE_DEP_NUM++))
+                        if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                            echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
+                        fi
+                    else
+                        if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                            echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
+                        fi
+                    fi
+                fi
+            done
+            local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
+            # Check if dependency is installed in the system.
+            if (("${FILE_DEP_NUM}" <= "5")); then
+                if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+                    echogn "\t** OK: Present"
+                    echo " (${DEPS_PERCENT}%)"
+                else
+                    echogn "\t** FAIL: Present"
+                    echo " (${DEPS_PERCENT}%)"
+                    # Check on repo.
+                    ${repo_check_func}
+                fi
+            elif (("${FILE_DEP_NUM}" > "5")); then
+                if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
+                && (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+                    echogn "\t** OK: Present"
+                    echo " (${DEPS_PERCENT}%)"
+                else
+                    echogn "\t** FAIL: Present"
+                    echo " (${DEPS_PERCENT}%)"
+                    # Check on repo.
+                    ${repo_check_func}
+                fi
+            fi
+        done
+    else
+        echogn " *** No dependencies found on package:" >&2
+        echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
+    fi
+    local IFS="${OLDIFS}"
+}
+
 ## Function check_build_dependencies(). Checks required build dependencies.
 # Usage: check_build_dependencies file_to_check
 function check_build_dependencies()
 {
-	local pkgname pkgversion pkgrevision
-	get_basic_data "${1}"
-	local CASE_DEPS=$(grep "^# BuildDep:" "${1}" 2> /dev/null)
-	if [[ -n "${CASE_DEPS}" ]]; then
-		local IFS=$'\n'
-		local buildeps
-		for buildeps in ${CASE_DEPS};
-		do
-			local IFS="${OLDIFS}"
-			# Gets name and files from dependency.
-			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
-			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
-			# Support new format: if no files are listed, treat NAME_DEP as the dependency spec
-			if [[ -z "${FILE_DEP}" ]]; then
-				FILE_DEP="${NAME_DEP}"
-				
-			fi
-			# Shows dependency for check.
-			echogn " --- Processing Dependency:"
-			echo -n " ${NAME_DEP} "
-			echogn "for"
-			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-			# Check dependency!
-			# Count dependency files.
-			local CHECK_FILE_DEP_NUM="0"
-			local FILE_DEP_NUM="0"
-			local FILE_DEP_COUNT
-			for FILE_DEP_COUNT in ${FILE_DEP};
-			do
-				(( FILE_DEP_NUM++ ))
-			done
-			local CHECK_DILE_DEP
-			for CHECK_FILE_DEP in ${FILE_DEP};	
-				do
-					# If CHECK_FILE_DEP is an absolute path, use the old method
-					if [[ "${CHECK_FILE_DEP}" == /* ]]; then
-						if [[ -f "${CHECK_FILE_DEP}" ]]; then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
-							fi
-						else
-							get_good_file_name "${CHECK_FILE_DEP}"
-							local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
-							if [[ -n "${LOCATE_DEPS}" ]]; then
-								(( CHECK_FILE_DEP_NUM++ ))
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
-								fi
-							else
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
-								fi
-							fi
-						fi
-					else
-						# New format: package name (with or without version)
-						if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
-							fi
-						else
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
-							fi
-						fi
-					fi
-			done
-			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
-			# Check if dependency is installed in the system.
-			if (("${FILE_DEP_NUM}" <= "5")); then
-				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_package
-				fi
-			elif (("${FILE_DEP_NUM}" > "5")); then
-				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
-				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_package
-				fi
-			fi
-
-		done
-	else
-		echogn " *** No build deps found on package:" >&2
-		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
-	fi
-	local IFS="${OLDIFS}"
+    check_dependencies "$1" "^# BuildDep:" "check_if_repository_package"
 }
+
 ## Function check_optional_build_dependencies(). Checks optional build dependencies.
 # Usage: check_optional_build_dependencies file_to_check
 function check_optional_build_dependencies()
 {
-	local pkgname pkgversion pkgrevision
-	get_basic_data "${1}"
-	local CASE_DEPS=$(grep "^# OptionalBuildDep:" "${1}" 2> /dev/null)
-	if [[ -n "${CASE_DEPS}" ]]; then
-		local IFS=$'\n'
-		local buildeps
-		for buildeps in ${CASE_DEPS};
-		do
-			local IFS="${OLDIFS}"
-			# Gets name and files from dependency.
-			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
-            local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
-            # Support new format: if no files are listed, treat NAME_DEP as the dependency spec
-			if [[ -z "${FILE_DEP}" ]]; then
-				FILE_DEP="${NAME_DEP}"
-				
-			fi
-			# Shows dependency for check.
-			echogn " --- Processing Optional Dependency:"
-			echo -n " ${NAME_DEP} "
-			echogn "for"
-			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-			# Check dependency!
-			# Count dependency files.
-			local CHECK_FILE_DEP_NUM="0"
-			local FILE_DEP_NUM="0"
-			local FILE_DEP_COUNT
-			for FILE_DEP_COUNT in ${FILE_DEP};
-			do
-				(( FILE_DEP_NUM++ ))
-			done
-			local CHECK_DILE_DEP
-			for CHECK_FILE_DEP in ${FILE_DEP};	
-				do
-					# If CHECK_FILE_DEP is an absolute path, use the old method
-					if [[ "${CHECK_FILE_DEP}" == /* ]]; then
-						if [[ -f "${CHECK_FILE_DEP}" ]]; then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
-							fi
-						else
-							get_good_file_name "${CHECK_FILE_DEP}"
-							local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
-							if [[ -n "${LOCATE_DEPS}" ]]; then
-								(( CHECK_FILE_DEP_NUM++ ))
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
-								fi
-							else
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
-								fi
-							fi
-						fi
-					else
-						# New format: package name (with or without version)
-						if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
-							fi
-						else
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
-							fi
-						fi
-					fi
-			done
-			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
-			# Check if dependency is installed in the system.
-			if (("${FILE_DEP_NUM}" <= "5")); then
-				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_optional_package
-				fi
-			elif (("${FILE_DEP_NUM}" > "5")); then
-				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
-				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_optional_package
-				fi
-			fi
-
-		done
-	else
-		echogn " *** No optional build deps found on package:" >&2
-		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
-	fi
-	local IFS="${OLDIFS}"
+    check_dependencies "$1" "^# OptionalBuildDep:" "check_if_repository_optional_package"
 }
+
 ## Function check_post_dependencies(). Checks required dependencies.
 # Usage: check_post_dependencies file_to_check
 function check_post_dependencies()
 {
-	local pkgname pkgversion pkgrevision
-	get_basic_data "${1}"
-	local CASE_DEPS=$(grep "^# Dep(post):" "${1}" 2> /dev/null)
-	if [[ -n "${CASE_DEPS}" ]]; then
-		local IFS=$'\n'
-		local buildeps
-		for buildeps in ${CASE_DEPS};
-		do
-			local IFS="${OLDIFS}"
-			# Gets name and files from dependency.
-			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
-			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
-			# Support new format: if no files are listed, treat NAME_DEP as the dependency spec
-			if [[ -z "${FILE_DEP}" ]]; then
-				FILE_DEP="${NAME_DEP}"
-				
-			fi
-			# Shows dependency for check.
-			echogn " --- Processing Dependency:"
-			echo -n " ${NAME_DEP} "
-			echogn "for"
-			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-			# Check dependency!
-			# Count dependency files.
-			local CHECK_FILE_DEP_NUM="0"
-			local FILE_DEP_NUM="0"
-			local FILE_DEP_COUNT
-			for FILE_DEP_COUNT in ${FILE_DEP};
-			do
-				(( FILE_DEP_NUM++ ))
-			done
-			local CHECK_DILE_DEP
-			for CHECK_FILE_DEP in ${FILE_DEP};	
-				do
-					# If CHECK_FILE_DEP is an absolute path, use the old method
-					if [[ "${CHECK_FILE_DEP}" == /* ]]; then
-						if [[ -f "${CHECK_FILE_DEP}" ]]; then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
-							fi
-						else
-							get_good_file_name "${CHECK_FILE_DEP}"
-							local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
-							if [[ -n "${LOCATE_DEPS}" ]]; then
-								(( CHECK_FILE_DEP_NUM++ ))
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
-								fi
-							else
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
-								fi
-							fi
-						fi
-					else
-						# New format: package name (with or without version)
-						if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
-							fi
-						else
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
-							fi
-						fi
-					fi
-			done
-			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
-			# Check if dependency is installed in the system.
-			if (("${FILE_DEP_NUM}" <= "5")); then
-				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_package
-				fi
-			elif (("${FILE_DEP_NUM}" > "5")); then
-				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
-				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_package
-				fi
-			fi
-
-		done
-	else
-		echogn " *** No deps found on package:" >&2
-		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
-	fi
-	local IFS="${OLDIFS}"
+    check_dependencies "$1" "^# Dep(post):" "check_if_repository_package"
 }
+
 ## Function check_optional_post_dependencies(). Checks optional dependencies.
 # Usage: check_optional_post_dependencies file_to_check
 function check_optional_post_dependencies()
 {
-	local pkgname pkgversion pkgrevision
-	get_basic_data "${1}"
-	local CASE_DEPS=$(grep "^# OptionalDep(post):" "${1}" 2> /dev/null)
-	if [[ -n "${CASE_DEPS}" ]]; then
-		local IFS=$'\n'
-		local buildeps
-		for buildeps in ${CASE_DEPS};
-		do
-			local IFS="${OLDIFS}"
-			# Gets name and files from dependency.
-			local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
-			local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
-			# Support new format: if no files are listed, treat NAME_DEP as the dependency spec
-			if [[ -z "${FILE_DEP}" ]]; then
-				FILE_DEP="${NAME_DEP}"
-			fi
-			# Shows dependency for check.
-			echogn " --- Processing Optional Dependency:"
-			echo -n " ${NAME_DEP} "
-			echogn "for"
-			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-			# Check dependency!
-			# Count dependency files.
-			local CHECK_FILE_DEP_NUM="0"
-			local FILE_DEP_NUM="0"
-			local FILE_DEP_COUNT
-			for FILE_DEP_COUNT in ${FILE_DEP};
-			do
-				(( FILE_DEP_NUM++ ))
-			done
-			local CHECK_DILE_DEP
-			for CHECK_FILE_DEP in ${FILE_DEP};	
-				do
-					# If CHECK_FILE_DEP is an absolute path, use the old method
-					if [[ "${CHECK_FILE_DEP}" == /* ]]; then
-						if [[ -f "${CHECK_FILE_DEP}" ]]; then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
-							fi
-						else
-							get_good_file_name "${CHECK_FILE_DEP}"
-							local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
-							if [[ -n "${LOCATE_DEPS}" ]]; then
-								(( CHECK_FILE_DEP_NUM++ ))
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
-								fi
-							else
-								if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-									echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
-								fi
-							fi
-						fi
-					else
-						# New format: package name (with or without version)
-						if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
-							((CHECK_FILE_DEP_NUM++))
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
-							fi
-						else
-							if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-								echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
-							fi
-						fi
-					fi
-			done
-			local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
-			# Check if dependency is installed in the system.
-			if (("${FILE_DEP_NUM}" <= "5")); then
-				if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_optional_package
-				fi
-			elif (("${FILE_DEP_NUM}" > "5")); then
-				if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
-				&& (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
-					echogn "\t** OK: Present"
-					echo " (${DEPS_PERCENT}%)"
-				else
-					echogn "\t** FAIL: Present"
-					echo " (${DEPS_PERCENT}%)"
-					# Check on repo.
-					check_if_repository_optional_package
-				fi
-			fi
-
-		done
-	else
-		echogn " *** No optional deps found on package:" >&2
-		echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
-	fi
-	local IFS="${OLDIFS}"
+    check_dependencies "$1" "^# OptionalDep(post):" "check_if_repository_optional_package"
 }
 ## Function downloadrequiredeps(). Download required dependencies.
 # Usage: downloadrequiredeps (without arguments)
