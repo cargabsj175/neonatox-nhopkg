@@ -156,100 +156,79 @@ function noemptyfuncs()
 # Parameters: updates
 # ---------------------------------------------------------
 shooter_updates() {
-    local verbose=true
-    local update_count=0
-    local update_errors=0
+    local verbose=true update_count=0 update_errors=0
+    local GLIB_SCHEMAS ICON_CACHE DESKTOP_DB MIME_DB MANDB FC_CACHE LDCONFIG
 
-    # Detect binaries in a portable way
-    local GLIB_SCHEMAS=$(command -v glib-compile-schemas || true)
-    local ICON_CACHE=$(command -v gtk-update-icon-cache || true)
-    local DESKTOP_DB=$(command -v update-desktop-database || true)
-    local MIME_DB=$(command -v update-mime-database || true)
-    local MANDB=$(command -v mandb || true)
-    local FC_CACHE=$(command -v fc-cache || true)
-    local LDCONFIG=$(command -v ldconfig || true)
+    GLIB_SCHEMAS=$(command -v glib-compile-schemas || true)
+    ICON_CACHE=$(command -v gtk-update-icon-cache || true)
+    DESKTOP_DB=$(command -v update-desktop-database || true)
+    MIME_DB=$(command -v update-mime-database || true)
+    MANDB=$(command -v mandb || true)
+    FC_CACHE=$(command -v fc-cache || true)
+    LDCONFIG=$(command -v ldconfig || true)
 
-    if [[ "$1" == "silent" ]]; then
-        verbose=false
-    fi
+    [[ "$1" == "silent" ]] && verbose=false
 
     run_update() {
-        local cmd="$1"
-        shift
-        local description="$1"
-        shift
-        local args=("$@")
+        local cmd="$1" desc="$2"; shift 2
+        [[ -n "$cmd" && -x "$cmd" ]] || { $verbose && echog " --- Tool not found, skipping"; return 2; }
 
-        if [[ -n "$cmd" && -x "$cmd" ]]; then
-            $verbose && echo " - Updating $description..."
-            if "$cmd" "${args[@]}" &> /dev/null; then
-                ((update_count++))
-                $verbose && echo "   [OK] $description updated successfully"
-                return 0
-            else
-                ((update_errors++))
-                $verbose && echo "   [X] Failed to update $description" >&2
-                return 1
-            fi
+        $verbose && echog " --- Updating $desc..."
+        if "$cmd" "$@" &>/dev/null; then
+            ((update_count++))
+            $verbose && echog "\t** OK: Update completed successfully"
         else
-            $verbose && echo " - $description tool not found, skipping"
-            return 2
+            ((update_errors++))
+            $verbose && echog "\t** Fail: Update failed"
         fi
     }
+	# 1. Update GLib Schemes
+	run_update "$GLIB_SCHEMAS" "schemas" /usr/share/glib-2.0/schemas
 
-    # 1. Update GLib Schemes
-    run_update "$GLIB_SCHEMAS" "GSettings schemas" /usr/share/glib-2.0/schemas
-
-    # 2. Update icon cache (per theme in /usr/share/icons)
+    # 2. Update icon cache globally
     if [[ -n "$ICON_CACHE" && -x "$ICON_CACHE" && -d /usr/share/icons && -w /usr/share/icons ]]; then
-        while IFS= read -r -d '' icon_dir; do
-            run_update "$ICON_CACHE" "icon cache for $(basename "$icon_dir") theme" -q -t -f "$icon_dir"
-        done < <(find /usr/share/icons -mindepth 1 -maxdepth 1 -type d -print0)
+        run_update "$ICON_CACHE" "icons" -q -t -f /usr/share/icons
     fi
 
-    # 3. Update desktop database
-    run_update "$DESKTOP_DB" "desktop database" /usr/share/applications
+	# 3. Update desktop database
+	run_update "$DESKTOP_DB" "desktop entries" /usr/share/applications
+    
+	# 4. Update MIME types
+	run_update "$MIME_DB" "MIME database" /usr/share/mime
 
-    # 4. Update MIME types
-    run_update "$MIME_DB" "MIME database" /usr/share/mime
-
-    # 5. Update manual database (if there are changes)
+	# 5. Update manual database (if there are changes)
     if [[ -n "$MANDB" && -x "$MANDB" && -d /usr/share/man ]]; then
-        local mandb_cache="/var/cache/man/index.db"
-        if [[ -e "$mandb_cache" ]] && find /usr/share/man -newer "$mandb_cache" -type f -quit 2>/dev/null; then
-            run_update "$MANDB" "man database" -q
-        fi
+        [[ -e /var/cache/man/index.db ]] && \
+        find /usr/share/man -newer /var/cache/man/index.db -type f -quit &>/dev/null && \
+        run_update "$MANDB" "manual pages" -q
     fi
-
-    # 6. Update font cache (if there are changes)
+	
+	# 6. Update font cache (if there are changes)
     if [[ -n "$FC_CACHE" && -x "$FC_CACHE" && -d /usr/share/fonts ]]; then
-        local fc_cache="/var/cache/fontconfig"
-        if [[ -d "$fc_cache" ]] && find /usr/share/fonts -newer "$fc_cache" -type f -quit 2>/dev/null; then
-            run_update "$FC_CACHE" "font cache" -f
-        fi
+        [[ -d /var/cache/fontconfig ]] && \
+        find /usr/share/fonts -newer /var/cache/fontconfig -type f -quit &>/dev/null && \
+        run_update "$FC_CACHE" "font cache" -f
     fi
-
-    # 7. Update library cache (if there are changes)
+	
+	# 7. Update library cache (if there are changes)
     if [[ -n "$LDCONFIG" && -x "$LDCONFIG" ]]; then
-        local ld_cache="/etc/ld.so.cache"
-        if [[ -e "$ld_cache" ]] && find /usr/lib /lib -newer "$ld_cache" -type f -quit 2>/dev/null; then
-            run_update "$LDCONFIG" "shared library cache"
-        fi
+        [[ -e /etc/ld.so.cache ]] && \
+        find /usr/lib /lib -newer /etc/ld.so.cache -type f -quit &>/dev/null && \
+        run_update "$LDCONFIG" "shared libraries"
     fi
 
-    # Summary
+	# Summary
     if $verbose; then
-        if (( update_count > 0 || update_errors > 0 )); then
-            echo -n " - System updates completed: $update_count succeeded"
-            (( update_errors > 0 )) && echo ", $update_errors failed" || echo
+        if ((update_count > 0 || update_errors > 0)); then
+            echog " - System updates completed"
+            ((update_errors > 0)) && echog "   Some updates failed"
         else
-            echo " - No updates were necessary"
+            echog " - No updates were necessary"
         fi
     fi
 
     return $((update_errors > 0 ? 1 : 0))
 }
-
 # ---------------------------------------------------------
 # print_background_title()
 # Description: This function prints a title.
