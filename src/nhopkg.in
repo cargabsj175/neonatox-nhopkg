@@ -911,11 +911,14 @@ done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -name "${n
 		return 1
 	fi
 }
-## Function check_if_repository_package(). Checks if dependency packages are on repository.
-# Usage: check_if_repository_package (without arguments)
-function check_if_repository_package()
+## Shared function to check if a dependency package is in the repository.
+# Usage: check_if_repository_package_common <array_name>
+# where <array_name> is the name of the array to store packages (e.g., RCASEPACKAGES or ORCASEPACKAGES)
+function check_if_repository_package_common()
 {
+    local array_name="$1"
     local dep_spec="${FILE_DEP%% *}"  # Supports multiple deps in FILE_DEP, we take the first one
+
     # If dep_spec is NOT an absolute path, we assume it is a package name
     if [[ "${dep_spec}" != /* ]]; then
         # Is a package name (may include >=)
@@ -938,7 +941,7 @@ function check_if_repository_package()
     else
         # It is an absolute path → original behavior
         get_good_file_name "${dep_spec}"
-        local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.zst 2> /dev/null)
+        local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*.zst 2> /dev/null)
         MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
         MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .zst)
         if [[ -z "${MATCHPACKAGE}" ]]; then
@@ -951,19 +954,22 @@ function check_if_repository_package()
 
     # Add to the list of packages to install
     if [[ -n "${MATCHPACKAGE}" ]]; then
-        if [[ -z "${RCASEPACKAGES[*]}" ]]; then
-            RCASEPACKAGES=("${MATCHPACKAGE}")
+        # Use eval to dynamically access the array by name
+        local -a packages
+        eval "packages=(\"\${${array_name}[@]}\")"
+        if [[ -z "${packages[*]}" ]]; then
+            eval "${array_name}=(\"\${MATCHPACKAGE}\")"
             INCLUDE_DEP="0"
         else
-            for rpackages in "${RCASEPACKAGES[@]}";
-            do
+            INCLUDE_DEP="0"
+            for rpackages in "${packages[@]}"; do
                 if [[ "${rpackages}" = "${MATCHPACKAGE}" ]]; then
                     INCLUDE_DEP="1"
                     break
                 fi
             done
             if [[ "${INCLUDE_DEP}" != "1" ]]; then
-                RCASEPACKAGES=("${MATCHPACKAGE}" "${RCASEPACKAGES[@]}")
+                eval "${array_name}=(\"\${MATCHPACKAGE}\" \"\${${array_name}[@]}\")"
             fi
         fi
         if [[ "${INCLUDE_DEP}" != "1" ]]; then
@@ -972,66 +978,19 @@ function check_if_repository_package()
         fi
     fi
 }
+
+## Function check_if_repository_package(). Checks if dependency packages are on repository.
+# Usage: check_if_repository_package (without arguments)
+function check_if_repository_package()
+{
+    check_if_repository_package_common "RCASEPACKAGES"
+}
+
 ## Function check_if_repository_optional_package(). Checks if dependency (optional) packages are on repository.
 # Usage: check_if_repository_optional_package (without arguments)
 function check_if_repository_optional_package()
 {
-	local dep_spec="${FILE_DEP%% *}"  # Supports multiple deps in FILE_DEP, we take the first one
-    # If dep_spec is NOT an absolute path, we assume it is a package name
-    if [[ "${dep_spec}" != /* ]]; then
-        # Is a package name (may include >=)
-        local pkg_name="${dep_spec%%>=*}"
-        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkg_name}" ]]; then
-            # Base package exists → use it directly
-            MATCHPACKAGE="${pkg_name}"
-        else
-            # Find packages starting with that name (implicit version)
-            local candidates=($(find "${NHOPKG_LOCALSTATEDIR}/repo/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1))
-            if [[ ${#candidates[@]} -gt 0 ]]; then
-                MATCHPACKAGE="$(basename "${candidates[0]}")"
-            else
-                echo -n " *** ${dep_spec} " >&2
-                echog "is not on repository." >&2
-                cleanup_tmp_dir
-                exit 1
-            fi
-        fi
-    else
-        # It is an absolute path → original behavior
-        get_good_file_name "${dep_spec}"
-        local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.zst 2> /dev/null)
-        MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
-        MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .zst)
-        if [[ -z "${MATCHPACKAGE}" ]]; then
-            echo -n " *** ${dep_spec} " >&2
-            echog "is not on repository." >&2
-            cleanup_tmp_dir
-            exit 1
-        fi
-    fi
-
-    # Add to the list of packages to install
-    if [[ -n "${MATCHPACKAGE}" ]]; then
-        if [[ -z "${ORCASEPACKAGES[*]}" ]]; then
-            ORCASEPACKAGES=("${MATCHPACKAGE}")
-            INCLUDE_DEP="0"
-        else
-            for rpackages in "${ORCASEPACKAGES[@]}";
-            do
-                if [[ "${rpackages}" = "${MATCHPACKAGE}" ]]; then
-                    INCLUDE_DEP="1"
-                    break
-                fi
-            done
-            if [[ "${INCLUDE_DEP}" != "1" ]]; then
-                ORCASEPACKAGES=("${MATCHPACKAGE}" "${ORCASEPACKAGES[@]}")
-            fi
-        fi
-        if [[ "${INCLUDE_DEP}" != "1" ]]; then
-            check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
-            check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
-        fi
-    fi
+    check_if_repository_package_common "ORCASEPACKAGES"
 }
 ## Function check_dependencies(). Generic function to check dependencies.
 # Usage: check_dependencies file_to_check dep_type repo_check_func
