@@ -3016,7 +3016,7 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdrBbklno:wxstcg:UezhuvC"
+SHORTOPTIONS="RiSdrBbklno:wxstcg:UehuvC"
 LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
