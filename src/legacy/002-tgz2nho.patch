@@ -1,0 +1,189 @@
+--- nhopkg.in.new	2025-10-26 10:25:09.507695595 -0300
++++ nhopkg.in.old	2025-10-26 10:23:34.386594186 -0300
+@@ -358,6 +358,7 @@
+ 	echog " -u, --update-db\tUpdate Nhopkg database."
+ 	echog " -w, --show\tShows package files."
+ 	echog " -x, --update-shooters\tUpdates all system data and schemas."
++	echog " -z, --tgz2nho\tConverts .tgz package to .nho package."
+ 	echog " --license-all\tShows complete Nhopkg license."
+ 	echog " --license\tShows Nhopkg license."
+ 	echog " --version\tShows Nhopkg version."
+@@ -3017,7 +3018,7 @@
+ #==============================================================================
+ NHNAME=$(basename "$0")
+ SHORTOPTIONS="RiSdrBbklno:wxstcg:UezhuvC"
+-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build"
++LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,tgz2nho,help,license,license-all,version,update-db,verbose,super-build"
+ NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
+ if [[ "${?}" != "0" ]]; then
+ 	nhopkg_usage
+@@ -3267,6 +3268,15 @@
+ 				exit 1
+ 			fi
+ 		;;
++		-z|--tgz2nho)	
++			shift
++			if [[ -z "${NHOPKG_OPTION}" ]]; then
++				NHOPKG_OPTION="tgz2nho"
++			else
++				echog " * You have selected more than one valid option." >&2
++				exit 1
++			fi
++		;;
+ 		-h|--help)
+ 			shift
+ 			if [[ -z "${NHOPKG_OPTION}" ]]; then
+@@ -4364,6 +4374,153 @@
+ 			cleanup_tmp_dir
+ 		done
+ 		exit 0
++	;;
++	tgz2nho)
++# ********************************************************************
++#
++# Section: TGZ2NHO
++# 1. Basic configurations.
++# 2. Checking packages and prepare it.
++# 3. Start the wizard
++# 4. Packaging and compress new source package (original).
++# 5. Add external dependencies.
++# 6. Add post installation comands.
++# 7. Builds binary package (*.nho).
++# 8. Clean up.
++#
++# ********************************************************************
++		## 1. Basic configurations.
++		# Sets PWD directory.
++		get_pwd_dir
++		# Checks if have selected any package.
++		if [[ -z "${CASEPACKAGES}" ]]; then
++			echog " * Must select package." >&2
++			exit 1
++		fi
++		## 2. Checking packages and prepare it.
++		for CASEPACKAGE in ${CASEPACKAGES};
++		do
++			echogn " :: Prepating to convert .tgz package into .nho package:"
++			echo " $(basename ${CASEPACKAGE})"
++			# Clean up nhopkg temporal directory.
++			check_if_exist_local_package "${CASEPACKAGE}"
++			cleanup_tmp_dir
++			make_tmp_dir
++			echog " - Loading the wizard..."
++			mkdir "${NHOPKG_TMPDIR}/data"
++			# Uncompress package.
++			tar zxfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/data" 2> /dev/null
++			check_if_ok " * Unable to uncompress package."
++			if [[ -f "${NHOPKG_TMPDIR}/data/install/slack-desc" ]]; then
++				mv "${NHOPKG_TMPDIR}/data/install/slack-desc" "${NHOPKG_TMPDIR}"
++			fi
++			if [[ -f "${NHOPKG_TMPDIR}/data/install/doinst.sh" ]]; then
++				mv "${NHOPKG_TMPDIR}/data/install/doinst.sh" "${NHOPKG_TMPDIR}"
++			fi
++			clear
++			## 3. Start the wizard
++			#======================================================================================================
++			print_background_title "Nhopkg tgz2nho"
++			echog "This wizard helps you to convert Slackware package (*.tgz) into Nhopkg binary package (*.nho)."
++			echog "It is very important to complete all the fields correctly."
++			echo
++			#======================================================================================================
++			csw_username
++			csw_usermail
++			# Get package info from package label.
++			CASEPACKAGE=$(basename "${CASEPACKAGE}" ".tgz")
++			PACKAGENAME=$(echo "${CASEPACKAGE}" | awk -F"-[0-9]" '{print $1}')
++			PACKAGEVERSION=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $1}')
++			PACKAGEARCH=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $2}')
++			PACKAGERELEASE=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $3}')
++			if [ -z "${PACKAGERELEASE}" ]; then
++				# Haven't package revision. By default is 1.
++				PACKAGERELEASE="1"
++			fi
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				csw_username
++				csw_usermail
++				csw_packagename
++				csw_packageversion
++				csw_packagerelease
++			fi
++			## 4. Packaging and compress new source package (original).
++			echog " --- Setting up package sources."
++			rm -Rf "${NHOPKG_TMPDIR}/data/install"
++			cd "${NHOPKG_TMPDIR}/data"
++			tar --create --preserve-permissions --file=- * 2> /dev/null | zstd -o ../data.tar.zst
++			cd ../
++			PACKAGESHA256=$(sha256sum "data.tar.zst")
++			# Vuelve al directorio inicial y elimina restos de los sources.
++			cd "${CWD}"
++			rm -R "${NHOPKG_TMPDIR}/data"
++			# Get package description from slack-desc.
++			if [[ -f "${NHOPKG_TMPDIR}/slack-desc" ]]; then
++				PACKAGEDESCRIPTION=$(grep "^${PACKAGENAME}: " "${NHOPKG_TMPDIR}/slack-desc" \
++				| sed -e "s@^${PACKAGENAME}:@@g" | tr -t '\n' ' ')
++			fi
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				csw_packagelicense
++				csw_packagegroup
++				csw_packageurl
++				csw_packagedescription
++			else
++				PACKAGELICENSE="unkown"
++				PACKAGEGROUP="unkown"
++				PACKAGEWEBURL="unkown"
++				PACKAGEDESCRIPTION="unkown"
++			fi
++			# Creates nhoid file.
++			csw_make_nhoid_file
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				## 5. Add external dependencies.
++				#======================================================================================================"
++				print_background_title "Add external dependencies"
++				echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
++				echo
++				echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
++				echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
++				echog "To finish, press Enter twice."
++				#======================================================================================================
++				get_csw_post_dependencies
++				get_csw_optional_post_dependencies
++			fi
++			## 6. Add post installation comands.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			if [[ -f "${NHOPKG_TMPDIR}/doinst.sh" ]]; then
++				# First is needed to change to dir /.
++				echo "cd /" >> "${NHOPKG_TMPDIR}/nhoid"
++				cat "${NHOPKG_TMPDIR}/doinst.sh" >> "${NHOPKG_TMPDIR}/nhoid"
++			else
++				echo "ldconfig" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			# Create npostremove function.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			## 7. Builds binary package (*.nho).
++			echog " - Building binary package."
++			rm "${NHOPKG_TMPDIR}/doinst.sh"
++			rm "${NHOPKG_TMPDIR}/slack-desc"
++			cd "${NHOPKG_TMPDIR}"
++			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho" 2> /dev/null
++			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.nho"
++			cd ${CWD}
++			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho" ]]; then
++				echogn " --- New package is:"
++				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.nho"
++			else
++				echog " *** Unable to build package." >&2
++				cleanup_tmp_dir
++				exit 1
++			fi
++			## 8. Clean up.
++			cleanup_tmp_dir
++		done
++		exit 0
+ 	;;
+ 	create-repo)
+ # ********************************************************************
