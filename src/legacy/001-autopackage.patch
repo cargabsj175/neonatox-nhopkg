@@ -1,0 +1,267 @@
+--- nhopkg.in.new	2025-10-26 10:16:57.076738641 -0300
++++ nhopkg.in.old	2025-10-26 09:59:30.103191280 -0300
+@@ -338,6 +338,7 @@
+ 	echo "nhopkg --show gimp-3.0.4-n2025"
+ 	echo
+ 	echog "Commands:"
++	echog " -A, --auto-package\tCreates automatically source package from tarball."
+ 	echog " -B, --backup\tCreates binary package from installed package."
+ 	echog " -C, --super-build\tCompiles and installs source package from Git repo."
+ 	echog " -S, --super-install\tInstalls binary package form repository."
+@@ -3017,8 +3018,8 @@
+ # Section: Nhopkg parse options.
+ #==============================================================================
+ NHNAME=$(basename "$0")
+-SHORTOPTIONS="RiSdrBbklno:wxstcg:UezhuvC"
+-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,tgz2nho,help,license,license-all,version,update-db,verbose,super-build"
++SHORTOPTIONS="RiSdrBbklno:wxstcg:UeAzhuvC"
++LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,auto-package,tgz2nho,help,license,license-all,version,update-db,verbose,super-build"
+ NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
+ if [[ "${?}" != "0" ]]; then
+ 	nhopkg_usage
+@@ -3268,6 +3269,15 @@
+ 				exit 1
+ 			fi
+ 		;;
++		-A|--auto-package)
++			shift
++			if [[ -z "${NHOPKG_OPTION}" ]]; then
++				NHOPKG_OPTION="auto-package"
++			else
++				echog " * You have selected more than one valid option." >&2
++				exit 1
++			fi
++		;;
+ 		-z|--tgz2nho)	
+ 			shift
+ 			if [[ -z "${NHOPKG_OPTION}" ]]; then
+@@ -4374,6 +4384,229 @@
+ 			cleanup_tmp_dir
+ 		done
+ 		exit 0
++	;;
++	auto-package)
++# ********************************************************************
++#
++# Section: Auto Package
++# 1. Basic configurations.
++# 2. Checking packages and prepare it.
++# 3. Packaging and compress new source package (original).
++# 4. Add external dependencies (manual).
++# 5. Add compilation comands.
++# 6. Add installation comands.
++# 7. Add post installation comands.
++# 8. Builds source package (*.srcnho).
++# 9. Clean up.
++#
++# ********************************************************************
++		## 1. Basic configurations.
++		# Sets PWD directory.
++		get_pwd_dir
++		# Print warning message.
++		echog "Automated package creation."
++		echog "This option don't get any type of dependencies for the package and could fail in some packages. If you want to create a good package you sould use --create-source option."
++		# Checks if have selected any package.
++		if [[ -z "${CASEPACKAGES}" ]]; then
++			echog " * Must select package." >&2
++			exit 1
++		fi
++		## 2. Checking packages and prepare it.
++		for CASEPACKAGE in ${CASEPACKAGES};
++		do
++			echogn " :: Preparing to create source package:"
++			echo " $(basename ${CASEPACKAGE})"
++			# Clean up nhopkg temporal directory.
++			check_if_exist_local_package "${CASEPACKAGE}"
++			cleanup_tmp_dir
++			make_tmp_dir
++			mkdir "${NHOPKG_TMPDIR}/source"
++			# Uncompress package.
++			tar axfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/source" 2> /dev/null
++			check_if_ok " * Unable to uncompress package."
++			echog " --- Getting user and package data."
++			# First of all get user info.
++			PACKAGERNAME=$(id -un)
++			PACKAGERMAIL="${PACKAGERNAME}@$(uname -n)"
++			# Get package info.
++			CASEPACKAGE=$(basename "${CASEPACKAGE}" | sed -e 's@.tar.*@@' | sed -e 's@.tbz2@@' | sed -e 's@.tgz@@')
++			PACKAGENAME=$(echo "${CASEPACKAGE}" | awk -F"-[0-9]" '{print $1}')
++			PACKAGEVERSION=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $1}')
++			PACKAGERELEASE=$(echo "${CASEPACKAGE}" | sed -e "s@${PACKAGENAME}-@@" | awk -F'-' '{print $2}')
++			if [[ -z "${PACKAGERELEASE}" ]]; then
++				# Haven't package revision. By default is 1.
++				PACKAGERELEASE="1"
++			fi
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				csw_username
++				csw_usermail
++				csw_packagename
++				csw_packageversion
++				csw_packagerelease
++			fi
++			## 3. Packaging and compress new source package (original).
++			echog " --- Setting up package sources."
++			mkdir "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}"
++			mv "${NHOPKG_TMPDIR}/source/"*/* "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
++			check_if_ok " * Unable to uncompress package."
++			# Clean up.
++			rm -Rf "${NHOPKG_TMPDIR}/source"
++			# Compress and clean up.
++			cd "${NHOPKG_TMPDIR}"
++			tar Jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
++			tar --directory="${PACKAGENAME}-${PACKAGEVERSION}" -c --zstd -f "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst" 2> /dev/null
++
++			# Get package license --> LICENSE or COPYING file.
++			for LICENSE_FILE in COPYING LICENSE COPYING.txt LICENSE.txt;
++			do
++				if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}" ]]; then
++					if [[ $(grep "GNU GENERAL PUBLIC LICENSE" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]] \
++					|| [[ $(grep "GPL" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
++						# Package uses GNU GPL, but what version?
++						if [[ $(grep "Version 2" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
++							PACKAGELICENSE="GPLv2"
++						elif [[ $(grep "Version 3" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${LICENSE_FILE}") ]]; then
++							PACKAGELICENSE="GPLv3"
++						else
++							PACKAGELICENSE="GPL"
++						fi
++					else
++						if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
++							PACKAGELICENSE="unknown"
++						fi
++					fi
++				fi
++			done
++			# Get a desciption of package.
++			for README_FILE in README README.txt;
++			do
++				if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${README_FILE}" ]]; then
++					PACKAGEDESCRIPTION=$(grep -hiwm 1 "^${PACKAGENAME}" "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/${README_FILE}")
++				fi
++				if [[ -n ${PACKAGEDESCRIPTION} ]]; then
++					PACKAGEDESCRIPTION="${PACKAGEDESCRIPTION} [...]"
++					break
++				else
++					if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
++						PACKAGEDESCRIPTION="unknown"
++					fi
++				fi
++			done
++			# Get package arch
++			PACKAGEARCH=$(uname -m)
++			# Get SHA256 sum of package.
++			PACKAGESHA256=$(sha256sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
++			cd "${CWD}"
++			# If not selected Recursive option, ask for some data of package.
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				csw_packagelicense
++				csw_packagegroup
++				csw_packagearch
++				csw_packageurl
++				csw_packagedescription
++			else
++				# Get package URL
++				PACKAGEWEBURL="unknown"
++				# Get package group
++				PACKAGEGROUP="unknown"
++			fi
++			# Creates nhoid file.
++			csw_make_nhoid_file
++			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
++				## 4. Add external dependencies (manual).
++				#======================================================================================================"
++				print_background_title "Add external dependencies"
++				echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
++				echo
++				echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
++				echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
++				echog "To finish, press Enter twice."
++				#======================================================================================================
++				get_csw_build_dependencies
++				get_csw_optional_build_dependencies
++				get_csw_post_dependencies
++				get_csw_optional_post_dependencies
++			fi
++			## 5. Add compilation comands.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'nbuild() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			# Automated add of compilation commands.
++			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure.ac" ]] \
++			&& [[ ! -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure" ]] ; then
++				echo "autoconf" >> "${NHOPKG_TMPDIR}/nhoid"
++				echo "./configure ${CONFIGURE_OPTIONS}" >> "${NHOPKG_TMPDIR}/nhoid"
++			elif [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/configure" ]]; then
++				echo "./configure ${CONFIGURE_OPTIONS}" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/CMakeLists.txt" ]]; then
++				echo "cmake ${CMAKE_OPTIONS} ." >> "${NHOPKG_TMPDIR}/nhoid"
++				echo "make" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in" ]] \
++			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile" ]] \
++			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am" ]]; then
++				if [[ "$(grep -s '^all: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in)" ]] || [[ "$(grep -s '^all: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile)" ]]; then
++					echo "make" >> "${NHOPKG_TMPDIR}/nhoid"
++				fi
++			fi
++			# Checks that there are any command, if not then add echo.
++			if [ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "nbuild() {" ]; then
++				# Si no se añadieron comandos de compilación hay que añadir un echo para que no de error.
++				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			## 6. Add installation comands.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'ninstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			if [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in" ]] \
++			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile" ]] \
++			|| [[ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am" ]]; then
++				if [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.in)" ]] \
++				|| [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile)" ]] \
++				|| [[ "$(grep -s '^install: ' ${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/Makefile.am)" ]]; then
++					echo "make install" >> "${NHOPKG_TMPDIR}/nhoid"
++				fi
++			fi
++			# If needs cmake is needed to use make install too.
++			if [ -f "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}/CMakeLists.txt" ]; then
++				echo "make install" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			# Checks that there are any command, if not then exits with error.
++			if [ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "ninstall() {" ]; then
++				echog " *** Unable to add installation comands." >&2
++				cleanup_tmp_dir
++				exit 1
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			## 7. Add post installation comands.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			# By default ldconfig.
++			echo "ldconfig" >> "${NHOPKG_TMPDIR}/nhoid"
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			# Create npostremove function.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			## 8. Builds source package (*.srcnho).
++			rm -R "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}"
++			echog " - Building source package."
++			cd "${NHOPKG_TMPDIR}"
++			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" 2> /dev/null
++			cd ${CWD}
++			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" ]]; then
++				echogn " --- New package is:"
++				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho"
++			else
++				echog " *** Unable to build package." >&2
++				cleanup_tmp_dir
++				exit 1
++			fi
++			## 9. Clean up.
++			cleanup_tmp_dir
++		done
++		exit 0
+ 	;;
+ 	tgz2nho)
+ # ********************************************************************
