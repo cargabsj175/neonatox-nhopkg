@@ -1,0 +1,960 @@
+--- nhopkg.in.new	2025-10-28 07:16:58.900849243 -0300
++++ nhopkg.in.old	2025-10-28 07:06:01.677490502 -0300
+@@ -344,6 +344,7 @@
+ 	echog " -U, --update\tUpdate repository database."
+ 	echo
+ 	echog " -b, --build\tCompiles and installs source package."
++	echog " -c, --create-source\tCreates source package from tarball."
+ 	echog " -d, --dios\tSame as -S, --super-install."
+ 	echog " -e, --clean\tRemove cached data."
+ 	echog " -g, --create-repo\tCreates software repository on selected directory."
+@@ -2211,6 +2212,602 @@
+ #======================================8
+ # empty at the moment.
+ #======================================9
++# Create Source Wizard (csw) functions
++#======================================9
++## Function csw_username(). Asks about user name.
++# Usage: csw_username (without arguments)
++function csw_username()
++{
++	# Ask about username.
++	if [[ -z "${PACKAGERNAME}" ]]; then
++		echog "Enter your username:"
++		read -er PACKAGERNAME
++		while [[ -z "${PACKAGERNAME}" ]]; do
++			echog "You haven't entered your name!"
++			echog "Please, enter your username:"
++			read -er PACKAGERNAME
++		done
++	fi
++}
++## Function csw_usermail(). Asks about user mail.
++# Usage: csw_usermail (without arguments)
++function csw_usermail()
++{
++	# Ask about user mail.
++	if [[ -z "${PACKAGERMAIL}" ]]; then
++		echog "Enter your e-mail:"
++		read -er PACKAGERMAIL
++		while [[ -z "${PACKAGERMAIL}" ]]; do
++			echog "You haven't entered your e-mail!"
++			echog "Please, enter your e-mail:"
++			read -er PACKAGERMAIL
++		done
++	fi
++}
++## Function csw_packagename(). Asks about package name.
++# Usage: csw_packagename (without arguments)
++function csw_packagename()
++{
++	# Ask about package name.
++	if [[ -z "${PACKAGENAME}" ]]; then
++		# Package name for example selected by pragmart ;)
++		echog "Enter package name (Ex: gimp):"
++		read -er PACKAGENAME
++		while [[ -z "${PACKAGENAME}" ]]; do
++			echog "You haven't entered package name!"
++			echog "Please, enter package name (Ex: gimp):"
++			read -er PACKAGENAME
++		done
++	fi
++}
++## Function csw_packageversion(). Asks about package version.
++# Usage: csw_packageversion (without arguments)
++function csw_packageversion()
++{
++	# Ask about package version.
++	if [[ -z "${PACKAGEVERSION}" ]]; then
++		echog "Enter package version (Ex: 2.6.3):"
++		read -er PACKAGEVERSION
++		while [[ -z "${PACKAGEVERSION}" ]]; do
++			echog "You haven't entered package version!"
++			echog "Please, enter package version (Ex: 2.6.3):"
++			read -er PACKAGEVERSION
++		done
++	fi
++}
++## Function csw_packagerelease(). Asks about package release.
++# Usage: csw_packagerelease (without arguments)
++function csw_packagerelease()
++{
++	# Ask about package release.
++	if [[ -z "${PACKAGERELEASE}" ]]; then
++		echog "Enter package release (Ex: 1):"
++		read -er PACKAGERELEASE
++		while [[ -z "${PACKAGERELEASE}" ]]; do
++			echog "You haven't entered package release!"
++			echog "Please, enter package release (Ex: 1):"
++			read -er PACKAGERELEASE
++		done
++	fi
++}
++## Function csw_packagelicense(). Asks about package license.
++# Usage: csw_packagelicense (without arguments)
++function csw_packagelicense()
++{
++	# Ask about package license.
++	if [[ -z "${PACKAGELICENSE}" ]]; then
++		echog "Enter package license (Ex: GPLv3):"
++		read -er PACKAGELICENSE
++		while [[ -z "${PACKAGELICENSE}" ]]; do
++			echog "You haven't entered package license!"
++			echog "Please, enter package license (Ex: GPLv3):"
++			read -er PACKAGELICENSE
++		done
++	fi
++}
++## Function csw_packagegroup(). Asks about package group.
++# Usage: csw_packagegroup (without arguments)
++function csw_packagegroup()
++{
++	# Ask about package group.
++	if [[ -z "${PACKAGEGROUP}" ]]; then
++		echog "Enter package group (Ex: Graphics):"
++		read -er PACKAGEGROUP
++		while [[ -z "${PACKAGEGROUP}" ]]; do
++			echog "You haven't entered package group!"
++			echog "Please, enter package group (Ex: Graphics):"
++			read -er PACKAGEGROUP
++		done
++	fi
++}
++## Function csw_packagearch(). Asks about package architecture.
++# Usage: csw_packagearch (without arguments)
++function csw_packagearch()
++{
++	# Ask about package architecture.
++	if [[ -z "${PACKAGEARCH}" ]]; then
++		echog "Enter package arch (you can enter more than one arch separated by space. Ex: i686):"
++		read -er PACKAGEARCH
++		while [[ -z "${PACKAGEARCH}" ]]; do
++			echog "You haven't entered package arch!"
++			echog "Please, enter package arch (Ex: i686):"
++			read -er PACKAGEARCH
++		done
++	fi
++}
++## Function csw_packageurl(). Asks about package url.
++# Usage: csw_packageurl (without arguments)
++function csw_packageurl()
++{
++	# Ask about package web.
++	if [[ -z "${PACKAGEURL}" ]]; then
++		echog "Enter package web page (Ex: http://gimp.org/):"
++		read -er PACKAGEWEBURL
++		while [[ -z "${PACKAGEWEBURL}" ]]; do
++			echog "You haven't entered package web page (URL)!"
++			echog "Please, enter package web page (Ex: http://gimp.org/):"
++			read -er PACKAGEWEBURL
++		done
++	fi
++}
++## Function csw_packagedescription(). Asks about package description.
++# Usage: csw_packagedescription (without arguments)
++function csw_packagedescription()
++{
++	# Ask about package description.
++	if [[ -z "${PACKAGEDESCRIPTION}" ]]; then
++		echog "Enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
++		read -er PACKAGEDESCRIPTION
++		while [[ -z "${PACKAGEDESCRIPTION}" ]]; do
++			echog "You haven't entered package description!"
++			echog "Please, enter package description (Ex: GIMP is the GNU Image Manipulation Program.):"
++			read -er PACKAGEDESCRIPTION
++		done
++	fi
++}
++## Function csw_splitpackage(). Asks if the package will have sub-packages.
++# Usage: csw_splitpackage (without arguments)
++function csw_splitpackage() {
++    # Ask about package split names.
++    echog "Do you want to split this package into sub-packages? (y/N):"
++    read -r SPLIT_CHOICE
++
++    # Convert the input to lowercase for consistency.
++    SPLIT_CHOICE=$(echo "${SPLIT_CHOICE}" | tr '[:upper:]' '[:lower:]')
++
++    if [[ "${SPLIT_CHOICE}" == "y" || "${SPLIT_CHOICE}" == "yes" ]]; then
++        echog "Enter package split names separated by spaces (Ex: dev data ...):"
++        read -er SPLITPACKAGE
++
++        # Validate input.
++        while [[ -z "${SPLITPACKAGE}" ]]; do
++            echog "You haven't entered package split names!"
++            echog "Please, enter package split names or press Enter to skip:"
++            read -er SPLITPACKAGE
++
++            # If the user presses Enter without typing anything, exit the loop.
++            if [[ -z "${SPLITPACKAGE}" ]]; then
++                echog "Skipping package splitting."
++                break
++            fi
++        done
++    else
++        echog "Skipping package splitting."
++        SPLITPACKAGE=""
++    fi
++}
++## Function csw_make_nhoid_file(). Creates nhoid file to .srcnho package.
++# Usage: csw_make_nhoid_file (without arguments)
++function csw_make_nhoid_file()
++{
++	# Check that needed variables exists.
++	if [[ -z "${PACKAGERNAME}" ]] || [[ -z "${PACKAGERMAIL}" ]] \
++	|| [[ -z "${PACKAGENAME}" ]] || [[ -z "${PACKAGEVERSION}" ]] \
++	|| [[ -z "${PACKAGERELEASE}" ]] || [[ -z "${PACKAGESHA256}" ]]; then
++		echog " * Unable to create nhoid file." >&2
++		exit 1
++	fi
++	# Create nhoid file.
++	touch "${NHOPKG_TMPDIR}/nhoid"
++	echo "#%NHO-${NHOID_VERSION}" > "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Package Maintainer:\t${PACKAGERNAME} <${PACKAGERMAIL}>" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Name:\t${PACKAGENAME}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Version:\t${PACKAGEVERSION}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Release:\t${PACKAGERELEASE}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# License:\t${PACKAGELICENSE}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Group:\t${PACKAGEGROUP}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Arch:\t${PACKAGEARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Url:\t${PACKAGEWEBURL}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# Description:\t${PACKAGEDESCRIPTION}" >> "${NHOPKG_TMPDIR}/nhoid"
++	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
++	# Add this line only if SPLITPACKAGE is not empty
++	if [[ -n "${SPLITPACKAGE}" ]]; then
++		echo -e "# Splitpackage:\t${SPLITPACKAGE}" >> "${NHOPKG_TMPDIR}/nhoid"
++	fi
++	echo >> "${NHOPKG_TMPDIR}/nhoid"
++}
++## Function get_csw_build_dependencies(). Asks about build dependencies.
++# Usage: get_csw_build_dependencies (without arguments)
++function get_csw_build_dependencies()
++{
++	# Needed build dependencies.
++	echog "Enter build dependency:"
++	read -er Combo2
++	while [[ -n "${Combo2}" ]]; do
++		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo2}"))
++		# Search on repository database.
++		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" ]]; then
++			echo -en "# BuildDep:\t${Combo2}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo2} "
++			echog "added like package-dependency."
++			echog "Enter build dependency (if necesary):"
++		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" ]]; then
++			echo -en "# BuildDep:\t${Combo2}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo2}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo2} "
++			echog "added like package-dependency."
++			echog "Enter build dependency (if necesary):"
++		elif [[ "${FILEDEPS}" != "0" ]]; then
++			if [[ -f "${Combo2}" ]]; then
++				echo -e "# BuildDep:\t${Combo2}\t${Combo2}" >> "${NHOPKG_TMPDIR}/nhoid"
++				echo -n "${Combo2} "
++				echog "added like file-dependency."
++				echog "Enter build dependency (if necesary):"
++			else
++				echogn "Found"
++				echo -n " $(basename ${Combo2}) "
++				echogn "on this path:"
++				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo2})."
++				echogn "Enter correct path to"
++				echo " $(basename ${Combo2})."
++				echog "Enter build dependency (if necesary):"
++			fi
++		else
++			echo -n " * ${Combo2} " >&2
++			echog "is not present in your system." >&2
++			echog "Enter build dependency (if necesary):"
++		fi
++		read -er Combo2
++	done
++}
++## Function get_csw_optional_build_dependencies(). Asks about optional build dependencies.
++# Usage: get_csw_optional_build_dependencies (without arguments)
++function get_csw_optional_build_dependencies()
++{
++	# Optionals build dependencies.
++	echog "Enter optional build dependency:"
++	read -er Combo3
++	while [[ -n "${Combo3}" ]]; do
++		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo3}"))
++		# Search on repository database.
++		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" ]]; then
++			echo -en "# OptionalBuildDep:\t${Combo3}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo3} "
++			echog "added like package-dependency."
++			echog "Enter build dependency (if necesary):"
++		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" ]]; then
++			echo -en "# OptionalBuildDep:\t${Combo3}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo3}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo3} "
++			echog "added like package-dependency."
++			echog "Enter optional build dependency (if necesary):"
++		elif [[ "${FILEDEPS}" != "0" ]]; then
++			if [[ -f "${Combo3}" ]]; then
++				echo -e "# OptionalBuildDep:\t${Combo3}\t${Combo3}" >> "${NHOPKG_TMPDIR}/nhoid"
++				echo -n "${Combo3} "
++				echog "added like file-dependency."
++				echog "Enter optional build dependency (if necesary):"
++			else
++				echogn "Found"
++				echo -n " $(basename ${Combo3}) "
++				echogn "on this path:"
++				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo3})."
++				echogn "Enter correct path to"
++				echo " $(basename ${Combo3})."
++				echog "Enter optional build dependency (if necesary):"
++			fi
++		else
++			echo -n " * ${Combo3} " >&2
++			echog "is not present in your system." >&2
++			echog "Enter optional build dependency (if necesary):"
++		fi
++		read -er Combo3
++	done
++}
++## Function get_csw_post_dependencies(). Asks about post installation dependencies.
++# Usage: get_csw_post_dependencies (without arguments)
++function get_csw_post_dependencies()
++{
++	# Needed post installation dependencies.
++	echog "Enter post installation dependency for ${PACKAGENAME} (main):"
++	read -er Combo4
++	while [[ -n "${Combo4}" ]]; do
++		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
++		# Search on repository database.
++		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
++			echo -en "# Dep(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				if [[ -f "${PACKAGEDEPRAND}" ]]; then
++					echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++				fi
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo4} "
++			echog "added like package-dependency."
++			echog "Enter post installation dependency (if necesary):"
++		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" ]]; then
++			echo -en "# Dep(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo4} "
++			echog "added like package-dependency."
++			echog "Enter post installation dependency (if necesary):"
++		elif [[ "${FILEDEPS}" != "0" ]]; then
++			if [[ -f "${Combo4}" ]]; then
++				echo -e "# Dep(post):\t${Combo4}\t${Combo4}" >> "${NHOPKG_TMPDIR}/nhoid"
++				echo -n "${Combo4} "
++				echog "added like file-dependency."
++				echog "Enter post installation dependency (if necesary):"
++			else
++				echogn "Found"
++				echo -n " $(basename ${Combo4}) "
++				echogn "on this path:"
++				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo4})."
++				echogn "Enter correct path to"
++				echo " $(basename ${Combo4})."
++				echog "Enter post installation dependency (if necesary):"
++			fi
++		else
++			echo -n " * ${Combo4} " >&2
++			echog "is not present in your system." >&2
++			echog "Enter post installation dependency (if necesary):"
++		fi
++		read -er Combo4
++	done
++	
++	# If SPLITPACKAGE is not empty, create additional dependencies.
++    if [[ -n "${SPLITPACKAGE}" ]]; then
++        IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
++
++        for part in "${SPLITPARTS[@]}"; do
++            echog "Adding post installation dependencies for ${PACKAGENAME}-${part}"
++            echog "Enter post installation dependency for ${part} (if necessary):"
++            read -er Combo4
++            while [[ -n "${Combo4}" ]]; do
++                FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo4}"))
++                # Search the repository database.
++                if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" ]]; then
++                    echo -en "# Dep_${part}(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++                    # Complete dependencies.
++                    local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++                    for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}; do
++                        if [[ -f "${PACKAGEDEPRAND}" ]]; then
++                            echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++                        fi
++                    done
++                    echo >> "${NHOPKG_TMPDIR}/nhoid"
++                    echo -n "${Combo4} "
++                    echog "added like package-dependency for ${PACKAGENAME}-${part}."
++                elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" ]]; then
++                    echo -en "# Dep_${part}(post):\t${Combo4}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++                    # Complete dependencies.
++                    local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo4}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++                    for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}; do
++                        echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++                    done
++                    echo >> "${NHOPKG_TMPDIR}/nhoid"
++                    echo -n "${Combo4} "
++                    echog "added like package-dependency for ${PACKAGENAME}-${part}."
++                elif [[ "${FILEDEPS}" != "0" ]]; then
++                    if [[ -f "${Combo4}" ]]; then
++                        echo -e "# Dep_${part}(post):\t${Combo4}\t${Combo4}" >> "${NHOPKG_TMPDIR}/nhoid"
++                        echo -n "${Combo4} "
++                        echog "added like file-dependency for ${PACKAGENAME}-${part}."
++                    else
++                        echogn "Found"
++                        echo -n " $(basename ${Combo4}) "
++                        echogn "on this path:"
++                        echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo4})."
++                        echogn "Enter correct path to"
++                        echo " $(basename ${Combo4})."
++                    fi
++                else
++                    echo -n " * ${Combo4} " >&2
++                    echog "Isn't present in your system." >&2
++                fi
++                echog "Enter post installation dependency for ${part} (if necessary):"
++                read -er Combo4
++            done
++        done
++    fi
++}
++## Function get_csw_optional_post_dependencies(). Asks about optional post installation dependencies.
++# Usage: get_csw_optional_post_dependencies (without arguments)
++function get_csw_optional_post_dependencies()
++{
++	# Optionals post installation dependencies.
++	echog "Enter optional post installation dependency for ${PACKAGENAME}:"
++	read -er Combo5
++	while [[ -n "${Combo5}" ]]; do
++		FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
++		# Search on repository database.
++		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
++			echo -en "# OptionalDep(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				if [ -f "${PACKAGEDEPRAND}" ]; then
++					echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++				fi
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo5} "
++			echog "added like package-dependency."
++			echog "Enter optional post installation dependency (if necesary):"
++		elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" ]]; then
++			echo -en "# OptionalDep(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++			# Completes dependencies.
++			local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++			PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++			for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}
++			do
++				echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++			done
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo -n "${Combo5} "
++			echog "added like package-dependency."
++			echog "Enter post installation dependency (if necesary):"
++		elif [[ "${FILEDEPS}" != "0" ]]; then
++			if [[ -f "${Combo5}" ]]; then
++				echo -e "# OptionalDep(post):\t${Combo5}\t${Combo5}" >> "${NHOPKG_TMPDIR}/nhoid"
++				echo -n "${Combo5} "
++				echog "added like file-dependency."
++				echog "Enter optional post installation dependency (if necesary):"
++			else
++				echogn "Found"
++				echo -n " $(basename ${Combo5}) "
++				echogn "on this path:"
++				echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo5})."
++				echogn "Enter correct path to"
++				echo " $(basename ${Combo5})."
++				echog "Enter optional post installation dependency (if necesary):"
++			fi
++		else
++			echo -n " * ${Combo5} " >&2
++			echog "is not present in your system." >&2
++			echog "Enter optional post installation dependency (if necesary):"
++		fi
++		read -er Combo5
++	done
++	
++	# If SPLITPACKAGE is not empty, create additional dependencies.
++    if [[ -n "${SPLITPACKAGE}" ]]; then
++        IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
++
++        for part in "${SPLITPARTS[@]}"; do
++            echog "Adding optional post installation dependencies for ${PACKAGENAME}-${part}"
++            echog "Enter optional post installation dependency for ${part} (if necessary):"
++            read -er Combo5
++            while [[ -n "${Combo5}" ]]; do
++                FILEDEPS=$(${BINLOCATE} -bc -d "${NHOPKG_DB}" $(basename "${Combo5}"))
++                # Search the repository database.
++                if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" ]]; then
++                    echo -en "# OptionalDep_${part}(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++                    # Complete dependencies.
++                    local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++                    for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}; do
++                        if [ -f "${PACKAGEDEPRAND}" ]; then
++                            echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++                        fi
++                    done
++                    echo >> "${NHOPKG_TMPDIR}/nhoid"
++                    echo -n "${Combo5} "
++                    echog "added like package-dependency for ${part}."
++                elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" ]]; then
++                    echo -en "# OptionalDep_${part}(post):\t${Combo5}\t" >> "${NHOPKG_TMPDIR}/nhoid"
++                    # Complete dependencies.
++                    local pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    local pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${Combo5}" 2> /dev/null | awk -F'\t' '{print $2}')
++                    PACKAGEDEPSRAND=$(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" | sort -R | head -10)
++                    for PACKAGEDEPRAND in ${PACKAGEDEPSRAND}; do
++                        echo -n "${PACKAGEDEPRAND} " >> "${NHOPKG_TMPDIR}/nhoid"
++                    done
++                    echo >> "${NHOPKG_TMPDIR}/nhoid"
++                    echo -n "${Combo5} "
++                    echog "added like package-dependency for ${part}."
++                elif [[ "${FILEDEPS}" != "0" ]]; then
++                    if [[ -f "${Combo5}" ]]; then
++                        echo -e "# OptionalDep_${part}(post):\t${Combo5}\t${Combo5}" >> "${NHOPKG_TMPDIR}/nhoid"
++                        echo -n "${Combo5} "
++                        echog "added like file-dependency for ${part}."
++                    else
++                        echogn "Found"
++                        echo -n " $(basename ${Combo5}) "
++                        echogn "on this path:"
++                        echo " $(${BINLOCATE} -l 1 -d "${NHOPKG_DB}" ${Combo5})."
++                        echogn "Enter correct path to"
++                        echo " $(basename ${Combo5})."
++                    fi
++                else
++                    echo -n " * ${Combo5} " >&2
++                    echog "is not present in your system." >&2
++                fi
++                echog "Enter optional post installation dependency for ${part} (if necessary):"
++                read -er Combo5
++            done
++        done
++    fi
++}
++#======================================9
+ # Auto Package functions.
+ #======================================9
+ ## Variables
+@@ -2419,8 +3016,8 @@
+ # Section: Nhopkg parse options.
+ #==============================================================================
+ NHNAME=$(basename "$0")
+-SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvC"
+-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build"
++SHORTOPTIONS="RiSdrBbklno:wxstcg:UehuvC"
++LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-source,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build"
+ NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
+ if [[ "${?}" != "0" ]]; then
+ 	nhopkg_usage
+@@ -2626,6 +3223,15 @@
+ 				exit 1
+ 			fi
+ 		;;
++		-c|--create-source)
++			shift
++			if [[ -z "${NHOPKG_OPTION}" ]]; then
++				NHOPKG_OPTION="create-source"
++			else
++				echog " * You have selected more than one valid option." >&2
++				exit 1
++			fi
++		;;
+ 		-g|--create-repo)
+ 			shift
+ 			if [[ -d "${1}" ]]; then
+@@ -3446,6 +4052,319 @@
+ 		done
+ 		exit 0
+ 	;;
++	create-source)
++# ********************************************************************
++#
++# Section: Create Source
++# 1. Basic configurations.
++# 2. Checking packages and prepare it.
++# 3. Start the wizard
++# 4. Packaging and compress new source package (original).
++# 5. Add patches.
++# 6. Add external dependencies.
++# 7. Add compilation comands.
++# 8. Add installation comands.
++# 9. Add post installation comands.
++# 10. Add post remove comands.
++# 11. Builds source package (*.srcnho).
++# 12. Clean up.
++#
++# ********************************************************************
++		## 1. Basic configurations.
++		# Sets PWD directory.
++		get_pwd_dir
++		# Checks if have selected any package.
++		if [[ -z "${CASEPACKAGES}" ]]; then
++			echog " * Must select package." >&2
++			exit 1
++		fi
++		## 2. Checking packages and prepare it.
++		for CASEPACKAGE in ${CASEPACKAGES};
++		do
++			echogn " :: Preparing to create source package:"
++			echo " $(basename ${CASEPACKAGE})"
++			# Clean up nhopkg temporal directory.
++			cleanup_tmp_dir
++			check_if_exist_local_package "${CASEPACKAGE}"
++			# Setting up the wizard.
++			echog " - Loading the wizard..."
++			make_tmp_dir
++			mkdir "${NHOPKG_TMPDIR}/source"
++			# Uncompress package.
++			tar axfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}/source" 2> /dev/null
++			check_if_ok " * Unable to uncompress package."
++			clear
++			## 3. Start the wizard
++			#======================================================================================================
++			print_background_title "Nhopkg Create Source Wizard"
++			echog "This wizard helps you to create a (*.srcnho) package from other source package like (*.tar.zst)."
++			echog "It is very important to complete all the fields correctly."
++			echo
++			#======================================================================================================
++			csw_username
++			csw_usermail
++			csw_packagename
++			csw_packageversion
++			csw_packagerelease
++			csw_packagelicense
++			csw_packagegroup
++			csw_packagearch
++			csw_packageurl
++			csw_packagedescription
++			csw_splitpackage
++			## 4. Packaging and compress new source package (original).
++			echog " --- Setting up package sources."
++			mv "${NHOPKG_TMPDIR}/source/"*/ "${NHOPKG_TMPDIR}/${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
++			check_if_ok " * Unable to uncompress package."
++			# Clean up.
++			rm -Rf "${NHOPKG_TMPDIR}/source"
++			# Compress and clean up.
++			cd "${NHOPKG_TMPDIR}"
++			tar Jcf "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst" "${PACKAGENAME}-${PACKAGEVERSION}" 2> /dev/null
++			rm -Rf "${PACKAGENAME}-${PACKAGEVERSION}"
++			# Get SHA256 sum of package.
++			PACKAGESHA256=$(sha256sum "${PACKAGENAME}-${PACKAGEVERSION}.tar.zst")
++			cd "${CWD}"
++			# Creates nhoid file.
++			csw_make_nhoid_file
++			## 5. Add patches.
++			#======================================================================================================
++			print_background_title "Add patches into package"
++			echog "You can add patches from your system. Enter real path to patch."
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			echog "Enter path to patch:"
++			PATCH_COUNTER="0"
++			read -er Combo1
++			while [[ -n "${Combo1}" ]]; do
++				if [[ -f "${Combo1}" ]]; then
++					cp "${Combo1}" "${NHOPKG_TMPDIR}/"
++					echo -n "${Combo1} "
++					echog "added to the package."
++					# Sumar un parche a la lista!
++					((PATCH_COUNTER++))
++				else
++					echo -n " *** ${Combo1} " >&2
++					echog "not found! Retry." >&2
++				fi
++				echog "Enter path to patch:"
++				read -er Combo1
++			done
++			if [[ "${PATCH_COUNTER}" != "0" ]]; then
++				echogn " --- Added patches:"
++				echo " ${PATCH_COUNTER}."
++			else
++				echog " --- No patches added." >&2
++			fi
++			## 6. Add external dependencies.
++			#======================================================================================================"
++			print_background_title "Add external dependencies"
++			echog "You can add external dependencies to your package. Dependencies are other libraries or softwares needed to build, install and run other software. It's important that they are satisfied."
++			echo
++			echog "To add dependency, enter its name with or without version. Dependency must be installed by Nhopkg."
++			echog "You can add too files present in your system needed for the package. Ex: libc.so.6"
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			get_csw_build_dependencies
++			get_csw_optional_build_dependencies
++			get_csw_post_dependencies
++			get_csw_optional_post_dependencies
++			## 7. Add compilation comands.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'nbuild() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			#======================================================================================================
++			print_background_title "Add compilation commands"
++			echog "Here you can enter compilation commands. Ex: ./configure, make."
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			echog "Enter compilation commands:"
++			read -er Combo6
++			while [[ -n "${Combo6}" ]]; do
++				echo "${Combo6}" >> "${NHOPKG_TMPDIR}/nhoid"
++				read -er Combo6
++			done
++			# Checks that there are any command, if not then add echo.
++			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "nbuild() {" ]]; then
++				# If no compilation commands were added, an echo must be added so that it does not give an error.
++				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			## 8. Add installation comands.
++			# We make sure that the ninstall() function always exists.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'ninstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			#======================================================================================================
++			print_background_title "Add installation commands for ${PACKAGENAME} (main)"
++			echog "Here you can enter instalation commands. Ex: make install, install ..., cp -v ... Files that will be installed in this step will be in the binary package."
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			echog "Enter instalation commands for ${PACKAGENAME}:"
++			# Checks that there are any command. Is needed that there are any commands!
++			CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
++			while [[ "${CHECKANYCOMMAND}" = "ninstall() {" ]]; do
++				read -er Combo7
++				while [ -n "${Combo7}" ]; do
++					echo "${Combo7}" >> "${NHOPKG_TMPDIR}/nhoid"
++					read -er Combo7
++					# Reload variable.
++					CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
++				done
++				if [[ "${CHECKANYCOMMAND}" = "ninstall() {" ]]; then
++					echog " * You must add at least one command!" >&2
++				fi
++			done
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			# Split packages function for ninstall
++			# If SPLITPACKAGE is not empty, create additional functions.
++			if [[ -n "${SPLITPACKAGE}" ]]; then
++        IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
++
++        for part in "${SPLITPARTS[@]}"; do
++            echog "Adding installation commands for ${PACKAGENAME}-${part}"
++
++            # Create a dynamic function like ninstall_*().
++            echo >> "${NHOPKG_TMPDIR}/nhoid"
++            echo "ninstall_${part}() {" >> "${NHOPKG_TMPDIR}/nhoid"
++
++            # Prompt the user to enter specific commands for this part.
++            echog "Add installation commands for ${PACKAGENAME}-${part}:"
++            echog "To finish, press Enter twice."
++
++            CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
++            while [[ "${CHECKANYCOMMAND}" = "ninstall_${part}() {" ]]; do
++                read -er Combo7
++                while [ -n "${Combo7}" ]; do
++                    echo "${Combo7}" >> "${NHOPKG_TMPDIR}/nhoid"
++                    read -er Combo7
++                    CHECKANYCOMMAND="$(tail -1 ${NHOPKG_TMPDIR}/nhoid)"
++                done
++                if [[ "${CHECKANYCOMMAND}" = "ninstall_${part}() {" ]]; then
++                    echog " * You must add at least one command for '${part}'!" >&2
++                fi
++            done
++
++            echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++        done
++    fi
++			## 9. Add post installation comands.
++			# Make sure the npostinstall() function always exists.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			#======================================================================================================
++			print_background_title "Add post installation commands for ${PACKAGENAME}"
++			echog "Here you can enter post instalation commands, as hard links or similar. This commands will be in the binary package too, but not created files by these commands. Ex: ln -sf, ldconfig ..."
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			echog "Enter post instalation commands for ${PACKAGENAME} (main):"
++			read -er Combo8
++			while [[ -n "${Combo8}" ]]; do
++				echo "${Combo8}" >> "${NHOPKG_TMPDIR}/nhoid"
++				read -er Combo8
++			done
++			# Checks that there are any command, if not then add echo.
++			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostinstall() {" ]]; then
++				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			
++			   # If SPLITPACKAGE is not empty, create additional functions.
++    if [[ -n "${SPLITPACKAGE}" ]]; then
++        IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
++
++        for part in "${SPLITPARTS[@]}"; do
++            echog "Adding post-installation commands for ${PACKAGENAME}-${part}"
++
++            # Create a dynamic function like npostinstall_*().
++            echo >> "${NHOPKG_TMPDIR}/nhoid"
++            echo "npostinstall_${part}() {" >> "${NHOPKG_TMPDIR}/nhoid"
++
++            # Prompt the user to enter specific commands for this part.
++            echog "Add post-installation commands for ${PACKAGENAME}-${part}:"
++            echog "To finish, press Enter twice."
++
++            read -er Combo8
++            while [[ -n "${Combo8}" ]]; do
++                echo "${Combo8}" >> "${NHOPKG_TMPDIR}/nhoid"
++                read -er Combo8
++            done
++
++            # Verify that there is at least one command in the dynamic function.
++            if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostinstall_${part}() {" ]]; then
++                echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++            fi
++
++            echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++        done
++    fi
++			## 10. Add post remove comands.
++			# Make sure the npostremove() function always exists.
++			echo >> "${NHOPKG_TMPDIR}/nhoid"
++			echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
++			#======================================================================================================
++			print_background_title "Add post remove commands for ${PACKAGENAME}"
++			echog "Here you can enter post remove commands, as remove hard links created in post installation commands or similar. This commands will be ejecuted after package has been deleted. Ex: rm /etc/ld.so.conf."
++			echog "To finish, press Enter twice."
++			#======================================================================================================
++			echog "Enter post remove commands:"
++			read -er Combo9
++			while [[ -n "${Combo9}" ]]; do
++				echo "${Combo9}" >> "${NHOPKG_TMPDIR}/nhoid"
++				read -er Combo9
++			done
++			# Checks that there are any command, if not then add echo.
++			if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostremove() {" ]]; then
++				# If there are no post-installation commands, insert echo so that there is no error.
++				echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++			fi
++			echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++			
++			# If SPLITPACKAGE is not empty, create additional functions.
++    if [[ -n "${SPLITPACKAGE}" ]]; then
++        IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
++
++        for part in "${SPLITPARTS[@]}"; do
++            echog "Adding post-remove commands for ${PACKAGENAME}-${part}"
++
++            # Create a dynamic function like npostremove_*()
++            echo >> "${NHOPKG_TMPDIR}/nhoid"
++            echo "npostremove_${part}() {" >> "${NHOPKG_TMPDIR}/nhoid"
++
++           # Prompt the user to enter specific commands for this part.
++            echog "Add post-remove commands for ${PACKAGENAME}-${part}:"
++            echog "To finish, press Enter twice."
++
++            read -er Combo9
++            while [[ -n "${Combo9}" ]]; do
++                echo "${Combo9}" >> "${NHOPKG_TMPDIR}/nhoid"
++                read -er Combo9
++            done
++
++            # Verify that there is at least one command in the dynamic function.
++            if [[ "$(tail -1 ${NHOPKG_TMPDIR}/nhoid)" = "npostremove_${part}() {" ]]; then
++                echo "noemptyfuncs" >> "${NHOPKG_TMPDIR}/nhoid"
++            fi
++
++            echo '}' >> "${NHOPKG_TMPDIR}/nhoid"
++        done
++    fi
++			## 11. Builds source package (*.srcnho).
++			echog " - Building source package."
++			cd "${NHOPKG_TMPDIR}"
++			tar cp * > "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" 2> /dev/null
++			cd ${CWD}
++			if [[ -f "${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho" ]]; then
++				echogn " --- New package is:"
++				echo " ${CWD}/${PACKAGENAME}-${PACKAGEVERSION}-${PACKAGERELEASE}.srcnho"
++			else
++				echog " *** Unable to build package." >&2
++				cleanup_tmp_dir
++				exit 1
++			fi
++			## 12. Clean up.
++			cleanup_tmp_dir
++		done
++		exit 0
++	;;
+ 	create-repo)
+ # ********************************************************************
+ #
