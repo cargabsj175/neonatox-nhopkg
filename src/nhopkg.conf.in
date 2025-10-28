@@ -39,6 +39,16 @@ NHOPKG_CHECKARCH=yes
 # Verbose mode for nhopkg (yes OR no):
 VERBOSE_MODE=no
 
+# Sign binary packages with PGP
+NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
+# Sign packages when building (maintainers only)
+NHOPKG_SIGN_PACKAGES=yes
+NHOPKG_SIGN_KEY="repo@neonatox.vegnux.com"
+# Verify signatures when installing
+NHOPKG_VERIFY_SIGNATURE=yes
+NHOPKG_REQUIRE_SIGNATURE=no
+
+
 # [server]
 # Repository configuration for nhopkg.
 # Default repository of Nhopkg. You can change it.
