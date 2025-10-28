@@ -369,6 +369,10 @@ function nhopkg_help()
 	echog " --no-check-arch\tDon't check architecture."
 	echog " --no-check-deps\tDon't check dependencies."
 	echog " --no-check-sha256\tDon't check SHA256 Sum."
+	echog " --sign-package\tSign the binary package when building it."
+	echog " --no-sign-package\tSkip the package signature."
+	echog " --verify-package-signature\tVerify the GPG signature of the package before installing it."
+	echog " --no-verify-package-signature\tSkip signature verification."
 	echog " --purge\tRemove inverse dependencies of package."
 	echog " --root\tSets install root."
 	echog " -R, --recursive\tNhopkg works recursively."
@@ -1336,6 +1340,59 @@ bin_install_progress()
 	echo >&2
 	) | ${COMMAND}  2>/dev/null > ${LOG_FILE}
 }
+# ---------------------------------------------------------
+# verify_package_signature()
+# Description: Verifies GPG signature of data.tar.zst using trusted keyring.
+#              Auto-initializes the keyring if needed.
+# Parameters: none
+# Returns: 0 if OK or signature not required; exits on failure.
+# ---------------------------------------------------------
+function verify_package_signature()
+{
+    if [[ "${NHOPKG_VERIFY_SIGNATURE}" != "yes" ]]; then
+        return 0
+    fi
+
+    # --- Auto-setup trusted keyring if not initialized ---
+    local TRUSTED_KEYS_DIR="${NHOPKG_TRUSTED_KEYS_DIR}"
+    local DEFAULT_PUBKEY="${TRUSTED_KEYS_DIR}/nhopkg-repo.pub"
+
+    if [[ ! -f "${TRUSTED_KEYS_DIR}/pubring.kbx" ]] && [[ -f "${DEFAULT_PUBKEY}" ]]; then
+        mkdir -p "${TRUSTED_KEYS_DIR}"
+        echog " --- Initializing trusted keyring..."
+        if gpg --homedir "${TRUSTED_KEYS_DIR}" --import "${DEFAULT_PUBKEY}" &>/dev/null; then
+            echog " --- Trusted keyring initialized."
+        else
+            echog " *** WARNING: Failed to initialize trusted keyring." >&2
+        fi
+    fi
+
+    # --- Verify signature ---
+    if [[ ! -f "${NHOPKG_TMPDIR}/signature.gpg" ]]; then
+        echog " *** WARNING: Package is not signed." >&2
+        if [[ "${NHOPKG_REQUIRE_SIGNATURE}" == "yes" ]]; then
+            echog " *** Signature required. Aborting." >&2
+            cleanup_tmp_dir
+            exit 1
+        fi
+        return 0
+    fi
+
+    if [[ ! -f "${TRUSTED_KEYS_DIR}/pubring.kbx" ]]; then
+        echog " *** ERROR: No trusted keyring found and no default key to import." >&2
+        cleanup_tmp_dir
+        exit 1
+    fi
+
+    echog " --- Verifying GPG signature..."
+    if gpg --homedir "${TRUSTED_KEYS_DIR}" --batch --quiet --verify "${NHOPKG_TMPDIR}/signature.gpg" "${NHOPKG_TMPDIR}/data.tar.zst" 2>/dev/null; then
+        echog " --- Signature OK."
+    else
+        echog " *** BAD SIGNATURE! Package may be tampered." >&2
+        cleanup_tmp_dir
+        exit 1
+    fi
+}
 ## Funtion bin_install(). Installs binary package form data.tar.zst.
 # Usage: bin_install (without arguments)
 function bin_install()
@@ -2183,6 +2240,15 @@ function build_make_binary_package()
 	echog " --- Compressing package."
 	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${pkgname}${part:+-}${part}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
+		# Sign data.tar.zst if enabled
+		if [[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]] && command -v gpg >/dev/null; then
+			echog " --- Signing package with GPG..."
+			if ! gpg --default-key "${NHOPKG_SIGN_KEY}" --detach-sign --armor "${NHOPKG_TMPDIR}/data.tar.zst" 2>/dev/null; then
+				echog " *** WARNING: Failed to sign package. Continuing without signature." >&2
+			else
+				mv "${NHOPKG_TMPDIR}/data.tar.zst.asc" "${NHOPKG_TMPDIR}/signature.gpg"
+			fi
+		fi
 		# Go to the temp directory and package.
 		cd "${NHOPKG_TMPDIR}"
 		# Gets sha256 sum from data.tar.zst
@@ -2414,7 +2480,7 @@ trap cleanup_all EXIT TERM
 #==============================================================================
 NHNAME=$(basename "$0")
 SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvC"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -2428,7 +2494,6 @@ while [[ "${1}" != "--" ]]; do
 			# Use recursive mode in Nhopkg.
 			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
 				NHOPKG_RECURSIVE="yes"
-			fi
 		;;
 		--root)
 			shift
@@ -2482,6 +2547,34 @@ while [[ "${1}" != "--" ]]; do
 			# Force check dependencies.
 			if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
 				NHOPKG_CHECKSHA256="yes"
+			fi
+		;;
+		--sign-package)
+			shift
+			# Sign the binary package when building it.
+			if [[ "${NHOPKG_SIGN_PACKAGE}" = "no" ]]; then
+				NHOPKG_SIGN_PACKAGE="yes"
+			fi
+		;;
+		--no-sign-package)
+			shift
+			# Skip the package signature.
+			if [[ "${NHOPKG_SIGN_PACKAGE}" = "yes" ]]; then
+				NHOPKG_SIGN_PACKAGE="no"
+			fi
+		;;
+		--verify-package-signature)
+			shift
+			# Verify the GPG signature of the package before installing it.
+			if [[ "${NHOPKG_VERIFY_SIGNATURE}" = "no" ]]; then
+				NHOPKG_VERIFY_SIGNATURE="yes"
+			fi
+		;;
+		--no-verify-package-signature)
+			shift
+			# Skip signature verification.
+			if [[ "${NHOPKG_VERIFY_SIGNATURE}" = "yes" ]]; then
+				NHOPKG_VERIFY_SIGNATURE="no"
 			fi
 		;;
 		-i|--install)
@@ -2778,6 +2871,8 @@ case "${NHOPKG_OPTION}" in
 			## 3. Checks architecture and SHA256 Sum.
 			check_package_sha256sum
 			check_package_arch
+			## 3.5. Verify GPG signature (if enabled)
+			verify_package_signature
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
 				echog " - Resolving Dependencies."
