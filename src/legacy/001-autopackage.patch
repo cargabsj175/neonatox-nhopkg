@@ -8,6 +8,19 @@
  	echog " -B, --backup\tCreates binary package from installed package."
  	echog " -C, --super-build\tCompiles and installs source package from Git repo."
  	echog " -S, --super-install\tInstalls binary package form repository."
+@@ -2210,6 +2210,12 @@
+ # Check (packages) functions.
+ #======================================8
+ # empty at the moment.
++#======================================9
++# Auto Package functions.
++#======================================9
++## Variables
++CONFIGURE_OPTIONS="--prefix=/usr"
++CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX=/usr"
+ #======================================10
+ # List (packages) functions.
+ #======================================10
 @@ -3017,8 +3018,8 @@
  # Section: Nhopkg parse options.
  #==============================================================================
@@ -265,3 +278,5 @@
  	;;
  	tgz2nho)
  # ********************************************************************
+
+
