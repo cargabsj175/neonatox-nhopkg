@@ -2494,6 +2494,7 @@ while [[ "${1}" != "--" ]]; do
 			# Use recursive mode in Nhopkg.
 			if [[ "${NHOPKG_RECURSIVE}" != "yes" ]]; then
 				NHOPKG_RECURSIVE="yes"
+			fi
 		;;
 		--root)
 			shift
