@@ -1192,6 +1192,8 @@ function installdownloadedeps()
 		## 3. Checks SHA256 sum and architecture.
 		check_package_sha256sum
 		check_package_arch
+		## 3.5. Verify GPG signature (if enabled)
+		verify_package_signature
 		## 6. Install binary package.
 		bin_install
 		## 7. Configure installation.
