@@ -852,80 +852,85 @@ function check_if_installed_package()
 # Returns: Full path to package file in ${NHOPKG_LOCALSTATEDIR}/packages/, or empty if not found/invalid.
 # ---------------------------------------------------------
 function resolve_package_by_name() {
-	local spec="$1"
-	local name
-	local min_version=""
-	local best_match=""
-	local best_ver=""
+    local spec="$1"
+    local name
+    local min_version=""
+    local best_match=""
+    local best_ver=""
 
-	# Extract name and minimum version (if exists)
-	if [[ "$spec" == *">="* ]]; then
-		name="${spec%%>=*}"
-		min_version="${spec#*>=}"
-	else
-		name="$spec"
-	fi
+    # Extract name and minimum version (if exists)
+    if [[ "$spec" == *">="* ]]; then
+        name="${spec%%>=*}"
+        min_version="${spec#*>=}"
+    else
+        name="$spec"
+    fi
 
-	# Find candidates: only packages whose base name is EXACTLY "$name"
-	local candidates=()
-while IFS= read -r -d '' pkg; do
-	local basename_pkg=$(basename "$pkg")
-	case "$basename_pkg" in
-		"$name")
-			candidates+=("$pkg")
-			;;
-		"$name"-[0-9]*)
-			# Version starts with number → valid
-			candidates+=("$pkg")
-			;;
-		"$name"-[0-9]*-[a-zA-Z0-9]*)
-			# Version and release → valid
-			candidates+=("$pkg")
-			;;
-		# Anything else (like package-variant) → ignore
-		*)
-			;;
-	esac
-done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -name "${name}*" -print0 2>/dev/null)
+    # Find candidates: only packages whose base name starts with "$name"
+    local candidates=()
+    while IFS= read -r -d '' pkg; do
+        local basename_pkg=$(basename "$pkg")
+        case "$basename_pkg" in
+            "$name")
+                candidates+=("$pkg")
+                ;;
+            "$name"-[0-9]*)
+                # Version starts with number → valid
+                candidates+=("$pkg")
+                ;;
+            "$name"-[0-9]*-[a-zA-Z0-9]*)
+                # Version and release → valid
+                candidates+=("$pkg")
+                ;;
+            # Anything else (like package-variant) → ignore
+            *)
+                ;;
+        esac
+    done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -name "${name}*" -print0 2>/dev/null)
 
-	# If there are no candidates, it fails
-	if [[ ${#candidates[@]} -eq 0 ]]; then
-		return 1
-	fi
+    # If there are no candidates, it fails
+    if [[ ${#candidates[@]} -eq 0 ]]; then
+        return 1
+    fi
 
-	# Compare versions
-	for pkgfile in "${candidates[@]}"; do
-		local basename_pkg=$(basename "$pkgfile")
-		local ver_rev="${basename_pkg#${name}-}"
+    # Compare versions and validate internal # Name:
+    for pkgfile in "${candidates[@]}"; do
+        # >>> NEW: Verify that the internal "# Name:" matches $name
+        local internal_name
+        internal_name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+        if [[ "$internal_name" != "$name" ]]; then
+            continue  # Skip if name doesn't match
+        fi
 
-		# If it is the exact name (no version), we treat it as version "0"
-		if [[ "$basename_pkg" == "$name" ]]; then
-			ver_rev="0"
-		fi
+        local basename_pkg=$(basename "$pkgfile")
+        local ver_rev="${basename_pkg#${name}-}"
+        # If it is the exact name (no version), we treat it as version "0"
+        if [[ "$basename_pkg" == "$name" ]]; then
+            ver_rev="0"
+        fi
 
-		# Validate minimum version
-		if [[ -n "$min_version" ]]; then
-			# If the candidate version is less than the minimum, discard
-			if [[ "$(printf '%s\n%s' "$min_version" "$ver_rev" | sort -V | head -n1)" != "$min_version" ]]; then
-				# This means: min_version > ver_rev → reject
-				continue
-			fi
+        # Validate minimum version
+        if [[ -n "$min_version" ]]; then
+            if [[ "$(printf '%s\n%s' "$min_version" "$ver_rev" | sort -V | head -n1)" != "$min_version" ]]; then
+		# This means: min_version > ver_rev → reject
+                continue  # version too old
+            fi
 			# If we get here: ver_rev >= min_version → accept
-		fi
+        fi
 
-		# Save the best (most recent) match
-		if [[ -z "$best_ver" ]] || [[ "$(printf '%s\n%s' "$best_ver" "$ver_rev" | sort -V | head -n1)" == "$best_ver" ]]; then
-			best_ver="$ver_rev"
-			best_match="$pkgfile"
-		fi
-	done
+        # Save the best (most recent) match
+        if [[ -z "$best_ver" ]] || [[ "$(printf '%s\n%s' "$best_ver" "$ver_rev" | sort -V | head -n1)" == "$best_ver" ]]; then
+            best_ver="$ver_rev"
+            best_match="$pkgfile"
+        fi
+    done
 
-	if [[ -n "$best_match" ]]; then
-		echo "$best_match"
-		return 0
-	else
-		return 1
-	fi
+    if [[ -n "$best_match" ]]; then
+        echo "$best_match"
+        return 0
+    else
+        return 1
+    fi
 }
 ## Shared function to check if a dependency package is in the repository.
 # Usage: check_if_repository_package_common <array_name>
@@ -1025,51 +1030,71 @@ function check_dependencies()
         local buildeps
         for buildeps in ${CASE_DEPS}; do
             local IFS="${OLDIFS}"
-            # Gets name and files from dependency.
-            local NAME_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $2}')"
-            local FILE_DEP="$(echo "${buildeps}" | awk -F'\t' '{print $3}')"
-            # Support new format: if no files are listed, treat NAME_DEP as the dependency spec
-            if [[ -z "${FILE_DEP}" ]]; then
-                FILE_DEP="${NAME_DEP}"
+            # Parse all fields by converting tabs to spaces and splitting
+            read -r -a DEP_FIELDS <<< "$(echo "${buildeps}" | tr '\t' ' ')"
+            # Remove empty elements (in case of leading/trailing/multiple tabs)
+            DEP_FIELDS=(${DEP_FIELDS[@]})
+            if (( ${#DEP_FIELDS[@]} < 2 )); then
+                continue
+            fi
+            local NAME_DEP="${DEP_FIELDS[1]}"
+            local FILE_DEP_LIST=()
+            local FORMAT="new"
+            if (( ${#DEP_FIELDS[@]} >= 3 )); then
+                # Old format: fields 2+ are file paths
+                FILE_DEP_LIST=("${DEP_FIELDS[@]:2}")
+                FORMAT="old"
+            else
+                # New format: field 1 contains space-separated package names
+                read -r -a FILE_DEP_LIST <<< "${NAME_DEP}"
+                FORMAT="new"
             fi
             # Shows dependency for check.
             echogn " --- Processing Dependency:"
             echo -n " ${NAME_DEP} "
             echogn "for"
             echo " ${pkgname}-${pkgversion}-${pkgrevision}"
-            # Check dependency!
-            # Count dependency files.
+            # Check each dependency in the list
             local CHECK_FILE_DEP_NUM="0"
-            local FILE_DEP_NUM="0"
-            local FILE_DEP_COUNT
-            for FILE_DEP_COUNT in ${FILE_DEP}; do
-                (( FILE_DEP_NUM++ ))
-            done
-            local CHECK_FILE_DEP
-            for CHECK_FILE_DEP in ${FILE_DEP}; do
-                # If CHECK_FILE_DEP is an absolute path, use the old method
-                if [[ "${CHECK_FILE_DEP}" == /* ]]; then
-                    if [[ -f "${CHECK_FILE_DEP}" ]]; then
-                        ((CHECK_FILE_DEP_NUM++))
-                        if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-                            echo -e "\t- $(basename ${CHECK_FILE_DEP}): ${CHECK_FILE_DEP}"
+            local FILE_DEP_NUM="${#FILE_DEP_LIST[@]}"
+            for CHECK_FILE_DEP in "${FILE_DEP_LIST[@]}"; do
+                if [[ "${FORMAT}" == "old" ]]; then
+                    # Old format: CHECK_FILE_DEP is a file path
+                    if [[ "${CHECK_FILE_DEP}" == /* ]]; then
+                        if [[ -f "${CHECK_FILE_DEP}" ]]; then
+                            ((CHECK_FILE_DEP_NUM++))
+                            if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                                echo -e "\t- $(basename "${CHECK_FILE_DEP}"): ${CHECK_FILE_DEP}"
+                            fi
+                        else
+                            get_good_file_name "${CHECK_FILE_DEP}"
+                            local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
+                            if [[ -n "${LOCATE_DEPS}" ]]; then
+                                (( CHECK_FILE_DEP_NUM++ ))
+                                if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                                    echo -e "\t- $(basename "${CHECK_FILE_DEP}"): $(echo -e "${LOCATE_DEPS}" | head -1)"
+                                fi
+                            else
+                                if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                                    echo -e "\t- $(basename "${CHECK_FILE_DEP}"): Not Found!"
+                                fi
+                            fi
                         fi
                     else
-                        get_good_file_name "${CHECK_FILE_DEP}"
-                        local LOCATE_DEPS=$(${BINLOCATE} -b -d "${NHOPKG_DB}" $(basename "${CHECK_FILE_DEP}") | grep "${GOOD_FILE_NAME}$")
-                        if [[ -n "${LOCATE_DEPS}" ]]; then
-                            (( CHECK_FILE_DEP_NUM++ ))
+                        # Fallback: treat as package name
+                        if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
+                            ((CHECK_FILE_DEP_NUM++))
                             if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-                                echo -e "\t- $(basename ${CHECK_FILE_DEP}): $(echo -e "${LOCATE_DEPS}" | head -1)"
+                                echo -e "\t- ${CHECK_FILE_DEP}: found as $(basename "$resolved_pkg")"
                             fi
                         else
                             if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-                                echo -e "\t- $(basename ${CHECK_FILE_DEP}): Not Found!"
+                                echo -e "\t- ${CHECK_FILE_DEP}: Not Found!"
                             fi
                         fi
                     fi
                 else
-                    # New format: package name (with or without version)
+                    # New format: CHECK_FILE_DEP is a package name (may include >=)
                     if resolved_pkg=$(resolve_package_by_name "${CHECK_FILE_DEP}"); then
                         ((CHECK_FILE_DEP_NUM++))
                         if [[ "${VERBOSE_MODE}" = "yes" ]]; then
@@ -1082,38 +1107,34 @@ function check_dependencies()
                     fi
                 fi
             done
-            local DEPS_PERCENT=$((${CHECK_FILE_DEP_NUM}*100/${FILE_DEP_NUM}))
-            # Check if dependency is installed in the system.
-            if (("${FILE_DEP_NUM}" <= "5")); then
-                if [ "${CHECK_FILE_DEP_NUM}" = "${FILE_DEP_NUM}" ]; then
+            local DEPS_PERCENT=$((CHECK_FILE_DEP_NUM * 100 / FILE_DEP_NUM))
+            # Check if dependency is satisfied
+            if (( FILE_DEP_NUM <= 5 )); then
+                if (( CHECK_FILE_DEP_NUM == FILE_DEP_NUM )); then
                     echogn "\t** OK: Present"
                     echo " (${DEPS_PERCENT}%)"
                 else
                     echogn "\t** FAIL: Present"
                     echo " (${DEPS_PERCENT}%)"
-                    # Check on repo.
                     ${repo_check_func}
                 fi
-            elif (("${FILE_DEP_NUM}" > "5")); then
-                if (("${CHECK_FILE_DEP_NUM}" >= "$((${FILE_DEP_NUM} - 2))")) \
-                && (("${CHECK_FILE_DEP_NUM}" < "$((${FILE_DEP_NUM} + 1))")); then
+            else
+                if (( CHECK_FILE_DEP_NUM >= (FILE_DEP_NUM - 2) )) && (( CHECK_FILE_DEP_NUM < (FILE_DEP_NUM + 1) )); then
                     echogn "\t** OK: Present"
                     echo " (${DEPS_PERCENT}%)"
                 else
                     echogn "\t** FAIL: Present"
                     echo " (${DEPS_PERCENT}%)"
-                    # Check on repo.
                     ${repo_check_func}
                 fi
             fi
         done
     else
-        echogn " *** No dependencies found on package:" >&2
+        echogn " *** No ${dep_type//[\^# :]/} dependencies found on package:" >&2
         echo " ${pkgname}-${pkgversion}-${pkgrevision}." >&2
     fi
     local IFS="${OLDIFS}"
 }
-
 ## Function check_build_dependencies(). Checks required build dependencies.
 # Usage: check_build_dependencies file_to_check
 function check_build_dependencies()
