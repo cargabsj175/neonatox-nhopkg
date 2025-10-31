@@ -3601,7 +3601,7 @@ case "${NHOPKG_OPTION}" in
 				rm "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
 				# Creates core.files.tar.zst
 				cd "${CWD}"
-				tar --extract --to-stdout --file="${REPO_DIR}/${nhopackage}" | zstd -d -q -c | tar --list 2> /dev/null > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}"
+				tar -xf "${REPO_DIR}/${nhopackage}" --to-command='zstd -dc | tar -tf -' data.tar.zst > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
 				check_if_ok " * One or more packages aren't valid."
 				# Package!
 				cd "${NHOPKG_TMPDIR}"
@@ -3615,8 +3615,8 @@ case "${NHOPKG_OPTION}" in
 			check_if_ok " *** Unable to create repository."
 			# Move core.files.tar.zst and core.packages.tar.zst to repository directory.
 			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.zst" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.zst" ]]; then
-				mv "${NHOPKG_TMPDIR}/core.files.tar.zst" "${REPO_DIR}"
-				mv "${NHOPKG_TMPDIR}/core.packages.tar.zst" "${REPO_DIR}"
+				mv "${NHOPKG_TMPDIR}/core.files.tar.zst" "${REPO_DIR}" 2> /dev/null
+				mv "${NHOPKG_TMPDIR}/core.packages.tar.zst" "${REPO_DIR}" 2> /dev/null
 			else
 				echog " *** Unable to create repository." >&2
 				cleanup_tmp_dir
