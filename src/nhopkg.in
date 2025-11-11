@@ -3032,6 +3032,8 @@ case "${NHOPKG_OPTION}" in
 			## 6. Checks architecture and SHA256 Sum.
 			check_package_sha256sum
 			check_package_arch
+			## 6.5 Verify GPG signature (if enabled)
+			verify_package_signature
 			## 7. Install binary package.
 			bin_install
 			## 8. Configure installation.
