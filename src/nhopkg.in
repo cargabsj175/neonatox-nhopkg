@@ -685,6 +685,239 @@ function get_nhoid_data()
 	source "${1}" 2> /dev/null
 	check_if_ok " * Unable to get data from package."
 }
+# ---------------------------------------------------------
+# version_compare()
+# Description: Compare two versions using sort -V.
+# Parameters: ver1 op ver2  (ex: "1.9" ">=" "2.0")
+# Returns: 0 if the comparison is true, 1 if it is false.
+# ---------------------------------------------------------
+version_compare() {
+    local ver1="$1" op="$2" ver2="$3"
+    case "$op" in
+        "")
+            # No operator → no version comparison
+            return 0
+            ;;
+        "="|==)
+            if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]] &&
+               [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        "!=")
+            if version_compare "$ver1" "=" "$ver2"; then
+                return 1
+            else
+                return 0
+            fi
+            ;;
+        "<")
+            if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]] &&
+               ! version_compare "$ver1" "=" "$ver2"; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        "<=")
+            if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        ">")
+            if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]] &&
+               ! version_compare "$ver1" "=" "$ver2"; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        ">=")
+            if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+        *)
+            # Unknown operator → we assume conflict
+            return 1
+            ;;
+    esac
+}
+# ---------------------------------------------------------
+# get_package_provides_and_conflicts()
+# Description: Extract Provides and Conflicts from an nhoid file.
+# Conflicts It may include operators: foo>=2.0, bar<1.5, etc.
+# Returns: 
+#   PROVIDES_LIST=(name1 name2 ...)
+#   CONFLICTS_SPECS=(spec1 spec2 ...)  # ej: "foo>=2.0"
+# ---------------------------------------------------------
+function get_package_provides_and_conflicts()
+{
+    local nhoid_file="$1"
+    PROVIDES_LIST=()
+    CONFLICTS_SPECS=()  # Now we save the complete string
+    if [[ ! -f "${nhoid_file}" ]]; then
+        return
+    fi
+    # Provides: names only
+    while IFS= read -r line; do
+        local value=$(echo "$line" | awk -F'\t' '{print $2}')
+        if [[ -n "$value" ]]; then
+            read -ra items <<< "$value"
+            PROVIDES_LIST+=("${items[@]}")
+        fi
+    done < <(grep "^# Provides:" "${nhoid_file}" 2>/dev/null)
+
+    # Conflicts: We saved the complete original chain
+    while IFS= read -r line; do
+        local value=$(echo "$line" | awk -F'\t' '{print $2}')
+        if [[ -n "$value" ]]; then
+            read -ra items <<< "$value"
+            CONFLICTS_SPECS+=("${items[@]}")
+        fi
+    done < <(grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null)
+}
+# ---------------------------------------------------------
+# check_package_conflicts()
+# Description: Check for conflicts with version operator support.
+# Sets global: REPLACES_PACKAGE (if a valid replacement exists)
+# ---------------------------------------------------------
+function check_package_conflicts()
+{
+    local nhoid_file="$1"
+    local new_pkgname new_pkgversion new_pkgrevision
+    get_basic_data "${nhoid_file}"
+    new_pkgname="$pkgname"
+    new_pkgversion="$pkgversion"
+    new_pkgrevision="$pkgrevision"
+    get_package_provides_and_conflicts "${nhoid_file}"
+
+    if [[ ${#CONFLICTS_SPECS[@]} -eq 0 ]]; then
+        unset REPLACES_PACKAGE
+        return 0
+    fi
+
+    get_list_installed_packages
+    echog " - Checking for conflicts..."
+
+    unset REPLACES_PACKAGE
+
+    for conflict_spec in "${CONFLICTS_SPECS[@]}"; do
+        # Parse: name, operator, version
+        local name op ver
+        if [[ "$conflict_spec" == *"="* ]] || [[ "$conflict_spec" == *"<"* ]] || [[ "$conflict_spec" == *">"* ]] || [[ "$conflict_spec" == *"!"* ]]; then
+            # Extract name (first alphanumeric part)
+            name="${conflict_spec%%[<>=!]*}"
+            local rest="${conflict_spec#"$name"}"
+            # Normalize == → =
+            rest="${rest//==/=}"
+            # Determine operator
+            if [[ "$rest" == "="* ]]; then
+                op="="
+                ver="${rest#=}"
+            elif [[ "$rest" == "!="* ]]; then
+                op="!="
+                ver="${rest#!}"
+            elif [[ "$rest" == ">="* ]]; then
+                op=">="
+                ver="${rest#>=}"
+            elif [[ "$rest" == "<="* ]]; then
+                op="<="
+                ver="${rest#<=}"
+            elif [[ "$rest" == ">"* ]]; then
+                op=">"
+                ver="${rest#>}"
+            elif [[ "$rest" == "<"* ]]; then
+                op="<"
+                ver="${rest#<}"
+            else
+                name="$conflict_spec"
+                op=""
+                ver=""
+            fi
+            name="${name// /}"
+            ver="${ver// /}"
+        else
+            name="$conflict_spec"
+            op=""
+            ver=""
+        fi
+
+        # 1. Search for installed package with exact name
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${name}" ]]; then
+            # Does the new package provide it? → possible replacement
+            if [[ " ${PROVIDES_LIST[@]} " == *" ${name} "* ]]; then
+                echog " *** WARNING: ${new_pkgname} will REPLACE '${name}' (provides the same interface)."
+                REPLACES_PACKAGE="${name}"
+                continue
+            fi
+
+            # Compare version if necessary
+            local inst_pkgname inst_pkgversion inst_pkgrevision
+            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${name}"
+            inst_pkgversion="$pkgversion"
+            inst_pkgrevision="$pkgrevision"
+            local inst_full_ver="${inst_pkgversion}-${inst_pkgrevision}"
+
+            # If there is an operator, compare
+            if [[ -n "$op" ]]; then
+                if version_compare "$inst_full_ver" "$op" "$ver"; then
+                    echog " *** CONFLICT: ${new_pkgname} conflicts with installed '${name}' (${inst_full_ver}) due to version constraint '${conflict_spec}'."
+                    cleanup_tmp_dir
+                    exit 1
+                fi
+            else
+                # No operator → name conflict
+                echog " *** CONFLICT: Cannot install ${new_pkgname} because '${name}' is installed." >&2
+                cleanup_tmp_dir
+                exit 1
+            fi
+        fi
+
+        # 2. Search in packages that *provide* this name
+        for installed_pkg in "${installedpackages[@]}"; do
+            if [[ "${installed_pkg}" == "${new_pkgname}"* ]]; then
+                continue
+            fi
+
+            # Extract Provides from the installed package
+            local installed_provides=()
+            while IFS= read -r line; do
+                local value=$(echo "$line" | awk -F'\t' '{print $2}')
+                if [[ -n "$value" ]]; then
+                    read -ra items <<< "$value"
+                    installed_provides+=("${items[@]}")
+                fi
+            done < <(grep "^# Provides:" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null)
+
+            for prov in "${installed_provides[@]}"; do
+                if [[ "$prov" == "$name" ]]; then
+                    # Compare version if there is an operator
+                    if [[ -n "$op" ]]; then
+                        # Get the full version of the package that provides
+                        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}"
+                        local prov_full_ver="${pkgversion}-${pkgrevision}"
+                        if version_compare "$prov_full_ver" "$op" "$ver"; then
+                            echog " *** CONFLICT: ${new_pkgname} conflicts with '${installed_pkg}' (provides '${name}' ${prov_full_ver}) due to '${conflict_spec}'."
+                            cleanup_tmp_dir
+                            exit 1
+                        fi
+                    else
+                        echog " *** CONFLICT: Cannot install ${new_pkgname} because '${installed_pkg}' provides '${name}'." >&2
+                        cleanup_tmp_dir
+                        exit 1
+                    fi
+                fi
+            done
+        done
+    done
+}
 ## Function check_package_sha256sum(). Check sha256 of package.
 # Usage: check_package_sha256sum (without arguments)
 function check_package_sha256sum()
@@ -846,27 +1079,53 @@ function check_if_installed_package()
 #======================================3
 # ---------------------------------------------------------
 # resolve_package_by_name()
-# Description: Given a package spec (e.g., "gd" or "gd>=1.0"),
+# Description: Given a package spec (e.g., "gd", "gd>=1.0", "gd<2.0"),
 # returns the full path to the installed package metadata file if found and valid.
-# Parameters: package_spec (e.g., "gd", "gd>=1.0")
+# Supports "Provides:" declarations in other packages.
+# Parameters: package_spec (e.g., "gd", "gd>=1.0", "libfoo!=3.1")
 # Returns: Full path to package file in ${NHOPKG_LOCALSTATEDIR}/packages/, or empty if not found/invalid.
 # ---------------------------------------------------------
 function resolve_package_by_name() {
     local spec="$1"
-    local name
-    local min_version=""
-    local best_match=""
-    local best_ver=""
+    local name op min_version best_match best_ver
 
-    # Extract name and minimum version (if exists)
-    if [[ "$spec" == *">="* ]]; then
-        name="${spec%%>=*}"
-        min_version="${spec#*>=}"
+    # Parse operator and version
+    if [[ "$spec" == *"="* ]] || [[ "$spec" == *"<"* ]] || [[ "$spec" == *">"* ]] || [[ "$spec" == *"!"* ]]; then
+        name="${spec%%[<>=!]*}"
+        local rest="${spec#"$name"}"
+        rest="${rest//==/=}"
+        if [[ "$rest" == "="* ]]; then
+            op="="
+            min_version="${rest#=}"
+        elif [[ "$rest" == "!="* ]]; then
+            op="!="
+            min_version="${rest#!}"
+        elif [[ "$rest" == ">="* ]]; then
+            op=">="
+            min_version="${rest#>=}"
+        elif [[ "$rest" == "<="* ]]; then
+            op="<="
+            min_version="${rest#<=}"
+        elif [[ "$rest" == ">"* ]]; then
+            op=">"
+            min_version="${rest#>}"
+        elif [[ "$rest" == "<"* ]]; then
+            op="<"
+            min_version="${rest#<}"
+        else
+            name="$spec"
+            op=""
+            min_version=""
+        fi
+        name="${name// /}"
+        min_version="${min_version// /}"
     else
         name="$spec"
+        op=""
+        min_version=""
     fi
 
-    # Find candidates: only packages whose base name starts with "$name"
+    # === 1. Search by exact package name ===
     local candidates=()
     while IFS= read -r -d '' pkg; do
         local basename_pkg=$(basename "$pkg")
@@ -882,48 +1141,77 @@ function resolve_package_by_name() {
                 # Version and release → valid
                 candidates+=("$pkg")
                 ;;
-            # Anything else (like package-variant) → ignore
-            *)
-                ;;
         esac
     done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -name "${name}*" -print0 2>/dev/null)
 
-    # If there are no candidates, it fails
-    if [[ ${#candidates[@]} -eq 0 ]]; then
-        return 1
-    fi
-
-    # Compare versions and validate internal # Name:
+    # Validate candidates by internal name and version
     for pkgfile in "${candidates[@]}"; do
-        # >>> NEW: Verify that the internal "# Name:" matches $name
         local internal_name
         internal_name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
         if [[ "$internal_name" != "$name" ]]; then
-            continue  # Skip if name doesn't match
+            continue
         fi
 
         local basename_pkg=$(basename "$pkgfile")
         local ver_rev="${basename_pkg#${name}-}"
-        # If it is the exact name (no version), we treat it as version "0"
         if [[ "$basename_pkg" == "$name" ]]; then
             ver_rev="0"
         fi
 
-        # Validate minimum version
-        if [[ -n "$min_version" ]]; then
-            if [[ "$(printf '%s\n%s' "$min_version" "$ver_rev" | sort -V | head -n1)" != "$min_version" ]]; then
-		# This means: min_version > ver_rev → reject
-                continue  # version too old
+        # Compare version if there is an operator
+        if [[ -n "$op" ]]; then
+            if ! version_compare "$ver_rev" "$op" "$min_version"; then
+                continue
             fi
-			# If we get here: ver_rev >= min_version → accept
         fi
 
-        # Save the best (most recent) match
+        # Save best match (highest version)
         if [[ -z "$best_ver" ]] || [[ "$(printf '%s\n%s' "$best_ver" "$ver_rev" | sort -V | head -n1)" == "$best_ver" ]]; then
             best_ver="$ver_rev"
             best_match="$pkgfile"
         fi
     done
+
+    # === 2. If not found, search in packages that "Provide" this name ===
+    if [[ -z "$best_match" ]]; then
+        while IFS= read -r -d '' pkg; do
+            [[ -L "$pkg" ]] && continue
+            local provides_line
+            provides_line=$(grep "^# Provides:" "$pkg" 2>/dev/null)
+            if [[ -n "$provides_line" ]]; then
+                local prov_name
+                while IFS= read -r prov_name; do
+                    prov_name=$(echo "$prov_name" | awk -F'\t' '{print $2}' | tr -s ' ' '\n')
+                    while IFS= read -r p; do
+                        if [[ -n "$p" && "$p" == "$name" ]]; then
+                            local internal_name
+                            internal_name=$(grep "^# Name:" "$pkg" 2>/dev/null | awk -F'\t' '{print $2}')
+                            if [[ -n "$internal_name" ]]; then
+                                local prov_ver_rev
+                                local bn=$(basename "$pkg")
+                                if [[ "$bn" == "$internal_name" ]]; then
+                                    prov_ver_rev="0"
+                                else
+                                    prov_ver_rev="${bn#${internal_name}-}"
+                                fi
+
+                                # If there is an operator, verify against the provider's version.
+                                if [[ -n "$op" ]]; then
+                                    if version_compare "$prov_ver_rev" "$op" "$min_version"; then
+                                        best_match="$pkg"
+                                        break 3
+                                    fi
+                                else
+                                    best_match="$pkg"
+                                    break 3
+                                fi
+                            fi
+                        fi
+                    done <<< "$prov_name"
+                done <<< "$provides_line"
+            fi
+        done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -print0 2>/dev/null)
+    fi
 
     if [[ -n "$best_match" ]]; then
         echo "$best_match"
@@ -1230,6 +1518,10 @@ function installdownloadedeps()
 		check_package_arch
 		## 3.5. Verify GPG signature (if enabled)
 		verify_package_signature
+		# Handle package replacement
+		if [[ -n "${REPLACES_PACKAGE}" ]]; then
+			remove_replaced_package "${REPLACES_PACKAGE}"
+		fi
 		## 6. Install binary package.
 		bin_install
 		## 7. Configure installation.
@@ -1760,6 +2052,43 @@ function remove_package_config_files()
 	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 	rm -f "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 }
+# ---------------------------------------------------------
+# remove_replaced_package()
+# Description: Removes a package that is being replaced.
+# Parameters: package_name (e.g., "sdl2")
+# ---------------------------------------------------------
+function remove_replaced_package()
+{
+    local old_pkg="$1"
+    if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkg}" ]]; then
+        return 0
+    fi
+
+    echogn " - Replacing ${old_pkg} with ${pkgname}..."
+    nhopkg_ask_follow
+    if [[ $? -ne 0 ]]; then
+        echog " * Replacement cancelled." >&2
+        cleanup_tmp_dir
+        exit 1
+    fi
+
+    # Save current values
+    local save_pkgname="$pkgname"
+    local save_pkgversion="$pkgversion"
+    local save_pkgrevision="$pkgrevision"
+
+    # Load data from the old package
+    get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkg}"
+
+    # Delete it
+    remove_package
+    remove_package_config_files
+
+    # Restore original values
+    pkgname="$save_pkgname"
+    pkgversion="$save_pkgversion"
+    pkgrevision="$save_pkgrevision"
+}
 #======================================7
 # Build (packages) functions.
 #======================================7
@@ -1979,7 +2308,7 @@ function build_package()
     echog "This step may take some time depending of package and your system."
     
     # Gets date, hour, host and arch of compilation.
-    BUILD_DATE=$(date -u "+%F %T" | sed 's/ /-/g' | sed 's/:/_/g')
+    BUILD_DATE=$(date +%s) # Unix format
     BUILD_HOST="$(uname -n)"
     BUILD_ARCH="$(uname -m)"
     PACKAGE_OS="$(uname -s | awk '{print tolower ($1)}')"
@@ -2035,7 +2364,7 @@ function build_package_install()
 	# Sleep 3 seconds.
 	sleep 3
 	# Gets date and hour of installation.
-	INSTALL_DATE=$(date -u "+%F %T" | sed 's/ /-/g' | sed 's/:/_/g')
+	INSTALL_DATE=$(date +%s) # Unix format
 	if [ "${VERBOSE_MODE}" = "yes" ]; then
 		(ninstall${part:+_}${part} || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") 2>&1 \
 		| tee -a "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
@@ -2203,9 +2532,17 @@ function build_nhoid_to_bin()
 	fi
 	# Add new SHA256
 	echo -e "# SHA256:\t${PACKAGESHA256}" >> "${NHOPKG_TMPDIR}/nhoid"
-    
+	# Add Provides and Conflicts (support split packages)
+	if [[ -n "${part}" ]]; then
+		# Subpackage: look for Provides_$part and Conflicts_$part
+		grep -h "^# Provides_${part}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Provides_${part}:/# Provides:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+		grep -h "^# Conflicts_${part}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Conflicts_${part}:/# Conflicts:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+	else
+		# Main package: use base Provides and Conflicts
+		grep -h "^# Provides:" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+		grep -h "^# Conflicts:" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+	fi
     echo >> "${NHOPKG_TMPDIR}/nhoid"
-	
 	# Add dependencies.
 	# === Add dependencies: one line per Dep(post):, preserving both fields ===
     local dep_pattern="^# Dep${part:+_${part}}(post):"
@@ -2904,6 +3241,7 @@ case "${NHOPKG_OPTION}" in
 			# Checks that is good package and get data from it.
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
 				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+				check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
 			else
 				echog " * The selected package is not valid." >&2
 				# Clean and exits with error.
@@ -2919,6 +3257,10 @@ case "${NHOPKG_OPTION}" in
 			check_package_arch
 			## 3.5. Verify GPG signature (if enabled)
 			verify_package_signature
+			# Handle package replacement
+			if [[ -n "${REPLACES_PACKAGE}" ]]; then
+				remove_replaced_package "${REPLACES_PACKAGE}"
+			fi
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
 				echog " - Resolving Dependencies."
@@ -3023,6 +3365,7 @@ case "${NHOPKG_OPTION}" in
 			# Checks that is good package and get data from it.
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
 				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+				check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
 			else
 				echog " * The selected package is not valid." >&2
 				# Clean and exits with error.
@@ -3034,6 +3377,10 @@ case "${NHOPKG_OPTION}" in
 			check_package_arch
 			## 6.5 Verify GPG signature (if enabled)
 			verify_package_signature
+			# Handle package replacement
+			if [[ -n "${REPLACES_PACKAGE}" ]]; then
+				remove_replaced_package "${REPLACES_PACKAGE}"
+			fi
 			## 7. Install binary package.
 			bin_install
 			## 8. Configure installation.
@@ -3237,6 +3584,7 @@ case "${NHOPKG_OPTION}" in
             # Get data from package.
             if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
                 get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+                check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
             else
                 echog " * The selected package is not valid." >&2
                 cleanup_tmp_dir
@@ -3249,6 +3597,10 @@ case "${NHOPKG_OPTION}" in
             ## 3. Checks architecture and SHA256 Sum.
             check_package_sha256sum
             check_package_arch
+            # Handle package replacement
+			if [[ -n "${REPLACES_PACKAGE}" ]]; then
+				remove_replaced_package "${REPLACES_PACKAGE}"
+			fi
 
             ## 4. Checks dependencies.
             if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
@@ -3297,7 +3649,7 @@ case "${NHOPKG_OPTION}" in
             bin_install_create_config_files
         done
 
-        # Si SPLITPACKAGE no está vacía, crear subpaquetes
+        # If SPLITPACKAGE is not empty, create subpackages
         if [[ -n "${SPLITPACKAGE}" ]]; then
             IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
             for part in "${SPLITPARTS[@]}"; do
@@ -3305,30 +3657,42 @@ case "${NHOPKG_OPTION}" in
                     echogn " :: Preparing split package:"
                     echo " ${part}"
 
-                    # Limpiar antes de cada subpaquete
+                    # Clean before each split package
                     cleanup_tmp_dir
                     make_tmp_dir
 
-                    # Volver a descomprimir el paquete fuente
+                    # Extract again the source package
                     tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
                     check_if_ok " * Unable to uncompress package for split."
 
-                    # Recuperar datos del paquete principal
+                    # Retrieve data from the main package
                     get_basic_data "${NHOPKG_TMPDIR}/nhoid"
-
+                    cp "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
+					
 					# Check that the split package is installed
 					check_if_installed_package "${part}"
-
-                    # 5. Set build directory and uncompress package again.
+					
+					# Generate a temporary nhoid for the split package
+					build_nhoid_to_bin "${part}"
+					# Now check conflicts using this split-specific metadata
+					check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
+					if [[ -n "${REPLACES_PACKAGE}" ]]; then
+						remove_replaced_package "${REPLACES_PACKAGE}"
+					fi
+					# Restore original .nhoid for build steps
+					cp "${NHOPKG_TMPDIR}/.nhoid" "${NHOPKG_TMPDIR}/nhoid"
+					get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+					
+                    # Set build directory and uncompress package again.
                     build_prepare
 
-                    # 6. Builds package (again? Or reuse?)
+                    # Builds package for this part
                     build_package "${part}"
 
-                    # 7. Installs package for this part
+                    # Installs package for this part
                     build_package_install "${part}"
 
-                    # 8. Search files for this part
+                    # Search files for this part
                     build_search_for_files "${part}"
 
                     # Create the binary package for this part
@@ -3351,7 +3715,7 @@ case "${NHOPKG_OPTION}" in
         shooter_updates
 		# Final clean up
         update_local_db
-        echog " - Installation finished successfully!"
+        echog " - Source installation finished successfully!"
         exit 0
     ;;
 	super-build)
@@ -3422,6 +3786,7 @@ case "${NHOPKG_OPTION}" in
 			# 5. Load real data from the nhoid
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
 				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+				check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
 			else
 				echog " * Invalid source package." >&2
 				cleanup_tmp_dir
@@ -3432,11 +3797,19 @@ case "${NHOPKG_OPTION}" in
 			CASEPACKAGE="${pkgname}-${pkgversion}-${pkgrevision}"
 			# We also updated CASEPACKAGES so that subpackages can use it
 			CASEPACKAGES="${CASEPACKAGE}"
-
+			
+			# Check if package is already installed.
 			check_if_installed_package
+			
+			## 3. Checks architecture and SHA256 Sum.
 			check_package_sha256sum
 			check_package_arch
-
+			# Handle package replacement
+			if [[ -n "${REPLACES_PACKAGE}" ]]; then
+				remove_replaced_package "${REPLACES_PACKAGE}"
+			fi
+			
+			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
 				echog " - Resolving Dependencies."
 				check_build_dependencies "${NHOPKG_TMPDIR}/nhoid"
@@ -3451,19 +3824,34 @@ case "${NHOPKG_OPTION}" in
 				installrequiredeps
 				installoptdeps
 			fi
+			
+			## 5. Set build directory and uncompress package.
+            build_prepare
 
-			build_prepare
+            ## 6. Builds package.
+            # Set initial date.
 			INITIAL_DATE=$(date -u +%s)
 			build_package
 			check_build_package
-			build_package_install
-			FINAL_DATE=$(date -u +%s)
-			check_build_package_install
-			cd "${CWD}"
-			build_save_log_files
-			build_make_binary_package
-			bin_install_setting_up
-			bin_install_create_config_files
+			
+			## 7. Installs package (main one).
+            build_package_install  # Sin parámetro → ninstall()
+            
+			# Set final date.
+            FINAL_DATE=$(date -u +%s)
+            check_build_package_install
+            # Returns to initial directory.
+            cd "${CWD}"
+            
+			# Save build and installation logs.
+            build_save_log_files
+
+            ## 8. Builds binary package (main one).
+            build_make_binary_package
+
+            ## 9. Clean up after main package.
+            bin_install_setting_up
+            bin_install_create_config_files
 		done
 
 		# Support for subpackages (same as --build)
@@ -3473,7 +3861,8 @@ case "${NHOPKG_OPTION}" in
 				for CASEPACKAGE in ${CASEPACKAGES}; do
 					echogn " :: Preparing split package:"
 					echo " ${part}"
-
+					
+					# Clean before each split package
 					cleanup_tmp_dir
 					make_tmp_dir
 
@@ -3504,19 +3893,47 @@ case "${NHOPKG_OPTION}" in
 					fi
 					rm -rf "${build_clone_dir}"
 
-					get_basic_data "${NHOPKG_TMPDIR}/nhoid"
-
+					# Retrieve data from the main package
+                    get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+                    cp "${NHOPKG_TMPDIR}/nhoid" "${NHOPKG_TMPDIR}/.nhoid"
+					
 					# Check that the split package is installed
-			        check_if_installed_package "${part}"
-			
-					build_prepare
-					build_package "${part}"
-					build_package_install "${part}"
-					build_search_for_files "${part}"
-					build_make_binary_package "${part}"
-					bin_install_setting_up "${part}"
-					bin_install_create_config_files "${part}"
+					check_if_installed_package "${part}"
+					
+					# Generate a temporary nhoid for the split package
+					build_nhoid_to_bin "${part}"
+					# Now check conflicts using this split-specific metadata
+					check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
+					if [[ -n "${REPLACES_PACKAGE}" ]]; then
+						remove_replaced_package "${REPLACES_PACKAGE}"
+					fi
+					# Restore original .nhoid for build steps
+					cp "${NHOPKG_TMPDIR}/.nhoid" "${NHOPKG_TMPDIR}/nhoid"
+					get_basic_data "${NHOPKG_TMPDIR}/nhoid"
+					
+					# Set build directory and uncompress package again.
+                    build_prepare
+					
+					# Builds package for this part
+                    build_package "${part}"
+
+                    # Installs package for this part
+                    build_package_install "${part}"
+
+                    # Search files for this part
+                    build_search_for_files "${part}"
+					
+					# Create the binary package for this part
+                    build_make_binary_package "${part}"
+
+                    # Configure post-installation
+                    bin_install_setting_up "${part}"
+                    bin_install_create_config_files "${part}"
+                    
+                    # Save log files for this part
 					build_save_log_files "${part}"
+					
+					# Clean up after each part
 					cleanup_tmp_dir
 				done
 			done
@@ -3524,7 +3941,7 @@ case "${NHOPKG_OPTION}" in
 
 		shooter_updates
 		update_local_db
-		echog " - Super-build finished successfully!"
+		echog " - Git Source instalation finished successfully!"
 		exit 0
 	;;
 	check)
