@@ -48,12 +48,21 @@ NHOPKG_SIGN_KEY="repo@neonatox.vegnux.com"
 NHOPKG_VERIFY_SIGNATURE=yes
 NHOPKG_REQUIRE_SIGNATURE=no
 
-
 # [server]
-# Repository configuration for nhopkg.
+# Repositories configuration for nhopkg.
 # Default repository of Nhopkg. You can change it.
-NHOPKG_REPO=@NHOPKG_REPO@
-NHOPKG_GIT_SOURCES=@NHOPKG_GIT_SOURCES@
+# Active repos (separated with spaces lowcase)
+# NHOPKG_ACTIVE_REPOS="core extra multilib"
+NHOPKG_ACTIVE_REPOS="extra"
+# Repositorry CORE (can content mirrors separated with spaces)
+# NHOPKG_REPO_CORE="https://example1.mirror.com/repo/core/x86_64 https://example2.mirror.com/repo/core/x86_64"
+NHOPKG_REPO_EXTRA="@NHOPKG_REPO@" # Default
+# Repositorry MULTILIB (can content mirrors separated with spaces)
+# NHOPKG_REPO_MULTILIB="https://example3.mirror.com/repo/multilib/x86_64"
+
+# Default GIT repository of Nhopkg. You can change it.
+NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources
+
 
 # [language suppor]
 # Language suppor for nhopkg (yes OR no):
