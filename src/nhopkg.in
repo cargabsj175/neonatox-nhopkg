@@ -630,6 +630,10 @@ function get_nhoid_data()
 	pkgrevision=$(grep "^# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkglicense=$(grep "^# License:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkggroup=$(grep "^# Group:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# Get package repository (repository where the package will be hosted.)
+	pkgrepo=$(grep "^# Repository:" "${1}" 2>/dev/null | awk -F'\t' '{print $2}')
+	# Backward compatibility (If not present, assume it is "extra")
+	pkgrepo="${pkgrepo:-extra}"
 	pkgurl=$(grep "^# Url:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgsha256=$(grep -a "^# SHA256:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -1465,7 +1469,11 @@ function downloadpackages()
         local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package}" 2> /dev/null | awk -F'\t' '{print $2}')
         echogn " --- Downloading"
         echo " ${pkgname}-${pkgversion}-${pkgrevision}.nho"
-        wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+        # Get repository URL
+		local REPO_URL
+		REPO_URL=$(get_repo_url "${pkgrepo}")
+		# Download from that repository
+		wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${REPO_URL}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
         check_if_ok " *** Failed to download package. Please, retry."
         # Adds downloaded packages to list for install.
         if [[ -z "${DCASEPACKAGES[*]}" ]]; then
@@ -1886,7 +1894,11 @@ function downloadpackage()
 	local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
 	echogn " --- Downloading"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
-	wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	# Get repository URL
+	local REPO_URL
+	REPO_URL=$(get_repo_url "${pkgrepo}")
+	# Download from that repository
+	wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${REPO_URL}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	check_if_ok " *** Failed to download package. Please, retry."
 }
 #======================================6
@@ -2497,16 +2509,18 @@ function build_nhoid_to_bin()
 	grep '^#%NHO-0.5' "${NHOPKG_TMPDIR}/.nhoid" > "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Package Maintainer:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
-	# Multilib name
+	# Multilib name if it is
 	echo -e "# Name:\t${PKG_DISPLAY_NAME}" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Version:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Release:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# License:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	# Force Multilib as group in multilib packages
+	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"  2>/dev/null || true
+	# Force "multilib" as repo in multilib packages
 	if [ "$part" = "lib32" ]; then
-	echo -e "# Group:\tMultilib" >> "${NHOPKG_TMPDIR}/nhoid"
+	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"  2>/dev/null || true
 	else
-	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Copy the Repository field if it exists
+	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	fi
 	# Add new arch.
 	echo -e "# Arch:\t${BUILD_ARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2848,6 +2862,38 @@ function get_package_info()
 		# No packages matches.
 		return 1
 	fi
+}
+# ---------------------------------------------------------
+# get_repo_url()
+# Description: Returns the best available URL for a given repository.
+# Parameters: repo_name (e.g., "core", "extra")
+# Returns: URL (or exits if none available)
+# ---------------------------------------------------------
+function get_repo_url()
+{
+    local repo="${1:-extra}"
+    local repo_var="NHOPKG_REPO_${repo^^}"  # Convert to uppercase: "core" → "CORE"
+    local mirrors="${!repo_var}"
+
+    if [[ -z "${mirrors}" ]]; then
+        echog " *** ERROR: No mirrors defined for repository '${repo}'." >&2
+        echog "     Please define \$NHOPKG_REPO_${repo^^} in your config." >&2
+        exit 1
+    fi
+
+    # Convert the mirror string into an array
+    read -ra MIRROR_LIST <<< "${mirrors}"
+
+    # Test mirrors in order (optional: add availability check)
+    for mirror in "${MIRROR_LIST[@]}"; do
+        # Optional: verify that the mirror is live with `wget --spider`
+        # But for now, we'll use the first one.
+        echo "${mirror}"
+        return 0
+    done
+
+    echog " *** ERROR: All mirrors failed for repository '${repo}'." >&2
+    exit 1
 }
 #==============================================================================
 # Section: Nhopkg trap.
@@ -4001,155 +4047,409 @@ case "${NHOPKG_OPTION}" in
 		exit 0
 	;;
 	create-repo)
-# ********************************************************************
-#
-# Section: Create Repo
-# 1. Basic configurations.
-# 2. Checking directory and prepare it.
-# 3. Creates binary repository.
-# 4. Setting up software repository.
-# 5. Clean up and exit.
-#
-# ********************************************************************
-		## 1. Basic configurations.
-		echogn " :: Creating software repository on:"
-		echo " ${REPO_DIR}"
-		## 2. Checking directory and prepare it.
-		# Sets PWD directory.
-		get_pwd_dir
-		# Clean up nhopkg temporal directory.
-		cleanup_tmp_dir
-		make_tmp_dir
-		## 3. Creates binary repository.
-		# Check there are any .nho package in this directory.
-		if [[ $(ls "${REPO_DIR}" | grep '[0-9].nho$') ]]; then
-			for nhopackage in $(ls "${REPO_DIR}" | grep '[0-9].nho$');
-			do
-				echogn " - Adding"
-				echo " ${nhopackage}..."
-				# Creates core.packages.tar.zst
-				cd "${CWD}"
-				tar xfC "${REPO_DIR}/${nhopackage}" "${NHOPKG_TMPDIR}" "nhoid" 2> /dev/null
-				check_if_ok " * One or more packages aren't valid."
-				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
-				cd "${NHOPKG_TMPDIR}"
-				mv "nhoid" "${pkgname}-${pkgversion}-${pkgrevision}"
-				ln -sf "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}"
-				ln -sf "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}"
-				# Package!
-				tar fr "core.packages.tar" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
-				rm "${pkgname}-${pkgversion}-${pkgrevision}" "${pkgname}-${pkgversion}" "${pkgname}"
-				# Creates core.files.tar.zst
-				cd "${CWD}"
-				tar -xf "${REPO_DIR}/${nhopackage}" --to-command='zstd -dc | tar -tf -' data.tar.zst > "${NHOPKG_TMPDIR}/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
-				check_if_ok " * One or more packages aren't valid."
-				# Package!
-				cd "${NHOPKG_TMPDIR}"
-				tar fr "core.files.tar" "${pkgname}-${pkgversion}-${pkgrevision}"
-				rm "${pkgname}-${pkgversion}-${pkgrevision}"
-			done
-			## 4. Setting up software repository.
-			cd "${CWD}"
-			# Zstandard core.files.tar.zst and core.packages.tar.zst
-			zstd --rm "${NHOPKG_TMPDIR}/core.files.tar" "${NHOPKG_TMPDIR}/core.packages.tar" 2> /dev/null
-			check_if_ok " *** Unable to create repository."
-			# Move core.files.tar.zst and core.packages.tar.zst to repository directory.
-			if [[ -f "${NHOPKG_TMPDIR}/core.files.tar.zst" ]] && [[ -f "${NHOPKG_TMPDIR}/core.packages.tar.zst" ]]; then
-				mv "${NHOPKG_TMPDIR}/core.files.tar.zst" "${REPO_DIR}" 2> /dev/null
-				mv "${NHOPKG_TMPDIR}/core.packages.tar.zst" "${REPO_DIR}" 2> /dev/null
-			else
-				echog " *** Unable to create repository." >&2
-				cleanup_tmp_dir
-				exit 1
-			fi
-			echo $(date -u +%s) > "${REPO_DIR}/lastsync"
-			cd "${REPO_DIR}"
-			du  *[0-9].nho > content.db
-			zstd --rm content.db
-			cd "${CWD}"
-			echog " --- Your new repository has been created sucesful."
-		else
-			echog " *** Can't find any .nho package in this directory." >&2
-			cleanup_tmp_dir
-			exit 1
-		fi
-		## 5. Clean up and exit.
-		cleanup_tmp_dir
-		exit 0
-	;;
+    # ********************************************************************
+    #
+    # Section: Create Repo (Multiple Repositories)
+    # 1. Basic configurations.
+    # 2. Check input directory (source of .nho files).
+    # 3. Determine active repositories from config (NHOPKG_ACTIVE_REPOS).
+    # 4. Iterate through .nho files in input directory.
+    # 5. Extract # Repository: from nhoid inside each .nho.
+    # 6. Assign to 'extra' if # Repository: is missing or invalid.
+    # 7. Group .nho files by determined repository.
+    # 8. For each active repo with assigned packages:
+    #    a. Create temporary staging area for that repo's metadata.
+    #    b. Process assigned .nho files, adding their metadata to staging.
+    #    c. Create repo-specific packages.tar.zst and files.tar.zst.
+    #    d. Place final files in subdirectory within output directory (e.g., REPO_DIR/core/, REPO_DIR/extra/).
+    #    e. Copy original .nho files to the corresponding repo subdirectory.
+    # 9. Clean up and exit.
+    #
+    # ********************************************************************
+
+    # 1. Basic configurations.
+    echogn " :: Creating software repository from:"
+    echo " ${REPO_DIR}" # This is the INPUT directory containing .nho files
+    # Define OUTPUT directory (could be the same as input or different)
+    # For this example, assume REPO_DIR is the output root where subdirectories (core/, extra/, etc.) will be created.
+    REPO_OUTPUT_ROOT="${REPO_DIR}"
+    get_pwd_dir
+    check_if_root_uid
+
+    # 2. Check input directory.
+    if [[ ! -d "${REPO_OUTPUT_ROOT}" ]]; then
+        echog " * Input/output directory does not exist: ${REPO_OUTPUT_ROOT}" >&2
+        exit 1
+    fi
+
+    # 3. Determine active repositories from config.
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        # Auto-detect like in 'update' section if not explicitly set
+        NHOPKG_ACTIVE_REPOS=""
+        for var in $(compgen -v NHOPKG_REPO_); do
+            repo_name="${var#NHOPKG_REPO_}"
+            # Only add if NHOPKG_REPO_<name> is defined and not empty
+            if [[ -n "${!var}" ]]; then
+                NHOPKG_ACTIVE_REPOS+="${repo_name} "
+            fi
+        done
+        NHOPKG_ACTIVE_REPOS=$(echo "${NHOPKG_ACTIVE_REPOS}" | xargs) # Trim whitespace
+    fi
+
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        echog " * No active repositories configured (NHOPKG_ACTIVE_REPOS is empty)." >&2
+        exit 1
+    fi
+    echogn " :: Active Repositories:"
+    for repo_name in ${NHOPKG_ACTIVE_REPOS}; do
+        echo " - ${repo_name}"
+    done
+
+    # 4. Clean up nhopkg temporal directory.
+    cleanup_tmp_dir
+    make_tmp_dir
+
+    # Find all .nho packages in the input directory
+    nhopackage_list=()
+    while IFS= read -r -d '' nhopackage_file; do
+        nhopackage_list+=("$nhopackage_file")
+    done < <(find "${REPO_OUTPUT_ROOT}" -maxdepth 1 -name '*.nho' -print0)
+
+    if (( ${#nhopackage_list[@]} == 0 )); then
+        echog " *** No .nho packages found in input directory: ${REPO_OUTPUT_ROOT}" >&2
+        cleanup_tmp_dir
+        exit 1
+    fi
+
+    # 5, 6, 7. Determine repo for each .nho and group them.
+    declare -A repo_packages # Associative array: repo_name -> list of .nho paths
+    for nhopackage_path in "${nhopackage_list[@]}"; do
+        nhopackage_basename=$(basename "${nhopackage_path}")
+
+        # Extract # Repository: field from the nhoid inside the .nho package
+        pkg_repo=$(tar xfO "${nhopackage_path}" "nhoid" 2>/dev/null | grep "^# Repository:" | awk -F'\t' '{print $2}' | tr '[:upper:]' '[:lower:]')
+
+        if [[ -z "${pkg_repo}" ]]; then
+            echog " - Package ${nhopackage_basename} has no '# Repository:' field. Assigning to 'extra'."
+            pkg_repo="extra"
+        else
+            # Validate against active repos
+            repo_found=0
+            for active_repo in ${NHOPKG_ACTIVE_REPOS}; do
+                if [[ "${pkg_repo}" == "${active_repo}" ]]; then
+                    repo_found=1
+                    break
+                fi
+            done
+            if [[ ${repo_found} -eq 0 ]]; then
+                echog " - Package ${nhopackage_basename} assigned to repository '${pkg_repo}', which is not in NHOPKG_ACTIVE_REPOS. Assigning to 'extra' instead."
+                pkg_repo="extra"
+            fi
+        fi
+
+        # Add to the appropriate list
+        repo_packages["${pkg_repo}"]+="${nhopackage_path} "
+        echogn " - Package ${nhopackage_basename}"
+        echo "   -> Repository: ${pkg_repo}"
+    done
+
+    # 8. Process each active repository that has packages assigned.
+    for repo_name in ${NHOPKG_ACTIVE_REPOS}; do
+        repo_pkg_list_str="${repo_packages[${repo_name}]}"
+        if [[ -z "${repo_pkg_list_str}" ]]; then
+            echog " :: No packages found for repository: ${repo_name}. Skipping metadata generation and copy."
+            continue
+        fi
+
+        echogn " :: Processing repository: ${repo_name}"
+        repo_pkg_list=($repo_pkg_list_str) # Convert string list to array
+
+        # --- Create target directory for .nho files for this repo ---
+        repo_nho_dir="${REPO_OUTPUT_ROOT}/${repo_name}"
+        mkdir -p "${repo_nho_dir}"
+
+        # --- Staging area for this specific repo's metadata ---
+        repo_tmp_dir="${NHOPKG_TMPDIR}/${repo_name}_staging"
+        mkdir -p "${repo_tmp_dir}"
+        repo_packages_file="${repo_tmp_dir}/repo_packages.tar"
+        repo_files_file="${repo_tmp_dir}/repo_files.tar"
+
+        # Ensure tar files start fresh
+        tar cf "${repo_packages_file}" --files-from /dev/null 2>/dev/null || touch "${repo_packages_file}"
+        tar cf "${repo_files_file}" --files-from /dev/null 2>/dev/null || touch "${repo_files_file}"
+
+        # --- Process each .nho assigned to this repo ---
+        for nhopackage_path in "${repo_pkg_list[@]}"; do
+            nhopackage_basename=$(basename "${nhopackage_path}")
+            echogn " - Adding"
+            echo " ${nhopackage_basename}..."
+
+            # Extract nhoid to get metadata
+            if ! tar xfO "${nhopackage_path}" "nhoid" 2> /dev/null > "${NHOPKG_TMPDIR}/nhoid"; then
+                 echog " * Error: Failed to extract 'nhoid' from ${nhopackage_path}" >&2
+                 cleanup_tmp_dir
+                 exit 1
+            fi
+
+            # Load metadata from the extracted nhoid
+            if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+                # Ensure we get the correct pkgname, pkgversion, pkgrevision
+                # Use the get_basic_data function or similar logic to populate them
+                get_nhoid_data "${NHOPKG_TMPDIR}/nhoid" # This populates pkgname, pkgversion, pkgrevision, etc.
+            else
+                 echog " * Error: Extracted 'nhoid' from ${nhopackage_path} is invalid." >&2
+                 cleanup_tmp_dir
+                 exit 1
+            fi
+
+            # --- Add package metadata entry to repo_packages_file ---
+            # Create a temporary file with the correct name structure
+            pkg_metadata_name="${pkgname}-${pkgversion}-${pkgrevision}"
+            mv "${NHOPKG_TMPDIR}/nhoid" "${repo_tmp_dir}/${pkg_metadata_name}"
+            # Create symlinks for name and name-version
+            ln -sf "${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}-${pkgversion}"
+            ln -sf "${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}"
+
+            # Add the metadata files (pkgname-ver-rev, symlinks) to the packages tar
+            tar rf "${repo_packages_file}" -C "${repo_tmp_dir}" "${pkg_metadata_name}" "${pkgname}-${pkgversion}" "${pkgname}"
+
+            # --- Add file list entry to repo_files_file ---
+            # Extract the file list from the .nho package (assuming it's stored as 'files' inside)
+            # You might need to adapt this if the file list is stored differently
+            # For now, let's assume it exists as 'files' inside the .nho
+            # Create a temporary file named after the package to hold its file list
+            pkg_files_name="${pkgname}-${pkgversion}-${pkgrevision}"
+            if tar -xf "${nhopackage_path}" --to-command='zstd -dc | tar -tf -' data.tar.zst > "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null; then
+            #if tar xfO "${nhopackage_path}" "files" 2>/dev/null > "${repo_tmp_dir}/${pkg_files_name}"; then
+                 # Add the file list file to the files tar
+                 tar rf "${repo_files_file}" -C "${repo_tmp_dir}" "${pkg_files_name}"
+                 # Compress the individual file list file
+                 zstd --rm "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null
+            else
+                 echog " - Warning: No 'files' list found in ${nhopackage_basename}. Skipping file list entry."
+                 # Create an empty file list entry anyway to maintain structure?
+                 # touch "${repo_tmp_dir}/${pkg_files_name}"
+                 # tar rf "${repo_files_file}" -C "${repo_tmp_dir}" "${pkg_files_name}"
+                 # zstd --rm "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null
+            fi
+
+            # Clean up temporary nhoid file for next iteration
+            rm -f "${repo_tmp_dir}/${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}" "${repo_tmp_dir}/${pkgname}-${pkgversion}"
+
+            # --- Copy .nho file to corresponding repo subdirectory ---
+            # Determine destination path for the .nho file
+            dest_nho_path="${repo_nho_dir}/${nhopackage_basename}"
+            # Only copy if it's not already in the target directory (to avoid overwriting or unnecessary copy if input=output)
+            if [[ "${nhopackage_path}" != "${dest_nho_path}" ]]; then
+                echogn "   - Copying .nho file to ${repo_name}/ directory..."
+                # Use cp to copy, preserving attributes might be useful (-p), but -a is often too much (preserves links/ownership)
+                # Standard cp should suffice for the file itself
+                if ! cp "${nhopackage_path}" "${dest_nho_path}"; then
+                     echog "   * Error: Failed to copy ${nhopackage_basename} to ${repo_nho_dir}/" >&2
+                     # Decide whether to exit or continue processing other packages for this repo
+                     # For now, let's continue
+                     continue
+                fi
+                echog "   - Copied ${nhopackage_basename} to ${repo_nho_dir}/"
+            else
+                # If the input path is the same as the output path (e.g., REPO_DIR is both input and output root),
+                # the .nho is already in the right place conceptually. We could log this.
+                echog "   - .nho file ${nhopackage_basename} is already in the target directory ${repo_nho_dir}/"
+            fi
+            # --- End of copy section ---
+
+        done # End loop for packages in this repo
+
+        # --- Compress and finalize metadata for this repo ---
+        # repo_final_dir is already set to "${REPO_OUTPUT_ROOT}/${repo_name}" where .nho files were copied
+        # repo_final_dir="${REPO_OUTPUT_ROOT}/${repo_name}" # This is implied from repo_nho_dir
+
+        # Compress the accumulated tar files for this repo
+        if [[ -f "${repo_packages_file}" ]] && [[ -s "${repo_packages_file}" ]]; then
+            zstd --rm "${repo_packages_file}" 2> /dev/null
+            if [[ $? -ne 0 ]]; then
+                 echog " *** Unable to compress packages DB for ${repo_name}." >&2
+                 cleanup_tmp_dir
+                 exit 1
+            fi
+            mv "${repo_packages_file}.zst" "${repo_nho_dir}/core.packages.tar.zst" # Keep 'core' name for compatibility with 'update' logic if needed, or use ${repo_name}.packages.tar.zst
+            # If using ${repo_name}.packages.tar.zst, 'update' section needs adjustment
+        else
+             echog " - No packages added for ${repo_name}, not creating packages DB."
+        fi
+
+        if [[ -f "${repo_files_file}" ]] && [[ -s "${repo_files_file}" ]]; then
+            zstd --rm "${repo_files_file}" 2> /dev/null
+            if [[ $? -ne 0 ]]; then
+                 echog " *** Unable to compress files DB for ${repo_name}." >&2
+                 cleanup_tmp_dir
+                 exit 1
+            fi
+            mv "${repo_files_file}.zst" "${repo_nho_dir}/core.files.tar.zst" # Keep 'core' name for compatibility with 'update' logic if needed, or use ${repo_name}.files.tar.zst
+            # If using ${repo_name}.files.tar.zst, 'update' section needs adjustment
+        else
+             echog " - No files added for ${repo_name}, not creating files DB."
+        fi
+
+        # Update lastsync for this repo
+        echo $(date -u +%s) > "${repo_nho_dir}/lastsync"
+        
+        # Create content.db for this repo
+        cd "${repo_nho_dir}" && du *[0-9].nho > content.db && zstd --rm content.db && cd "${CWD}"
+        echog " - Repository '${repo_name}' metadata created and .nho files copied successfully in ${repo_nho_dir}."
+
+    done # End loop for active repos
+
+    echog " - All repository metadata has been created and .nho files copied successfully."
+
+    # 9. Clean up and exit.
+    cleanup_tmp_dir
+    exit 0
+    ;;
 	update)
 # ********************************************************************
 #
-# Section: Update (Repository List)
+# Section: Update (Multiple Repositories)
 # 1. Basic configurations.
-# 2. Checking directory and prepare it.
-# 3. Download configure files from repository.
-# 4. Uncompressing files downloaded from server on system.
-# 5. Clean up and exit.
+# 2. Determine active repositories from config.
+# 3. Sync each repository to its subdirectory.
+# 4. Clean up and exit.
 #
 # ********************************************************************
 		## 1. Basic configurations.
-		# Sets PWD directory.
 		get_pwd_dir
-		# Checks if nhopkg is running as root.
 		check_if_root_uid
-		echogn " :: Updating from repository:"
-		echo " ${NHOPKG_REPO}"
-		# Delete the final / if there are.
-		NHOPKG_REPO=$(echo "${NHOPKG_REPO}" | sed -e 's@/$@@')
-		## 2. Checking directory and prepare it.
-		if [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo" ]]; then
-			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
-			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
-		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/packages" ]]; then
-			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
-		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/files" ]]; then
-			mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
-		elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/cache" ]]; then
-			mkdir -p "${NHOPKG_LOCALSTATEDIR}/cache"
-		fi
-		# Check last update.
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync" ]]; then
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
-			check_if_ok " * Unable to download files from repository."
-			ISYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/repo/lastsync)
-			FSYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/cache/lastsync)
-			if (( ${ISYNC} == ${FSYNC} )) || (( ${ISYNC} > ${FSYNC} )); then
-				echog " * Repository already is updated." >&2
-				exit 1
+
+		# If multiple repositories were not defined, use the old behavior
+		if [[ -z "${NHOPKG_REPO_EXTRA}" && -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+			echogn " :: Updating from single repository:"
+			echo " ${NHOPKG_REPO}"
+			NHOPKG_REPO=$(echo "${NHOPKG_REPO}" | sed -e 's@/$@@')
+			# --- Original behavior here (code unchanged) ---
+			if [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo" ]]; then
+				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
+				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
+			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/packages" ]]; then
+				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
+			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/files" ]]; then
+				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
+			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/cache" ]]; then
+				mkdir -p "${NHOPKG_LOCALSTATEDIR}/cache"
 			fi
-			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
-		else
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync" ]]; then
+				wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+				check_if_ok " * Unable to download files from repository."
+				ISYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/repo/lastsync)
+				FSYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/cache/lastsync)
+				if (( ${ISYNC} == ${FSYNC} )) || (( ${ISYNC} > ${FSYNC} )); then
+					echog " * Repository already is updated." >&2
+					exit 1
+				fi
+				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+			else
+				wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+				check_if_ok " * Unable to download files from repository."
+				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/files/"*
+				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*
+			fi
+			echog " - Downloading configuration files from server."
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.zst"
 			check_if_ok " * Unable to download files from repository."
-			# Clean up the actual repository db.
-			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/files/"*
-			rm -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*
+			echog " --- Downloading files database."
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
+			check_if_ok " *** Unable to download files from repository."
+			echog " --- Downloading packages database."
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
+			check_if_ok " *** Unable to download files from repository."
+			mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.zst" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.zst"
+			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
+			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
+			for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files" 2>/dev/null); do
+				zstd --rm "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+			done
+			mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+			echog " - Repository database updated successfully."
+			rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst"
+			rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+			exit 0
 		fi
-		## 3. Download configure files from repository.
-		echog " - Downloading configuration files from server."
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.zst"
-		check_if_ok " * Unable to download files from repository."
-		echog " --- Downloading files database."
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
-		check_if_ok " *** Unable to download files from repository."
-		echog " --- Downloading packages database."
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
-		check_if_ok " *** Unable to download files from repository."
-		## 4. Uncompressing files downloaded from server on system.
-		mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.zst" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.zst"
-		zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
-		zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
-		# zstd files on /repo/files
-		for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files")
-		do
-			zstd --rm "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+
+		## 2. Determine active repositories
+		# Si no se definió NHOPKG_ACTIVE_REPOS, usar todos los que tengan NHOPKG_REPO_*
+		if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+			# Auto-detectar repositorios desde variables NHOPKG_REPO_*
+			NHOPKG_ACTIVE_REPOS=""
+			for var in $(compgen -v NHOPKG_REPO_); do
+				repo_name="${var#NHOPKG_REPO_}"
+				NHOPKG_ACTIVE_REPOS+="${repo_name} "
+			done
+			NHOPKG_ACTIVE_REPOS=$(echo "${NHOPKG_ACTIVE_REPOS}" | xargs)
+		fi
+
+		if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+			echog " * No repositories configured for update." >&2
+			exit 1
+		fi
+
+		## 3. Sync each repository
+		for repo in ${NHOPKG_ACTIVE_REPOS}; do
+			# Get repository URL
+			repo_var="NHOPKG_REPO_${repo^^}"
+			repo_url="${!repo_var}"
+			if [[ -z "${repo_url}" ]]; then
+				echog " *** Skipping '${repo}': no URL defined (\$NHOPKG_REPO_${repo^^})" >&2
+				continue
+			fi
+
+			echogn " :: Updating repository:"
+			echo " ${repo} (${repo_url})"
+
+			# Specific directories
+			REPO_PKG_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
+			REPO_FILE_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/files"
+			mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
+
+			# Download lastsync
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/lastsync"
+			check_if_ok " * Unable to download lastsync for ${repo}."
+
+			# Check if it's already synchronized
+			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync" ]]; then
+				ISYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync")
+				FSYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/cache/lastsync")
+				if (( ${ISYNC} >= ${FSYNC} )); then
+					echog "   - Already up to date."
+					rm -f "${NHOPKG_LOCALSTATEDIR}/cache/lastsync"
+					continue
+				fi
+			fi
+
+			# Download databases
+			echog "   - Downloading database..."
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.packages.tar.zst"
+			check_if_ok " *** Failed to download packages DB for ${repo}."
+			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.files.tar.zst"
+			check_if_ok " *** Failed to download files DB for ${repo}."
+
+			# Extract to the repo subdirectory
+			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+
+			# Compress .zst files in /files (like the original does)
+			for filedb in "${REPO_FILE_DIR}"/*; do
+				if [[ -f "${filedb}" && "${filedb}" != *.zst ]]; then
+					zstd --rm "${filedb}" 2>/dev/null
+				fi
+			done
+
+			# Move lastsync
+			mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync"
+
+			# Cleaning temporary repo cache
+			rm -f "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
 		done
-		mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
-		echog " - Repository database updated sucesful."
-		## 5. Clean up and exit.
-		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst"
-		rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+
+		echog " - All repositories updated successfully."
 		exit 0
 	;;
 	clean)
