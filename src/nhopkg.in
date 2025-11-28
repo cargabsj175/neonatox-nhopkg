@@ -81,7 +81,7 @@ function echog()
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
 		gettext -es "${*}"
 	else
-		echo -e "${*}"
+		printf "%b\n" "${*}"
 	fi
 	# Success.
 	return 0
@@ -97,7 +97,7 @@ function echogn()
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
 		gettext -ens "${*}"
 	else
-		echo -ne "${*}"
+		printf "%b" "${*}"
 	fi
 	# Success.
 	return 0
@@ -2314,7 +2314,7 @@ function build_package()
     local part="$1"
     
     # Go to build directory.
-    cd "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+    cd "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}" || { echog " * Failed to change to build dir ${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"; exit 1; }
     echogn " - Building"
     echo " ${pkgname}-${pkgversion}-${pkgrevision}"
     echog "This step may take some time depending of package and your system."
@@ -2452,39 +2452,46 @@ function build_search_for_files()
 	get_package_display_name "$part"
 
 	touch "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log"
-	for searchdir in ${FIND_DIRS};
-	do
+	# Safely iterate FIND_DIRS (may contain spaces); parse into array by spaces.
+	IFS=' ' read -r -a FIND_DIRS_ARRAY <<< "${FIND_DIRS:-}"
+	for searchdir in "${FIND_DIRS_ARRAY[@]}"; do
+		if [[ -z "${searchdir}" ]]; then
+			continue
+		fi
 		if [[ -d "${searchdir}" ]]; then
-			find ${searchdir} -type f -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
+			find -- "${searchdir}" -type f -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
 			>> "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log"
-			find ${searchdir} -type l -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
+			find -- "${searchdir}" -type l -cnewer "${NHOPKG_TMPDIR}/.nho-preinstall${part:+-}${part}" \
 			>> "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log"
 		fi
 	done
 	# Delete NoUpgrade files.
-	for noupgrade in ${NOUPGRADE_FILES};
-	do
-		if [[ $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null) ]]; then
-			for noupgrade2 in $(grep "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log");
-			do
-				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+	IFS=' ' read -r -a NOUPGRADE_ARRAY <<< "${NOUPGRADE_FILES:-}"
+	for noupgrade in "${NOUPGRADE_ARRAY[@]}"; do
+		if [[ -z "${noupgrade}" ]]; then
+			continue
+		fi
+		if grep -- "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" &>/dev/null; then
+			while IFS= read -r noupgrade2; do
+				# Remove exact matches lines.
+				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
 				# Remove empty lines.
-				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
-			done
+				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
+			done < <(grep -- "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" || true)
 		fi
 	done
 	# Check if files exists and gets package size.
 	PACKAGE_SIZE=0
-	for casefile in $(grep -v '^#' "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log");
-	do
+	while IFS= read -r casefile; do
+		[[ -n "${casefile}" ]] || continue
 		if [[ ! -e "${casefile}" ]]; then
-			sed -e "s@^${casefile}@@" -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
-			sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null
+			sed -e "s@^${casefile}@@" -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
+			sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
 		elif [[ -f "${casefile}" ]]; then
-			PACKAGE_SIZE=$(( ${PACKAGE_SIZE} + $(du "${casefile}" | awk '{print $1}') ))
+			# Use du -- to be safe with leading dashes.
+			PACKAGE_SIZE=$(( PACKAGE_SIZE + $(du -- "${casefile}" | awk '{print $1}') ))
 		fi
-	done
-
+	done < <(grep -v '^#' "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" || true)
 }
 ## Function get_build_time(). Calculates time on build and install a package.
 # Usage: get_build_time (without arguments)
@@ -2517,7 +2524,7 @@ function build_nhoid_to_bin()
 	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"  2>/dev/null || true
 	# Force "multilib" as repo in multilib packages
 	if [ "$part" = "lib32" ]; then
-	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"  2>/dev/null || true
+	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"
 	else
 	# Copy the Repository field if it exists
 	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
@@ -3698,8 +3705,10 @@ case "${NHOPKG_OPTION}" in
         # If SPLITPACKAGE is not empty, create subpackages
         if [[ -n "${SPLITPACKAGE}" ]]; then
             IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
+            # ensure CASEPACKAGES parsed as array
+            IFS=' ' read -r -a CASEPACKAGES_ARRAY <<< "${CASEPACKAGES:-}"
             for part in "${SPLITPARTS[@]}"; do
-                for CASEPACKAGE in ${CASEPACKAGES}; do
+                for CASEPACKAGE in "${CASEPACKAGES_ARRAY[@]}"; do
                     echogn " :: Preparing split package:"
                     echo " ${part}"
 
@@ -3905,8 +3914,10 @@ case "${NHOPKG_OPTION}" in
 		# Support for subpackages (same as --build)
 		if [[ -n "${SPLITPACKAGE}" ]]; then
 			IFS=' ' read -r -a SPLITPARTS <<< "${SPLITPACKAGE}"
-			for part in "${SPLITPARTS[@]}"; do
-				for CASEPACKAGE in ${CASEPACKAGES}; do
+            # ensure CASEPACKAGES parsed as array
+            IFS=' ' read -r -a CASEPACKAGES_ARRAY <<< "${CASEPACKAGES:-}"
+            for part in "${SPLITPARTS[@]}"; do
+                for CASEPACKAGE in "${CASEPACKAGES_ARRAY[@]}"; do
 					echogn " :: Preparing split package:"
 					echo " ${part}"
 					
