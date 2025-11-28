@@ -3832,6 +3832,8 @@ case "${NHOPKG_OPTION}" in
 			# 5. Load real data from the nhoid
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
 				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+				# Save original name for later use in split packages
+				ORIGINAL_PKGNAME="${pkgname}"
 				check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
 			else
 				echog " * Invalid source package." >&2
@@ -3914,7 +3916,7 @@ case "${NHOPKG_OPTION}" in
 
 					# Here CASEPACKAGE is already "version-name-revision"
 					# We extract only the base name for the URL
-					pkg_base_name=$(echo "${CASEPACKAGE}" | awk -F'-' '{print $1}')
+					pkg_base_name="${ORIGINAL_PKGNAME}"
 					git_url="${NHOPKG_GIT_SOURCES}/${pkg_base_name}.git"
 
 					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
