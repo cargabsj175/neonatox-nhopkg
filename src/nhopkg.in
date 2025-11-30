@@ -1229,69 +1229,76 @@ function resolve_package_by_name() {
 # where <array_name> is the name of the array to store packages (e.g., RCASEPACKAGES or ORCASEPACKAGES)
 function check_if_repository_package_common()
 {
-    local array_name="$1"
-    local dep_spec="${FILE_DEP%% *}"  # Supports multiple deps in FILE_DEP, we take the first one
+	local array_name="$1"
+	local dep_spec="${FILE_DEP%% *}"
+	local found=0
+	local repo candidate match_pkg
 
-    # If dep_spec is NOT an absolute path, we assume it is a package name
-    if [[ "${dep_spec}" != /* ]]; then
-        # Is a package name (may include >=)
-        local pkg_name="${dep_spec%%>=*}"
-        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkg_name}" ]]; then
-            # Base package exists → use it directly
-            MATCHPACKAGE="${pkg_name}"
-        else
-            # Find packages starting with that name (implicit version)
-            local candidates=($(find "${NHOPKG_LOCALSTATEDIR}/repo/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1))
-            if [[ ${#candidates[@]} -gt 0 ]]; then
-                MATCHPACKAGE="$(basename "${candidates[0]}")"
-            else
-                echo -n " *** ${dep_spec} " >&2
-                echog "is not on repository." >&2
-                cleanup_tmp_dir
-                exit 1
-            fi
-        fi
-    else
-        # It is an absolute path → original behavior
-        get_good_file_name "${dep_spec}"
-        local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*.zst 2> /dev/null)
-        MATCHPACKAGE=$(echo "${MATCHPACKAGE}" | awk '{print $1}')
-        MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .zst)
-        if [[ -z "${MATCHPACKAGE}" ]]; then
-            echo -n " *** ${dep_spec} " >&2
-            echog "is not on repository." >&2
-            cleanup_tmp_dir
-            exit 1
-        fi
-    fi
+	# If it's an absolute path → use file search (old behavior)
+	if [[ "${dep_spec}" == /* ]]; then
+		get_good_file_name "${dep_spec}"
+		local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/"*/files/*.zst 2>/dev/null | head -n1)
+		if [[ -z "${MATCHPACKAGE}" ]]; then
+			echo -n " *** ${dep_spec} " >&2
+			echog "is not on repository." >&2
+			cleanup_tmp_dir
+			exit 1
+		fi
+		# Extract repo and filename
+		local repo_dir=$(echo "${MATCHPACKAGE}" | sed -E 's@.*/repo/([^/]*)/files/.*@\1@')
+		MATCHPACKAGE=$(basename "${MATCHPACKAGE}" .zst)
+		pkgrepo="${repo_dir}"
+	else
+		# It's a package name (possibly with >=, etc.)
+		local pkg_name="${dep_spec%%[<>=!]*}"
+		if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+			NHOPKG_ACTIVE_REPOS="extra"
+		fi
 
-    # Add to the list of packages to install
-    if [[ -n "${MATCHPACKAGE}" ]]; then
-        # Use eval to dynamically access the array by name
-        local -a packages
-        eval "packages=(\"\${${array_name}[@]}\")"
-        if [[ -z "${packages[*]}" ]]; then
-            eval "${array_name}=(\"\${MATCHPACKAGE}\")"
-            INCLUDE_DEP="0"
-        else
-            INCLUDE_DEP="0"
-            for rpackages in "${packages[@]}"; do
-                if [[ "${rpackages}" = "${MATCHPACKAGE}" ]]; then
-                    INCLUDE_DEP="1"
-                    break
-                fi
-            done
-            if [[ "${INCLUDE_DEP}" != "1" ]]; then
-                eval "${array_name}=(\"\${MATCHPACKAGE}\" \"\${${array_name}[@]}\")"
-            fi
-        fi
-        if [[ "${INCLUDE_DEP}" != "1" ]]; then
-            check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
-            check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}"
-        fi
-    fi
+		for repo in ${NHOPKG_ACTIVE_REPOS}; do
+			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}" ]]; then
+				MATCHPACKAGE="${pkg_name}"
+				pkgrepo="${repo}"
+				found=1
+				break
+			fi
+			# Try with versioned packages
+			candidate=$(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1)
+			if [[ -n "${candidate}" ]]; then
+				MATCHPACKAGE=$(basename "${candidate}")
+				pkgrepo="${repo}"
+				found=1
+				break
+			fi
+		done
+
+		if [[ $found -eq 0 ]]; then
+			echo -n " *** ${dep_spec} " >&2
+			echog "is not on repository." >&2
+			cleanup_tmp_dir
+			exit 1
+		fi
+	fi
+
+	# Add to array
+	if [[ -n "${MATCHPACKAGE}" ]]; then
+		local -a current_list
+		eval "current_list=(\"\${${array_name}[@]}\")"
+		local exists=0
+		for item in "${current_list[@]}"; do
+			if [[ "${item}" == "${MATCHPACKAGE}" ]]; then
+				exists=1
+				break
+			fi
+		done
+		if [[ $exists -eq 0 ]]; then
+			eval "${array_name}+=(\"\${MATCHPACKAGE}\")"
+			# Recursively check deps of this package
+			check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${MATCHPACKAGE}"
+			check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${MATCHPACKAGE}"
+		fi
+	fi
 }
-
 ## Function check_if_repository_package(). Checks if dependency packages are on repository.
 # Usage: check_if_repository_package (without arguments)
 function check_if_repository_package()
@@ -1837,61 +1844,85 @@ function bin_install_create_config_files()
 #======================================5
 ## Function getpackage(). Search selected package on repository.
 # Usage: getpackage (without arguments)
-# Gives: pkgname, pkgversion and pkgrevision variables.
+# Gives: pkgname, pkgversion, pkgrevision, pkgrepo, pkgos, pkgarch variables.
 function getpackage()
 {
-	if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" ]]; then
-		# Get data from package and download it.
-		pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
-		pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
-		pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" 2> /dev/null | awk -F'\t' '{print $2}')
-	else
-		get_good_file_name "${CASEPACKAGE}"
-		MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/files/"*.zst 2> /dev/null)
-		for package in ${MATCHPACKAGE};
-		do
-			if [[ -z "${MATCHPACKAGES}" ]]; then
-				MATCHPACKAGES=$(basename "${package}" .zst)
-			else
-				MATCHPACKAGES="${MATCHPACKAGES} $(basename "${package}" .zst)"
-			fi
-		done
-		if [[ -n "${MATCHPACKAGES}" ]]; then
-			# Check if there are more than one package.
-			if [[ $(echo ${MATCHPACKAGES} | awk '{print $2}') ]]; then
-				echog "There are more than one package with these arguments, please select one."
-				select package in ${MATCHPACKAGES};
-				do
-					if [[ -n "${package}" ]]; then
-						MATCHPACKAGE="${package}"
-						break
-					fi
-				done
-			else
-				MATCHPACKAGE=$(echo ${MATCHPACKAGES} | awk '{print $1}')
-			fi
-		else
-			echo -n " *** ${CASEPACKAGE} " >&2
-			echog "is not on repository." >&2
-			exit 1
-		fi
-		pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
-		pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
-		pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${MATCHPACKAGE}" | awk -F'\t' '{print $2}')
-	fi
-	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]] || [[ -z "${pkgrevision}" ]]; then
-		echo -n " *** ${CASEPACKAGE} " >&2
-		echog "is not on repository." >&2
-		exit 1
-	fi
+    local found=0
+    local repo candidate
+
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        NHOPKG_ACTIVE_REPOS="extra"
+    fi
+
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        # Try exact match
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" ]]; then
+            pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgrepo="${repo}"
+            pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+            found=1
+            break
+        fi
+
+        # Try by versioned name (e.g., zsnes → zsnes-2.0.12-n2025)
+        candidate=$(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${CASEPACKAGE}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1)
+        if [[ -n "${candidate}" ]]; then
+            pkgname=$(grep "^# Name:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgversion=$(grep "^# Version:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgrevision=$(grep "^# Release:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgrepo="${repo}"
+            pkgos=$(grep "^# OS:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgarch=$(grep "^# Arch:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
+            found=1
+            break
+        fi
+    done
+
+    if [[ $found -eq 0 ]]; then
+        # Fallback: search via file list (old method)
+        get_good_file_name "${CASEPACKAGE}"
+        local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/"*/files/*.zst 2>/dev/null | head -n1)
+        if [[ -n "${MATCHPACKAGE}" ]]; then
+            local repo_dir=$(echo "${MATCHPACKAGE}" | sed -E 's@.*/repo/([^/]*)/files/.*@\1@')
+            local pkgfile=$(basename "${MATCHPACKAGE}" .zst)
+            if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" ]]; then
+                pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+                pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+                pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+                pkgrepo="${repo_dir}"
+                pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+                pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+                found=1
+            fi
+        fi
+    fi
+
+    if [[ $found -eq 0 ]]; then
+        echo -n " *** ${CASEPACKAGE} " >&2
+        echog "is not on repository." >&2
+        exit 1
+    fi
+
+    # Validate essential fields
+    if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]] || [[ -z "${pkgrevision}" ]] || [[ -z "${pkgrepo}" ]]; then
+        echo -n " *** ${CASEPACKAGE} " >&2
+        echog "is not on repository." >&2
+        exit 1
+    fi
+
+    # Set defaults if missing (shouldn't happen, but safe)
+    pkgos="${pkgos:-$(uname -s | awk '{print tolower($1)}')}"
+    pkgarch="${pkgarch:-$(uname -m)}"
 }
-## Function dowloadpackage(). Downloads package to install.
+## Function downloadpackage(). Downloads package to install.
 # Usage: downloadpackage (without arguments)
 # Gives: Downloaded package on cache/ directory.
 function downloadpackage()
 {
-	local pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
-	local pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# pkgos and pkgarch are already set by getpackage()
 	echogn " --- Downloading"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	# Get repository URL
@@ -2703,172 +2734,182 @@ function get_list_installed_packages()
 #======================================11
 # Info (packages) functions.
 #======================================11
+## Function get_package_info()
+# Shows detailed information about a package from any source:
+# - Repository (any in NHOPKG_ACTIVE_REPOS)
+# - Locally installed package
+# - Local .nho file
+# Usage: get_package_info "package-name[-version-revision]"
+# Returns: 0 if found, 1 if not found
 function get_package_info()
 {
-	package_info_file="${1}"
-	# Get info if package exist in repository database.
-	if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}" ]]; then
-		# Get needed data to get info of package.
-		get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
-		# Show package info.
-		grep "^# Package Maintainer:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
-			# Get needed data to get info of installed package.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-			echogn "Lasted version installed:"
-			echo " ${pkgversion}-${pkgrevision}"
-			# Get data other time.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
-		else
-			echog "Lasted version installed: Not installed."
-		fi
-		grep "^# License:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Group:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Duration:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Date:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Host:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Url:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Description:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		# Show dependencies.
-		grep "^# Dep(post):" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# Show optional dependencies.
-		grep "^# OptionalDep(post):" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# End parsing data.
-		return 0
-	# Get info if package exist in local database.
-	elif [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}" ]]; then
-		# Get needed data to get info of package.
-		get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
-		# Show package info.
-		grep "^# Package Maintainer:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
-			# Get needed data to get info of package in repository.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-			echogn "Lasted version avaliable:"
-			echo " ${pkgversion}-${pkgrevision}"
-			# Get data other time.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
-		else
-			echog "Lasted version avaliable: Not avaliable."
-		fi
-		grep "^# License:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Group:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Installed-Size:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Duration:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Date:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Build-Host:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Url:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		grep "^# Description:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| sed -e 's@^# @@g'
-		# Show dependencies.
-		grep "^# Dep(post):" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# Show optional dependencies.
-		grep "^# OptionalDep(post):" "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# End parsing data.
-		return 0
-	# Get info if package exist as .nho (binary) package.
-	elif [[ -f "${package_info_file}" ]] && [[ $(basename "${package_info_file}" .nho) != "${package_info_file}" ]]; then
-		# Check if is a correct package.
-		tar xf "${package_info_file}" "nhoid" 2> /dev/null > /dev/null
-		check_if_ok " * The selected package is not valid."
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Package Maintainer:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Name:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Version:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Release:" \
-		| sed -e 's@^# @@g'
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}" ]]; then
-			# Get needed data to get info of package in repository.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${package_info_file}"
-			echogn "Lasted version avaliable:"
-			echo " ${pkgversion}-${pkgrevision}"
-		else
-			echog "Lasted version avaliable: Not avaliable."
-		fi
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}" ]]; then
-			# Get needed data to get info of installed package.
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${package_info_file}"
-			echogn "Lasted version installed:"
-			echo " ${pkgversion}-${pkgrevision}"
-		else
-			echog "Lasted version installed: Not installed."
-		fi
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# License:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Group:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Arch:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# OS:"  \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Installed-Size:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Duration:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Date:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Build-Host:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Url:" \
-		| sed -e 's@^# @@g'
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Description:" \
-		| sed -e 's@^# @@g'
-		# Show dependencies.
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# Dep(post):" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# Show optional dependencies.
-		tar xfO "${package_info_file}" "nhoid" 2> /dev/null | grep "^# OptionalDep(post):" \
-		| awk -F'\t' '{print $1"\t"$2}' | sed -e 's@^# @@g'
-		# End parsing data.
-		return 0
-	else
-		# No packages matches.
-		return 1
-	fi
+    local pkg_query="$1"
+    local found=0
+    local repo source_type
+
+    # ============== 1. Buscar en repositorios activos ==============
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        NHOPKG_ACTIVE_REPOS="extra"
+    fi
+
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_query}" ]]; then
+            found=1
+            source_type="repo"
+            break
+        fi
+
+        # Soportar búsqueda por nombre base (ej: "zsnes" → "zsnes-1.51-1")
+        local candidates=($(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_query}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1))
+        if [[ ${#candidates[@]} -gt 0 ]]; then
+            pkg_query=$(basename "${candidates[0]}")
+            found=1
+            source_type="repo"
+            break
+        fi
+    done
+
+    # ============== 2. Si no está en repo, buscar instalado localmente ==============
+    if [[ $found -eq 0 ]] && [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_query}" ]]; then
+        found=1
+        source_type="installed"
+    fi
+
+    # ============== 3. Si no está instalado, verificar si es un .nho local ==============
+    if [[ $found -eq 0 ]] && [[ -f "${pkg_query}" ]] && [[ "${pkg_query##*.}" == "nho" ]]; then
+        found=1
+        source_type="local_nho"
+    fi
+
+    # ============== Salir si no se encontró en ningún lado ==============
+    if [[ $found -eq 0 ]]; then
+        return 1
+    fi
+
+    # ============== Extraer y mostrar información ==============
+    case "${source_type}" in
+        repo)
+            # Leer desde repo (ya tenemos pkg_query resuelto)
+            local pkg_meta="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_query}"
+            get_basic_data "${pkg_meta}"
+
+            grep "^# Package Maintainer:" "${pkg_meta}" | sed 's/^# //'
+            grep "^# Name:"               "${pkg_meta}" | sed 's/^# //'
+            grep "^# Version:"            "${pkg_meta}" | sed 's/^# //'
+            grep "^# Release:"            "${pkg_meta}" | sed 's/^# //'
+
+            # ¿Está instalado?
+            if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+                echogn "Lasted version installed:"
+                echo " ${pkgversion}-${pkgrevision}"
+            else
+                echog "Lasted version installed: Not installed."
+            fi
+
+            grep "^# License:"          "${pkg_meta}" | sed 's/^# //'
+            grep "^# Group:"            "${pkg_meta}" | sed 's/^# //'
+            grep "^# Arch:"             "${pkg_meta}" | sed 's/^# //'
+            grep "^# OS:"               "${pkg_meta}" | sed 's/^# //'
+            grep "^# Installed-Size:"   "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Duration:"   "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Date:"       "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Host:"       "${pkg_meta}" | sed 's/^# //'
+            grep "^# Url:"              "${pkg_meta}" | sed 's/^# //'
+            grep "^# Description:"      "${pkg_meta}" | sed 's/^# //'
+            grep "^# Dep(post):"        "${pkg_meta}" | awk -F'\t' '{print "# Dep(post):\t" $2}' | sed 's/^# //'
+            grep "^# OptionalDep(post):" "${pkg_meta}" | awk -F'\t' '{print "# OptionalDep(post):\t" $2}' | sed 's/^# //'
+            ;;
+
+        installed)
+            local pkg_meta="${NHOPKG_LOCALSTATEDIR}/packages/${pkg_query}"
+            get_basic_data "${pkg_meta}"
+
+            grep "^# Package Maintainer:" "${pkg_meta}" | sed 's/^# //'
+            grep "^# Name:"               "${pkg_meta}" | sed 's/^# //'
+            grep "^# Version:"            "${pkg_meta}" | sed 's/^# //'
+            grep "^# Release:"            "${pkg_meta}" | sed 's/^# //'
+
+            # ¿Está en algún repo?
+            local in_repo=0
+            for r in ${NHOPKG_ACTIVE_REPOS}; do
+                if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+                    echogn "Lasted version available:"
+                    echo " ${pkgversion}-${pkgrevision}"
+                    in_repo=1
+                    break
+                fi
+            done
+            if [[ $in_repo -eq 0 ]]; then
+                echog "Lasted version available: Not available."
+            fi
+
+            grep "^# License:"          "${pkg_meta}" | sed 's/^# //'
+            grep "^# Group:"            "${pkg_meta}" | sed 's/^# //'
+            grep "^# Arch:"             "${pkg_meta}" | sed 's/^# //'
+            grep "^# OS:"               "${pkg_meta}" | sed 's/^# //'
+            grep "^# Installed-Size:"   "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Duration:"   "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Date:"       "${pkg_meta}" | sed 's/^# //'
+            grep "^# Build-Host:"       "${pkg_meta}" | sed 's/^# //'
+            grep "^# Url:"              "${pkg_meta}" | sed 's/^# //'
+            grep "^# Description:"      "${pkg_meta}" | sed 's/^# //'
+            grep "^# Dep(post):"        "${pkg_meta}" | awk -F'\t' '{print "# Dep(post):\t" $2}' | sed 's/^# //'
+            grep "^# OptionalDep(post):" "${pkg_meta}" | awk -F'\t' '{print "# OptionalDep(post):\t" $2}' | sed 's/^# //'
+            ;;
+
+        local_nho)
+            local nho_file="${pkg_query}"
+            # Extraer nhoid temporalmente
+            local tmp_nhoid="${NHOPKG_TMPDIR}/nhoid_extracted"
+            tar xfO "${nho_file}" nhoid > "${tmp_nhoid}" 2>/dev/null || { return 1; }
+
+            get_basic_data "${tmp_nhoid}"
+
+            grep "^# Package Maintainer:" "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Name:"               "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Version:"            "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Release:"            "${tmp_nhoid}" | sed 's/^# //'
+
+            # Verificar disponibilidad en repos
+            local in_repo=0
+            for r in ${NHOPKG_ACTIVE_REPOS}; do
+                if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+                    echogn "Lasted version available:"
+                    echo " ${pkgversion}-${pkgrevision}"
+                    in_repo=1
+                    break
+                fi
+            done
+            if [[ $in_repo -eq 0 ]]; then
+                echog "Lasted version available: Not available."
+            fi
+
+            # Verificar si está instalado
+            if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+                echogn "Lasted version installed:"
+                echo " ${pkgversion}-${pkgrevision}"
+            else
+                echog "Lasted version installed: Not installed."
+            fi
+
+            grep "^# License:"          "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Group:"            "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Arch:"             "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# OS:"               "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Installed-Size:"   "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Build-Duration:"   "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Build-Date:"       "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Build-Host:"       "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Url:"              "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Description:"      "${tmp_nhoid}" | sed 's/^# //'
+            grep "^# Dep(post):"        "${tmp_nhoid}" | awk -F'\t' '{print "# Dep(post):\t" $2}' | sed 's/^# //'
+            grep "^# OptionalDep(post):" "${tmp_nhoid}" | awk -F'\t' '{print "# OptionalDep(post):\t" $2}' | sed 's/^# //'
+
+            rm -f "${tmp_nhoid}"
+            ;;
+    esac
+
+    return 0
 }
 # ---------------------------------------------------------
 # get_repo_url()
@@ -3392,8 +3433,8 @@ case "${NHOPKG_OPTION}" in
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
 				echog " - Resolving Dependencies."
-				check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-				check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+				check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+				check_optional_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 				askforinstallrequiredeps
 				askforinstalloptdeps
 			fi
@@ -3408,9 +3449,6 @@ case "${NHOPKG_OPTION}" in
 			# Now install package.
 			cleanup_tmp_dir
 			make_tmp_dir
-			# get arch and os package info
-			pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
-			pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null | awk -F'\t' '{print $2}')
 			# Uncompress package.
 			tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2> /dev/null
 			check_if_ok " * Unable to uncompress package."
