@@ -372,6 +372,7 @@ function nhopkg_help()
 	echog " -u, --update-db\tUpdate Nhopkg database."
 	echog " -w, --show\tShows package files."
 	echog " -x, --update-shooters\tUpdates all system data and schemas."
+	echog " -y, --upgrade\tUpdates all installed packages."
 	echog " --license-all\tShows complete Nhopkg license."
 	echog " --license\tShows Nhopkg license."
 	echog " --version\tShows Nhopkg version."
@@ -2210,7 +2211,7 @@ fetch_tarball_source() {
 	local build_dir="${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
     
     echog " - Downloading source tarball: ${tarball_url}"
-    if wget --https-only -q --show-progress "${tarball_url}" -O "${tarball_file}"; then
+    if wget --https-only -q "${tarball_url}" -O "${tarball_file}"; then
         echog " - Download completed: ${tarball_file}"
     else
         echog " * Failed to download tarball from ${tarball_url}" >&2
@@ -2604,7 +2605,7 @@ function build_nhoid_to_bin()
         while IFS= read -r line; do
             local dep_data=$(echo "$line" | sed 's/^#[^:]*:\s*//')
             if [[ -n "$dep_data" ]]; then
-                echo "# Dep(post):	$dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
+                echo -e "# Dep(post):\t$dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
             fi
         done
     # Process optional dependencies: one line per dependency
@@ -2612,7 +2613,7 @@ function build_nhoid_to_bin()
         while IFS= read -r line; do
             local opt_dep_data=$(echo "$line" | sed 's/^#[^:]*:\s*//')
             if [[ -n "$opt_dep_data" ]]; then
-                echo "# OptionalDep(post):	$opt_dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
+                echo -e "# OptionalDep(post):\t$opt_dep_data" >> "${NHOPKG_TMPDIR}/nhoid"
             fi
         done
     
@@ -2944,6 +2945,167 @@ function get_repo_url()
     exit 1
 }
 #==============================================================================
+# Auxiliary functions for upgrade case
+#==============================================================================
+# ---------------------------------------------------------
+# package_exists_in_repos()
+# Description: Check if a package exists in the active repositories.
+# Parameters: pkg_name
+# Returns: 0 if it exists, 1 if it does not exist.
+# ---------------------------------------------------------
+function package_exists_in_repos()
+{
+    local pkg_name="$1"
+    local repo
+    
+    [[ -z "${NHOPKG_ACTIVE_REPOS}" ]] && NHOPKG_ACTIVE_REPOS="extra"
+    
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        # Check if the exact package exists
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}" ]]; then
+            return 0
+        fi
+        
+        # Search for package versions (name-version-revision)
+        if find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f &>/dev/null; then
+            return 0
+        fi
+    done
+    
+    return 1
+}
+# ---------------------------------------------------------
+# get_latest_version_in_repos()
+# Description: Gets the latest version of a package from the active repositories.
+# Parameters: pkg_name
+# Returns: Variables pkgname, pkgversion, pkgrevision, pkgrepo.
+# ---------------------------------------------------------
+function get_latest_version_in_repos()
+{
+    local pkg_name="$1"
+    local repo candidate best_version="" best_repo=""
+    
+    [[ -z "${NHOPKG_ACTIVE_REPOS}" ]] && NHOPKG_ACTIVE_REPOS="extra"
+    
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        # Find the exact version first
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}" ]]; then
+            get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}"
+            pkgrepo="${repo}"
+            return 0
+        fi
+        
+        # Search for all available versions in this repository
+        while IFS= read -r -d '' pkgfile; do
+            local pkg_version_file=$(basename "${pkgfile}")
+            local pkg_version="${pkg_version_file#${pkg_name}-}"
+            
+            # Compare versions to find the latest
+            if [[ -z "${best_version}" ]] || version_compare "${pkg_version}" ">" "${best_version}"; then
+                best_version="${pkg_version}"
+                best_repo="${repo}"
+                best_pkgfile="${pkgfile}"
+            fi
+        done < <(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f -print0 2>/dev/null)
+    done
+    
+    if [[ -n "${best_version}" ]]; then
+        get_basic_data "${best_pkgfile}"
+        pkgrepo="${best_repo}"
+        return 0
+    fi
+    
+    return 1
+}
+# ---------------------------------------------------------
+# update_repositories()
+# Description: Updates all configured repositories.
+# Parameters: none
+# Returns: 0 on success, exits with error on failure.
+# ---------------------------------------------------------
+function update_repositories()
+{
+    local NHOPKG_OPTION_BACKUP="${NHOPKG_OPTION}"
+    NHOPKG_OPTION="update"
+    
+    get_pwd_dir
+    check_if_root_uid
+    
+    ## 1. Determine active repositories
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        NHOPKG_ACTIVE_REPOS=""
+        for var in $(compgen -v NHOPKG_REPO_); do
+            repo_name="${var#NHOPKG_REPO_}"
+            [[ -n "${!var}" ]] && NHOPKG_ACTIVE_REPOS+="${repo_name} "
+        done
+        NHOPKG_ACTIVE_REPOS=$(echo "${NHOPKG_ACTIVE_REPOS}" | xargs)
+    fi
+    
+    if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
+        echog " * No repositories configured for update." >&2
+        NHOPKG_OPTION="${NHOPKG_OPTION_BACKUP}"
+        return 1
+    fi
+    
+    ## 2. Synchronize each repository
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        repo_var="NHOPKG_REPO_${repo^^}"
+        repo_url="${!repo_var}"
+        if [[ -z "${repo_url}" ]]; then
+            echog " *** Skipping '${repo}': no URL defined (\$${repo_var})" >&2
+            continue
+        fi
+        
+        echogn " :: Updating repository:"
+        echo " ${repo} (${repo_url})"
+        
+        REPO_PKG_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
+        REPO_FILE_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/files"
+        mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
+        
+        # Download lastsync
+        wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/lastsync"
+        check_if_ok " * Unable to download lastsync for ${repo}."
+        
+        # Check if it's already updated
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync" ]]; then
+            ISYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync")
+            FSYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/cache/lastsync")
+            if (( ${ISYNC} >= ${FSYNC} )); then
+                echog "   - Already up to date."
+                rm -f "${NHOPKG_LOCALSTATEDIR}/cache/lastsync"
+                continue
+            fi
+        fi
+        
+        # Download databases
+        echog "   - Downloading database..."
+        wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.packages.tar.zst"
+        check_if_ok " *** Failed to download packages DB for ${repo}."
+        wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.files.tar.zst"
+        check_if_ok " *** Failed to download files DB for ${repo}."
+        
+        # Extract files
+        zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+        zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+        
+        # Compress .zst files in /files
+        for filedb in "${REPO_FILE_DIR}"/*; do
+            if [[ -f "${filedb}" && "${filedb}" != *.zst ]]; then
+                zstd --rm "${filedb}" 2>/dev/null
+            fi
+        done
+        
+        # Update lastsync
+        mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync"
+        rm -f "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+    done
+    
+    echog " - All repositories updated successfully."
+    NHOPKG_OPTION="${NHOPKG_OPTION_BACKUP}"
+    return 0
+}
+#==============================================================================
 # Section: Nhopkg trap.
 #==============================================================================
 # Check if Nhopkg is running as root.
@@ -2955,8 +3117,8 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvC"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature"
+SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvCy"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature,upgrade"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -3265,6 +3427,15 @@ while [[ "${1}" != "--" ]]; do
 			shift
 			if [[ -z "${NHOPKG_OPTION}" ]]; then
 				NHOPKG_OPTION="update-db"
+			else
+				echog " * You have selected more than one valid option." >&2
+				exit 1
+			fi
+		;;
+		-y|--upgrade)
+			shift
+			if [[ -z "${NHOPKG_OPTION}" ]]; then
+				NHOPKG_OPTION="upgrade"
 			else
 				echog " * You have selected more than one valid option." >&2
 				exit 1
@@ -4426,9 +4597,9 @@ case "${NHOPKG_OPTION}" in
 		fi
 
 		## 2. Determine active repositories
-		# Si no se definió NHOPKG_ACTIVE_REPOS, usar todos los que tengan NHOPKG_REPO_*
+		# If NHOPKG_ACTIVE_REPOS was not defined, use all those that have NHOPKG_REPO_*
 		if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
-			# Auto-detectar repositorios desde variables NHOPKG_REPO_*
+			# Auto-detect repositories from variables NHOPKG_REPO_*
 			NHOPKG_ACTIVE_REPOS=""
 			for var in $(compgen -v NHOPKG_REPO_); do
 				repo_name="${var#NHOPKG_REPO_}"
@@ -4502,6 +4673,184 @@ case "${NHOPKG_OPTION}" in
 
 		echog " - All repositories updated successfully."
 		exit 0
+	;;
+	upgrade)
+# ********************************************************************
+#
+# Section: Upgrade (update all installed packages)
+# 1. Basic configurations and update repositories
+# 2. Get list of installed packages
+# 3. Check for available updates
+# 4. Prompt user which packages to update
+# 5. Download and install updates
+# 6. Update local databases
+#
+# ********************************************************************
+    ## 1. Basic configurations and update repositories
+    get_pwd_dir
+    check_if_root_uid
+    echog " - Updating repository databases..."
+    update_repositories
+    check_if_ok " * Failed to update the repositories."
+    
+    ## 2. Get list of installed packages
+    get_list_installed_packages
+    if [[ ${#installedpackages[@]} -eq 0 ]]; then
+        echog " * No packages are installed."
+        exit 0
+    fi
+    
+    ## 3. Check for available updates
+    declare -a packages_to_update
+    declare -a current_versions
+    declare -a new_versions
+    
+    echog " - Checking for available updates..."
+    for installed_pkg in "${installedpackages[@]}"; do
+        # Skip if it's a symlink (not a real package file)
+        [[ -h "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
+        
+        # Skip if it's not a regular file
+        [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
+        
+        # Get information from installed package
+        if grep -q "^#%NHO-" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null; then
+            # This is a proper nhopkg package file
+            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}"
+            current_pkgname="${pkgname}"
+            current_full_version="${pkgversion}-${pkgrevision}"
+        else
+            # This might be a legacy package or different format
+            # Try to extract package name from filename
+            current_pkgname=$(basename "${installed_pkg}" | sed -e 's/-[0-9].*//')
+            # Try to get version and revision from the file if possible
+            pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null | awk -F'\t' '{print $2}')
+            pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null | awk -F'\t' '{print $2}')
+            # If we can't get version/revision, skip this package
+            if [[ -z "${pkgversion}" ]] || [[ -z "${pkgrevision}" ]]; then
+                if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+                    echog " --- Skipping ${installed_pkg}: unable to determine version"
+                fi
+                continue
+            fi
+            current_full_version="${pkgversion}-${pkgrevision}"
+        fi
+        
+        # Skip packages with empty names
+        [[ -z "${current_pkgname}" ]] && continue
+        
+        # Search the package in repositories
+        if package_exists_in_repos "${current_pkgname}"; then
+            # Get information of the available version
+            if get_latest_version_in_repos "${current_pkgname}"; then
+                new_full_version="${pkgversion}-${pkgrevision}"
+                
+                # Compare versions
+                if version_compare "${new_full_version}" ">" "${current_full_version}"; then
+                    packages_to_update+=("${current_pkgname}")
+                    current_versions+=("${current_full_version}")
+                    new_versions+=("${new_full_version}")
+                fi
+            fi
+        fi
+    done
+    
+    ## 4. Show updates and ask user
+    if [[ ${#packages_to_update[@]} -eq 0 ]]; then
+        echog " - No updates are available."
+        exit 0
+    fi
+    
+    echog " - Updates are available for the following packages:"
+    for i in "${!packages_to_update[@]}"; do
+        echo "   ${packages_to_update[$i]}: ${current_versions[$i]} -> ${new_versions[$i]}"
+    done
+    
+    nhopkg_ask_follow
+    check_if_ok " * Packages will not be updated."
+    
+    ## 5. Download and install updates
+    for pkg_name in "${packages_to_update[@]}"; do
+        echogn " :: Updating:"
+        echo " ${pkg_name}"
+        
+        # Save information from the old package
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" ]]; then
+            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}"
+            old_pkgname="${pkgname}"
+            old_pkgversion="${pkgversion}"
+            old_pkgrevision="${pkgrevision}"
+            old_pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" 2>/dev/null | awk -F'\t' '{print $2}')
+            old_pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" 2>/dev/null | awk -F'\t' '{print $2}')
+        fi
+        
+        # Reuse super-install logic
+        CASEPACKAGE="${pkg_name}"
+        getpackage  # Search the package in repositories
+        check_if_ok " * Package ${pkg_name} not found in repositories"
+        
+        # Check for conflicts before proceeding
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+            check_package_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+        fi
+        
+        downloadpackage  # Download
+        
+        # Install the updated package
+        cleanup_tmp_dir
+        make_tmp_dir
+        
+        # Uncompress package
+        tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2>/dev/null
+        check_if_ok " * Error decompressing the package."
+        
+        [[ -f "${NHOPKG_TMPDIR}/nhoid" ]] || {
+            echog " * Invalid package." >&2
+            cleanup_tmp_dir
+            continue
+        }
+        
+        # Get data from package.
+		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+
+		## Checks SHA256 sum and architecture.
+		check_package_sha256sum
+		check_package_arch
+ 
+		## Verify GPG signature (if enabled)
+		verify_package_signature
+
+		# Handle package replacement if needed
+		if [[ -n "${REPLACES_PACKAGE}" ]]; then
+			remove_replaced_package "${REPLACES_PACKAGE}"
+		fi
+
+		# Remove the old package BEFORE installing the new one
+		if [[ -n "${old_pkgname}" ]]; then
+			echogn " --- Removing old version:"
+			echo " ${old_pkgname}-${old_pkgversion}-${old_pkgrevision}"
+            
+			# Get data from old package
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkgname}"
+			# Remove package files
+			remove_package
+			# Remove configuration files
+			remove_package_config_files
+		fi
+
+		# Install the new version
+		bin_install
+		bin_install_setting_up
+		bin_install_create_config_files
+
+		cleanup_tmp_dir
+	done
+
+	## 6. Finalize
+	shooter_updates
+	update_local_db
+	echog " - System updated successfully!"
+	exit 0
 	;;
 	clean)
 # ********************************************************************
