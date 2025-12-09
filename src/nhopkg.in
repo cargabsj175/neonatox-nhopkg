@@ -2562,7 +2562,14 @@ function build_nhoid_to_bin()
 	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	fi
 	# Add new arch.
-	echo -e "# Arch:\t${BUILD_ARCH}" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Determine architecture correctly based on source package
+	original_arch=$(grep "^# Arch:" "${NHOPKG_TMPDIR}/.nhoid" 2>/dev/null | awk -F'\t' '{print $2}' | tr -d '[:space:]')
+	if [[ -n "${original_arch}" ]] && ([[ "${original_arch}" == "noarch" ]] || [[ "${original_arch}" == "all" ]] || [[ "${original_arch}" == "any" ]]); then
+		final_arch="${original_arch}"
+	else
+		final_arch="${BUILD_ARCH}"
+	fi
+	echo -e "# Arch:\t${final_arch}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# OS:\t${PACKAGE_OS}" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Installed-Size:\t${PACKAGE_SIZE} KB" >> "${NHOPKG_TMPDIR}/nhoid"
 	echo -e "# Build-Duration:\t${BUILD_TIME} min" >> "${NHOPKG_TMPDIR}/nhoid"
@@ -3785,14 +3792,17 @@ case "${NHOPKG_OPTION}" in
 			## 4. Compress new package.
 			# Building binary package.
 			cd "${NHOPKG_TMPDIR}"
-			# Getting the architecture from the nhoid on backup section.
-			arch=$(grep "# Arch:" ${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision} | sed 's@# Arch:\t@@g')
-			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" 2> /dev/null
-			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+			# Setting the architecture and os for the nhoid on backup section.
+			bakarch="$(grep "# Arch:" ${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision} | sed 's@# Arch:\t@@g')"
+			bakos="$(uname -s | awk '{print tolower ($1)}')"
+			baksha256="$(sha256sum data.tar.zst)"
+			sed -i "s/\(SHA256:\t\).*/SHA256:\t${baksha256}/" nhoid
+			tar cp * > "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.${bakos}-${bakarch}.nho" 2> /dev/null
+			chown "${DIROWNER}" "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.${bakos}-${bakarch}.nho"
 			cd ${CWD}
-			if [[ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho" ]]; then
+			if [[ -f "${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.${bakos}-${bakarch}.nho" ]]; then
 				echogn " --- New package is:"
-				echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.$(uname -s | awk '{print tolower ($1)}')-${arch}.nho"
+				echo " ${CWD}/${pkgname}-${pkgversion}-${pkgrevision}.${bakos}-${bakarch}.nho"
 			else
 				echog " *** Unable to build package." >&2
 				cleanup_tmp_dir
