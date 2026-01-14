@@ -39,6 +39,9 @@ NHOPKG_CHECKARCH=yes
 # Verbose mode for nhopkg (yes OR no):
 VERBOSE_MODE=no
 
+# Strip binaries and libraries if enabled (yes OR no) (experimental):
+STRIP_BINARIES=yes
+
 # Sign binary packages with PGP
 NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
 # Sign packages when building (maintainers only)
@@ -52,13 +55,13 @@ NHOPKG_REQUIRE_SIGNATURE=no
 # Repositories configuration for nhopkg.
 # Default repository of Nhopkg. You can change it.
 # Active repos (separated with spaces lowcase)
-# NHOPKG_ACTIVE_REPOS="core extra multilib"
-NHOPKG_ACTIVE_REPOS="extra"
+NHOPKG_ACTIVE_REPOS="core extra multilib"
 # Repositorry CORE (can content mirrors separated with spaces)
-# NHOPKG_REPO_CORE="https://example1.mirror.com/repo/core/x86_64 https://example2.mirror.com/repo/core/x86_64"
-NHOPKG_REPO_EXTRA="@NHOPKG_REPO@" # Default
+NHOPKG_REPO_CORE="@NHOPKG_REPO_CORE@"
+# Repositorry EXTRA (can content mirrors separated with spaces)
+NHOPKG_REPO_EXTRA="@NHOPKG_REPO_EXTRA@"
 # Repositorry MULTILIB (can content mirrors separated with spaces)
-# NHOPKG_REPO_MULTILIB="https://example3.mirror.com/repo/multilib/x86_64"
+NHOPKG_REPO_MULTILIB="@NHOPKG_REPO_MULTILIB@"
 
 # Default GIT repository of Nhopkg. You can change it.
 NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources

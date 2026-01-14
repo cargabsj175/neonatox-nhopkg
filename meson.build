@@ -10,7 +10,9 @@ project('nhopkg', 'c',
 
 # === Opciones de configuración ===
 binlocate = get_option('binlocate')
-repo_url = get_option('repo-url')
+repo_url_core = get_option('repo-url-core')
+repo_url_extra = get_option('repo-url-extra')
+repo_url_multilib = get_option('repo-url-multilib')
 git_url = get_option('git-url')
 
 # === Configuración para sustitución en archivos .in ===
@@ -30,7 +32,9 @@ conf.set('localedir', join_paths(get_option('prefix'), 'share', 'locale'))
 # Variables para nhopkg.conf.in
 conf.set('datarootdir', join_paths(get_option('prefix'), get_option('datadir')))
 conf.set('PACKAGE', meson.project_name())
-conf.set('NHOPKG_REPO', repo_url)
+conf.set('NHOPKG_REPO_CORE', repo_url_core)
+conf.set('NHOPKG_REPO_EXTRA', repo_url_extra)
+conf.set('NHOPKG_REPO_MULTILIB', repo_url_multilib)
 conf.set('NHOPKG_GIT_SOURCES', git_url)
 
 # Variables para nhopkg.in

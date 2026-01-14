@@ -2679,6 +2679,36 @@ function build_make_binary_package()
 	# Package and compress files.
 	echog " --- Compressing package."
 	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
+		# Strip binaries and libraries if enabled  (experimental)
+		if [[ "${STRIP_BINARIES}" = "yes" ]]; then
+			echog " --- Stripping binaries and/or libraries..."
+
+			local processed=0
+
+			while IFS= read -r file; do
+				[[ -f "$file" && -r "$file" ]] || continue
+
+				# avoid setuid/setgid
+				[[ -u "$file" || -g "$file" ]] && continue
+
+				# ELF check
+				[[ $(head -c 4 "$file") != $'\x7fELF' ]] && continue
+
+				local file_output
+				file_output=$(file -b "$file" 2>/dev/null)
+
+				# avoid static binaries
+				[[ "$file_output" == *"statically linked"* ]] && continue
+
+				if [[ "$file_output" == *"shared object"* ]]; then
+					strip --strip-unneeded "$file" 2>/dev/null && ((processed++))
+				else
+					strip --strip-debug "$file" 2>/dev/null && ((processed++))
+				fi
+			done < "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log"
+
+			echog "Stripped $processed ELF files"
+		fi
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled
 		if [[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]] && command -v gpg >/dev/null; then

@@ -5,10 +5,22 @@ option('binlocate',
   description: 'File search tool'
 )
 
-option('repo-url',
+option('repo-url-core',
   type: 'string',
-  value: 'https://neonatox.vegnux.com/repo/n2025/x86_64',
-  description: 'Default repository URL'
+  value: 'https://neonatox.vegnux.com/repo/n2026/x86_64/core',
+  description: 'Default Core repository URL'
+)
+
+option('repo-url-extra',
+  type: 'string',
+  value: 'https://neonatox.vegnux.com/repo/n2026/x86_64/extra',
+  description: 'Default Extra repository URL'
+)
+
+option('repo-url-multilib',
+  type: 'string',
+  value: 'https://neonatox.vegnux.com/repo/n2026/x86_64/multilib',
+  description: 'Default Multilib repository URL'
 )
 
 option('git-url',
