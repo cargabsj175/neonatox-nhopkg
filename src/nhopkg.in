@@ -4716,182 +4716,147 @@ case "${NHOPKG_OPTION}" in
 	;;
 	upgrade)
 # ********************************************************************
-#
-# Section: Upgrade (update all installed packages)
-# 1. Basic configurations and update repositories
-# 2. Get list of installed packages
-# 3. Check for available updates
-# 4. Prompt user which packages to update
-# 5. Download and install updates
-# 6. Update local databases
-#
+# Upgrade: update all installed packages
+# Flow:
+# 1. Update repos
+# 2. Detect upgradable packages
+# 3. Ask user
+# 4. Resolve deps (read-only)
+# 5. Download ALL packages
+# 6. Install deps
+# 7. Install upgrades
+# 8. Update databases
 # ********************************************************************
-    ## 1. Basic configurations and update repositories
+
+    ## 1. Basic checks and repo update
     get_pwd_dir
     check_if_root_uid
+
     echog " - Updating repository databases..."
     update_repositories
     check_if_ok " * Failed to update the repositories."
-    
-    ## 2. Get list of installed packages
+
+    ## 2. Get installed packages
     get_list_installed_packages
     if [[ ${#installedpackages[@]} -eq 0 ]]; then
         echog " * No packages are installed."
         exit 0
     fi
-    
-    ## 3. Check for available updates
+
+    ## 3. Detect available upgrades
     declare -a packages_to_update
     declare -a current_versions
     declare -a new_versions
-    
+
     echog " - Checking for available updates..."
     for installed_pkg in "${installedpackages[@]}"; do
-        # Skip if it's a symlink (not a real package file)
         [[ -h "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
-        
-        # Skip if it's not a regular file
         [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
-        
-        # Get information from installed package
-        if grep -q "^#%NHO-" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null; then
-            # This is a proper nhopkg package file
-            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}"
-            current_pkgname="${pkgname}"
-            current_full_version="${pkgversion}-${pkgrevision}"
-        else
-            # This might be a legacy package or different format
-            # Try to extract package name from filename
-            current_pkgname=$(basename "${installed_pkg}" | sed -e 's/-[0-9].*//')
-            # Try to get version and revision from the file if possible
-            pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null | awk -F'\t' '{print $2}')
-            pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" 2>/dev/null | awk -F'\t' '{print $2}')
-            # If we can't get version/revision, skip this package
-            if [[ -z "${pkgversion}" ]] || [[ -z "${pkgrevision}" ]]; then
-                if [[ "${VERBOSE_MODE}" = "yes" ]]; then
-                    echog " --- Skipping ${installed_pkg}: unable to determine version"
-                fi
-                continue
-            fi
-            current_full_version="${pkgversion}-${pkgrevision}"
-        fi
-        
-        # Skip packages with empty names
-        [[ -z "${current_pkgname}" ]] && continue
-        
-        # Search the package in repositories
-        if package_exists_in_repos "${current_pkgname}"; then
-            # Get information of the available version
-            if get_latest_version_in_repos "${current_pkgname}"; then
-                new_full_version="${pkgversion}-${pkgrevision}"
-                
-                # Compare versions
-                if version_compare "${new_full_version}" ">" "${current_full_version}"; then
-                    packages_to_update+=("${current_pkgname}")
-                    current_versions+=("${current_full_version}")
-                    new_versions+=("${new_full_version}")
-                fi
-            fi
+
+        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}"
+        current_pkgname="${pkgname}"
+        current_full_version="${pkgversion}-${pkgrevision}"
+
+        package_exists_in_repos "${current_pkgname}" || continue
+        get_latest_version_in_repos "${current_pkgname}" || continue
+
+        new_full_version="${pkgversion}-${pkgrevision}"
+
+        if version_compare "${new_full_version}" ">" "${current_full_version}"; then
+            packages_to_update+=("${current_pkgname}")
+            current_versions+=("${current_full_version}")
+            new_versions+=("${new_full_version}")
         fi
     done
-    
-    ## 4. Show updates and ask user
+
+    ## 4. Ask user
     if [[ ${#packages_to_update[@]} -eq 0 ]]; then
         echog " - No updates are available."
         exit 0
     fi
-    
-    echog " - Updates are available for the following packages:"
+
+    echog " - Updates are available:"
     for i in "${!packages_to_update[@]}"; do
         echo "   ${packages_to_update[$i]}: ${current_versions[$i]} -> ${new_versions[$i]}"
     done
-    
+
     nhopkg_ask_follow
     check_if_ok " * Packages will not be updated."
-    
-    ## 5. Download and install updates
+
+    ## 5. Resolve deps (READ-ONLY) + prepare download list
+    declare -a UPGRADE_NHOS
+    unset RCASEPACKAGES ORCASEPACKAGES
+
     for pkg_name in "${packages_to_update[@]}"; do
-        echogn " :: Updating:"
-        echo " ${pkg_name}"
-        
-        # Save information from the old package
-        if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" ]]; then
-            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}"
-            old_pkgname="${pkgname}"
-            old_pkgversion="${pkgversion}"
-            old_pkgrevision="${pkgrevision}"
-            old_pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" 2>/dev/null | awk -F'\t' '{print $2}')
-            old_pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/packages/${pkg_name}" 2>/dev/null | awk -F'\t' '{print $2}')
-        fi
-        
-        # Reuse super-install logic
         CASEPACKAGE="${pkg_name}"
-        getpackage  # Search the package in repositories
-        check_if_ok " * Package ${pkg_name} not found in repositories"
-        
-        # Check for conflicts before proceeding
-        if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
-            check_package_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-        fi
-        
-        downloadpackage  # Download
-        
-        # Install the updated package
+        getpackage || exit 1
+
+        # Pre-check conflicts using repo metadata
+        check_package_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+
+        # Load nhoid from repo package (only for deps resolution)
+        check_post_dependencies "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+    done
+
+    ## 6. Download EVERYTHING (deps + upgrades)
+    echog " - Downloading upgrade packages..."
+    for pkg_name in "${packages_to_update[@]}"; do
+        CASEPACKAGE="${pkg_name}"
+        getpackage || exit 1
+        downloadpackage
+        UPGRADE_NHOS+=("${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
+    done
+
+    downloadrequiredeps
+    downloadoptdeps
+
+    ## 7. Install dependencies first
+    installdownloadedeps
+
+    ## 8. Install upgraded packages
+    for nho in "${UPGRADE_NHOS[@]}"; do
         cleanup_tmp_dir
         make_tmp_dir
-        
-        # Uncompress package
-        tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2>/dev/null
-        check_if_ok " * Error decompressing the package."
-        
-        [[ -f "${NHOPKG_TMPDIR}/nhoid" ]] || {
-            echog " * Invalid package." >&2
-            cleanup_tmp_dir
-            continue
-        }
-        
-        # Get data from package.
-		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 
-		## Checks SHA256 sum and architecture.
-		check_package_sha256sum
-		check_package_arch
- 
-		## Verify GPG signature (if enabled)
-		verify_package_signature
+        tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${nho}" "${NHOPKG_TMPDIR}" || exit 1
+        get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 
-		# Handle package replacement if needed
-		if [[ -n "${REPLACES_PACKAGE}" ]]; then
-			remove_replaced_package "${REPLACES_PACKAGE}"
-		fi
+        check_package_sha256sum
+        check_package_arch
+        verify_package_signature
 
-		# Remove the old package BEFORE installing the new one
-		if [[ -n "${old_pkgname}" ]]; then
-			echogn " --- Removing old version:"
-			echo " ${old_pkgname}-${old_pkgversion}-${old_pkgrevision}"
-            
-			# Get data from old package
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkgname}"
-			# Remove package files
-			remove_package
-			# Remove configuration files
-			remove_package_config_files
-		fi
+        # Save NEW version data
+        NEW_PKGNAME="$pkgname"
+        NEW_PKGVERSION="$pkgversion"
+        NEW_PKGREVISION="$pkgrevision"
 
-		# Install the new version
-		bin_install
-		bin_install_setting_up
-		bin_install_create_config_files
+        # Remove OLD version
+        if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+            get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+            echog " --- Removing ${pkgname}-${pkgversion}-${pkgrevision}"
+            remove_package
+            remove_package_config_files
+        fi
 
-		cleanup_tmp_dir
-	done
+        # Restore NEW metadata (IMPORTANT)
+        pkgname="$NEW_PKGNAME"
+        pkgversion="$NEW_PKGVERSION"
+        pkgrevision="$NEW_PKGREVISION"
 
-	## 6. Finalize
-	shooter_updates
-	update_local_db
-	echog " - System updated successfully!"
-	exit 0
-	;;
+        # Install
+        bin_install
+        bin_install_setting_up
+        bin_install_create_config_files
+
+        cleanup_tmp_dir
+    done
+
+    ## 9. Finalize
+    shooter_updates
+    update_local_db
+    echog " - System updated successfully!"
+    exit 0
+    ;;
 	clean)
 # ********************************************************************
 #
