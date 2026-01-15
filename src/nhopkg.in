@@ -2736,7 +2736,7 @@ function build_make_binary_package()
 		build_nhoid_to_bin ${part}
 		# Compress package!
 		get_package_display_name "$part"
-		OUTPUT_PKG="${CWD}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}.${PACKAGE_OS}-${BUILD_ARCH}.nho"
+		OUTPUT_PKG="${CWD}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}.${PACKAGE_OS}-${final_arch}.nho"
 		tar cp * > "${OUTPUT_PKG}"
 		chown "${DIROWNER}" "${OUTPUT_PKG}"
 		if [ -f "${OUTPUT_PKG}" ]; then
