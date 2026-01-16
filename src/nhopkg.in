@@ -173,22 +173,41 @@ function get_package_display_name()
 shooter_updates() {
     local verbose=true update_count=0 update_errors=0
     local GLIB_SCHEMAS ICON_CACHE DESKTOP_DB MIME_DB MANDB FC_CACHE LDCONFIG
-
-    GLIB_SCHEMAS=$(command -v glib-compile-schemas || true)
-    ICON_CACHE=$(command -v gtk-update-icon-cache || true)
-    DESKTOP_DB=$(command -v update-desktop-database || true)
-    MIME_DB=$(command -v update-mime-database || true)
-    MANDB=$(command -v mandb || true)
-    FC_CACHE=$(command -v fc-cache || true)
-    LDCONFIG=$(command -v ldconfig || true)
-
+    
+    # Save the command name even if it doesn't exist
+    # If `command -v` finds it, save the path; otherwise, save the name as a string
+    get_command() {
+        local cmd_path
+        cmd_path=$(command -v "$1" 2>/dev/null)
+        echo "${cmd_path:-$1}"
+    }
+    
+    GLIB_SCHEMAS=$(get_command glib-compile-schemas)
+    ICON_CACHE=$(get_command gtk-update-icon-cache)
+    DESKTOP_DB=$(get_command update-desktop-database)
+    MIME_DB=$(get_command update-mime-database)
+    MANDB=$(get_command mandb)
+    FC_CACHE=$(get_command fc-cache)
+    LDCONFIG=$(get_command ldconfig)
+    
     [[ "$1" == "silent" ]] && verbose=false
 
     run_update() {
         local cmd="$1" desc="$2"; shift 2
-        [[ -n "$cmd" && -x "$cmd" ]] || { $verbose && echog " --- Tool not found, skipping"; return 2; }
+        # Check if cmd is an absolute path (starts with /)
+        if [[ "$cmd" != /* ]]; then
+            # It's not a path, it's just the command name (not found)
+            $verbose && echogn " --- Tool not found (skipping): " && echo "$cmd"
+            return 2
+        fi
+        
+        # It's a path, check if it's executable
+        [[ -x "$cmd" ]] || { 
+            $verbose && echogn " --- Tool not executable (skipping): " && echo "$cmd"
+            return 2
+        }
 
-        $verbose && echog " --- Updating $desc..."
+        $verbose && echogn " --- Updating: " && echo "${desc}"
         if "$cmd" "$@" &>/dev/null; then
             ((update_count++))
             $verbose && echog "\t** OK: Update completed successfully"
@@ -2452,33 +2471,26 @@ function check_build_package_install()
 }
 ## Function build_save_log_files(). Save logs on logs/ directory and compress (zstd).
 # Usage: build_save_log_files (with/without split arguments)
-build_save_log_files()
+function build_save_log_files()
 {
-    part="$1"  # Parameter for subpackages. If there is no part, we use the main package
-    [ -z "$part" ] && part=""
-    get_package_display_name "$part"
+	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
+	if [[ -z "${part}" ]]; then
+		part=""
+	fi
+	get_package_display_name "${part}"
 
-    LOGDIR="${NHOPKG_LOCALSTATEDIR}/logs"
-
-    if [ -e "$LOGDIR" ] && [ ! -d "$LOGDIR" ]; then
-        echog " --- Veryfing logs path"
-        rm -f "$LOGDIR"
-    fi
-
-    mkdir -p "$LOGDIR"
-
-    echogn " --- Saving logs on"
-    echo " $LOGDIR"
-
-    if [ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]; then
-        mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "$LOGDIR/"
-        zstd --rm "$LOGDIR/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2>/dev/null
-    fi
-
-    if [ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]; then
-        mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "$LOGDIR/"
-        zstd --rm "$LOGDIR/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2>/dev/null
-    fi
+	echogn " --- Saving logs on"
+	echo " ${NHOPKG_LOCALSTATEDIR}/logs"
+	if [[ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+		# Compress with zstd
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
+	fi
+	if [[ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
+		mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
+		# Compress with zstd
+		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
+	fi
 }
 ## Function build_search_for_files(). Search for files installed by package.
 # Usage: build_search_for_files (with/without split arguments)
@@ -2644,10 +2656,10 @@ REMOVE_SPECIFIC="npostremove${part:+_}${part}"
 # === npostinstall logic for splitpackages ===
 if grep -q "^${INSTALL_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${INSTALL_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" | sed  "s|_${part}||g" >> "${NHOPKG_TMPDIR}/nhoid"
-    echog "Using ${INSTALL_SPECIFIC}() for post-install."
+    echogn "\t** Using for post-install: " && echo "${INSTALL_SPECIFIC}()"
 elif grep -q "^${INSTALL_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${INSTALL_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-    echog "Using ${INSTALL_GENERIC}() as fallback for post-install."
+    echogn "\t** Using as fallback for post-install: " && echo "${INSTALL_GENERIC}()"
 else
     echo 'npostinstall() {' >> "${NHOPKG_TMPDIR}/nhoid"
     echo '    noemptyfuncs' >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2658,10 +2670,10 @@ fi
 # === npostremove logic  for splitpackages ===
 if grep -q "^${REMOVE_SPECIFIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${REMOVE_SPECIFIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" | sed  "s|_${part}||g" >> "${NHOPKG_TMPDIR}/nhoid"
-    echog "Using ${REMOVE_SPECIFIC}() for post-remove."
+    echogn "\t** Using for post-remove: " && echo "${REMOVE_SPECIFIC}()"
 elif grep -q "^${REMOVE_GENERIC}() {" "${NHOPKG_TMPDIR}/.nhoid"; then
     sed -n "/^${REMOVE_GENERIC}() {/,/^}/p" "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-    echog "Using ${REMOVE_GENERIC}() as fallback for post-remove."
+    echogn "\t** Using as fallback for post-remove: " && echo "${REMOVE_GENERIC}()"
 else
     echo 'npostremove() {' >> "${NHOPKG_TMPDIR}/nhoid"
     echo '    noemptyfuncs' >> "${NHOPKG_TMPDIR}/nhoid"
@@ -2714,7 +2726,7 @@ function build_make_binary_package()
 				fi
 			done < "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log"
 
-			echog "Stripped $processed ELF files"
+			echog "\t** Stripped $processed ELF files"
 		fi
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled
