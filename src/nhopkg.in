@@ -151,6 +151,89 @@ noemptyfuncs()
 	return 0 # Best than others.
 }
 # ---------------------------------------------------------
+# nhouser()
+# Description: Creates or verifies system users and groups.
+#              Supports idempotent operation for package scripts,
+#              allowing safe execution during build, install, or
+#              post-install phases.
+#              User and group creation is performed only when needed,
+#              following BLFS/LFS conventions.
+# Parameters: Command-line options (--check, --create, --user, --group,
+#             --uid, --gid, --shell, --groups, etc.)
+# Returns: 0 on success, non-zero on error
+# ---------------------------------------------------------
+nhouser() {
+    MODE=""
+    VERBOSE=0
+
+    USER= U_ID= COMMENT= HOME= SHELL=
+    GNAME= G_ID= GROUPS=
+    GROUP_DONE=0
+
+    log() { [ "$VERBOSE" = 1 ] && echog "$*"; }
+
+    user_exists() { id "$1" >/dev/null 2>&1; }
+    group_exists() { grep -q "^$1:" /etc/group; }
+
+    usage() {
+        echo "nhouser --check|--create --user NAME [options]"
+        echo "nhouser --check|--create --group NAME [--gid GID]"
+    }
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --check|--create) MODE="$1" ;;
+            --verbose) VERBOSE=1 ;;
+            --user) USER="$2"; shift ;;
+            --uid) U_ID="$2"; shift ;;
+            --uname) COMMENT="$2"; shift ;;
+            --udir) HOME="$2"; shift ;;
+            --shell) SHELL="$2"; shift ;;
+            --group) GNAME="$2"; shift ;;
+            --gid) G_ID="$2"; shift ;;
+            --groups) GROUPS="$2"; shift ;;
+            --help) usage; return 0 ;;
+            *) echo "Opción inválida: $1" >&2; return 1 ;;
+        esac
+        shift
+    done
+
+    [ -z "$MODE" ] && { echo "Missing --check or --create" >&2; return 1; }
+    [ -z "$USER$GNAME" ] && { echo "Missing --user or --group" >&2; return 1; }
+
+    [ -n "$U_ID" ] && case $U_ID in *[!0-9]*) echo "Invalid UID: $U_ID" >&2; return 1;; esac
+    [ -n "$G_ID" ] && case $G_ID in *[!0-9]*) echo "Invalid GID: $G_ID" >&2; return 1;; esac
+
+    # Grupo explícito
+    if [ -n "$GNAME" ] && ! group_exists "$GNAME"; then
+        log "Creating group $GNAME"
+        groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+        GROUP_DONE=1
+    fi
+
+    # User
+    if [ -n "$USER" ]; then
+        if [ -n "$GNAME" ] && [ "$GROUP_DONE" = 0 ] && ! group_exists "$GNAME"; then
+            log "Creating a primary group $GNAME"
+            groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+        fi
+
+        if ! user_exists "$USER" || [ "$MODE" = "--create" ]; then
+            log "Creating user $USER"
+            useradd -m \
+                ${U_ID:+-u "$U_ID"} \
+                ${COMMENT:+-c "$COMMENT"} \
+                ${HOME:+-d "$HOME"} \
+                ${SHELL:+-s "$SHELL"} \
+                ${GNAME:+-g "$GNAME"} \
+                ${GROUPS:+-G "$GROUPS"} \
+                "$USER" || return 1
+        else
+            log "User $USER already exists"
+        fi
+    fi
+}
+# ---------------------------------------------------------
 # get_package_display_name()
 # Description: Returns the proper package name, applying multilib hacks.
 # Parameters: part (optional)
