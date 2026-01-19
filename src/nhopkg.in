@@ -151,6 +151,53 @@ noemptyfuncs()
 	return 0 # Best than others.
 }
 # ---------------------------------------------------------
+# install_init_unit()
+# Description: Install or remove init service units using
+#              external providers (BLFS).
+#              Automatically selects the backend according
+#              to INITSYSTEM (systemd or sysvinit).
+#              Action "remove" is normalized to "uninstall".
+# Parameters:
+#   $1 - Action: install | remove
+#   $2 - Service name (must match Makefile target name)
+# Returns:
+#   0 on success or if init system is unsupported.
+#   1 on error (missing parameters, download/extract failure).
+# ---------------------------------------------------------
+install_init_unit()
+{
+    action="$1"    # install | remove
+    service="$2"   # ej: slapd
+
+    [ -n "$action" ] && [ -n "$service" ] || return 1
+
+    # Normalizar acción
+    [ "$action" = "remove" ] && action="uninstall"
+
+    case "$INITSYSTEM" in
+        systemd)
+            dir="$SYSTEMD_BLFS_DIR"
+            url="$SYSTEMD_BLFS_URL"
+            ;;
+        sysvinit)
+            dir="$SYSV_BLFS_DIR"
+            url="$SYSV_BLFS_URL"
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    if [ ! -d "$dir" ]; then
+        wget -qO- "$url" | tar -xJ -C /usr/src || return 1
+    fi
+
+    cd "$dir" || return 1
+    echogn " --- Installing service: "
+    echo "${service}"
+    make "${action}-${service}"
+}
+# ---------------------------------------------------------
 # nhouser()
 # Description: Creates or verifies system users and groups.
 #              Supports idempotent operation for package scripts,

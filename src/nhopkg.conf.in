@@ -42,6 +42,19 @@ VERBOSE_MODE=no
 # Strip binaries and libraries if enabled (yes OR no) (experimental):
 STRIP_BINARIES=no
 
+# Init system: systemd | sysvinit
+INITSYSTEM=systemd
+
+# Systemd (BLFS units)
+SYSTEMD_BLFS_VER=20251204
+SYSTEMD_BLFS_DIR=/usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}
+SYSTEMD_BLFS_URL=https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz
+
+# SysVinit (BLFS bootscripts)
+SYSV_BLFS_VER=20251220
+SYSV_BLFS_DIR=/usr/src/blfs-bootscripts-${SYSV_BLFS_VER}
+SYSV_BLFS_URL=https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz
+
 # Sign binary packages with PGP
 NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
 # Sign packages when building (maintainers only)
