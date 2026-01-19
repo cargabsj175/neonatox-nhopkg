@@ -76,7 +76,7 @@ export TEXTDOMAIN TEXTDOMAINDIR
 # Parameters: "Message to user."
 # Returns: 0 in success.
 # ---------------------------------------------------------
-function echog()
+echog()
 {
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
 		gettext -es "${*}"
@@ -92,7 +92,7 @@ function echog()
 # Parameters: "Message to user."
 # Returns: 0 in success.
 # ---------------------------------------------------------
-function echogn()
+echogn()
 {
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
 		gettext -ens "${*}"
@@ -111,11 +111,11 @@ function echogn()
 #======================================0
 # ---------------------------------------------------------
 # get_good_file_name()
-# Description: This function is used to get the good file name to search dependencies.
+# Description: This is used to get the good file name to search dependencies.
 # Parameters: file_name
 # Returns: 0 in success and GOOD_FILE_NAME variable.
 # ---------------------------------------------------------
-function get_good_file_name()
+get_good_file_name()
 {
 	REAL_FILE_NAME="${1}"
 	REAL_FILE_NAME_WITH_SPACES=$(echo "${REAL_FILE_NAME}" | sed -e 's@/@ @g')
@@ -139,11 +139,11 @@ function get_good_file_name()
 }
 # ---------------------------------------------------------
 # noemptyfuncs()
-# Description: This function is used if you don't want a bash error if any function is empty.
+# Description: This is used if you don't want a bash error if any is empty.
 # Parameters: none
 # Returns: 0 in any way.
 # ---------------------------------------------------------
-function noemptyfuncs()
+noemptyfuncs()
 {
 	# Do you prefer other?
 	#echo -n
@@ -156,7 +156,7 @@ function noemptyfuncs()
 # Parameters: part (optional)
 # Returns: Proper package name in variable PKG_DISPLAY_NAME
 # ---------------------------------------------------------
-function get_package_display_name()
+get_package_display_name()
 {
     local part="$1"
     if [[ "$part" = "lib32" ]]; then
@@ -167,7 +167,7 @@ function get_package_display_name()
 }
 # ---------------------------------------------------------
 # shooter_updates()
-# Description: This function generates schemas, update database icons, desktop and mime types.
+# Description: This generates schemas, update database icons, desktop and mime types.
 # Parameters: updates
 # ---------------------------------------------------------
 shooter_updates() {
@@ -265,11 +265,11 @@ shooter_updates() {
 }
 # ---------------------------------------------------------
 # print_background_title()
-# Description: This function prints a title.
+# Description: This prints a title.
 # Parameters: message
 # Returns: 0 in any way and title messages.
 # ---------------------------------------------------------
-function print_background_title()
+print_background_title()
 {
 	# Get message text.
 	MESSAGE="${1}"
@@ -300,7 +300,7 @@ function print_background_title()
 # Parameters: none
 # Returns: 0 in any way and Nhopkg version.
 # ---------------------------------------------------------
-function nhopkg_version()
+nhopkg_version()
 {
 	echo
 	## Check if Nhopkg is running in LFS system ;-)
@@ -319,7 +319,7 @@ function nhopkg_version()
 # Parameters: none
 # Returns: 0 in success and usage message.
 # ---------------------------------------------------------
-function nhopkg_usage()
+nhopkg_usage()
 {
 	echo
 	echog "Usage: nhopkg [command] [options] package"
@@ -332,7 +332,7 @@ function nhopkg_usage()
 # Parameters: none
 # Returns: 0 in success and usage message (with sudo).
 # ---------------------------------------------------------
-function nhopkg_usage_with_sudo()
+nhopkg_usage_with_sudo()
 {
 	echo
 	echog "Usage: sudo nhopkg [command] [options] package"
@@ -345,7 +345,7 @@ function nhopkg_usage_with_sudo()
 # Parameters: none
 # Returns: 0 in success and license message.
 # ---------------------------------------------------------
-function nhopkg_license()
+nhopkg_license()
 {
 	echo "Nhopkg  Copyright (C) 2008-2009  Jaime Gil de Sagredo Luna <projectnhoax@gmail.com>"
 	echo "Nhopkg  Copyright (C) 2009-2025  Carlos Sánchez <cargabsj175@gmail.com>"
@@ -361,7 +361,7 @@ function nhopkg_license()
 # Returns: 0 in success and help pages.
 # TODO: Add support to explain any command with --help command.
 # ---------------------------------------------------------
-function nhopkg_help()
+nhopkg_help()
 {
 	nhopkg_usage_with_sudo
 	echo
@@ -422,7 +422,7 @@ function nhopkg_help()
 # Parameters: none
 # Returns: NHOPKG_LECHE variable (1 if running and 0 if not).
 # ---------------------------------------------------------
-function check_if_running()
+check_if_running()
 {
 	declare -x NHOPKG_LECHE
 	NHOPKG_LECHE=0
@@ -459,7 +459,7 @@ function check_if_running()
 # Parameters: none
 # Returns: CWD and DIROWNER variables. Return 0 if success.
 # ---------------------------------------------------------
-function get_pwd_dir()
+get_pwd_dir()
 {
 	if [[ -d $(pwd) ]]; then
 		CWD=$(pwd)
@@ -480,7 +480,7 @@ function get_pwd_dir()
 # Parameters: none
 # Returns: exit 1 if not root. Return 0 if success.
 # ---------------------------------------------------------
-function check_if_root_uid()
+check_if_root_uid()
 {
 	if [[ "${UID}" != "0" ]]; then
 		echog "To run Nhopkg you need have root powers."
@@ -494,7 +494,7 @@ function check_if_root_uid()
 # Parameters: none
 # Returns: NHOPKG_TMPDIR variable (is temporal directory). Return 0 if success.
 # ---------------------------------------------------------
-function make_tmp_dir()
+make_tmp_dir()
 {
 	NHOPKG_TMPDIR=$(mktemp -udt "${TEMPLATE_TMPDIR}" -p "${TMPDIR}")
 	mkdir -p "${NHOPKG_TMPDIR}"
@@ -507,7 +507,7 @@ function make_tmp_dir()
 # Parameters: none
 # Returns: Return 0 if success. Error message and exit 1 if error.
 # ---------------------------------------------------------
-function check_if_ok() {
+check_if_ok() {
 	if [[ "${?}" != "0" ]]; then
 		NHO_MSG_ERROR="${1}"
 		if [[ -n "${NHO_MSG_ERROR}" ]]; then			
@@ -525,7 +525,7 @@ function check_if_ok() {
 # Parameters: none
 # Returns: Return 0 if success.
 # ---------------------------------------------------------
-function update_local_db()
+update_local_db()
 {
 	echogn " --- Updating database:"
 	echo " ${NHOPKG_DB}"
@@ -539,7 +539,7 @@ function update_local_db()
 # Parameters: none
 # Returns: Return 0 if yes and 1 if no.
 # ---------------------------------------------------------
-function nhopkg_ask_follow()
+nhopkg_ask_follow()
 {
 	if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
 		# If you set recursive mode don't ask. By default YES (0).
@@ -570,7 +570,7 @@ function nhopkg_ask_follow()
 #======================================1
 ## Funtion cleanup_tmp_dir(). Clean up temporal directory recursively.
 # Usage: cleanup_tmp_dir (without arguments)
-function cleanup_tmp_dir()
+cleanup_tmp_dir()
 {
 	if [[ -d "${NHOPKG_TMPDIR}" ]]; then
 		echog " --- Deleting temporary directory."
@@ -580,7 +580,7 @@ function cleanup_tmp_dir()
 }
 ## Funtion cleanup_all(). Clean up nhopkg.
 # Usage: cleanup_all (without arguments)
-function cleanup_all()
+cleanup_all()
 {
 	if [[ -f "${NHOPKG_LOCKFILE}" ]]; then
 		rm -f "${NHOPKG_LOCKFILE}"
@@ -588,9 +588,9 @@ function cleanup_all()
 		cleanup_tmp_dir
 	fi
 }
-## Function cleanup_build_dir(). Clean up nhopkg build directory.
+## cleanup_build_dir(). Clean up nhopkg build directory.
 # Usage: cleanup_build_dir (without arguments)
-function cleanup_build_dir()
+cleanup_build_dir()
 {
 	if [[ -d "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}" ]]; then
 		echog "Compilation directory will be removed from your system."
@@ -611,9 +611,9 @@ function cleanup_build_dir()
 #================================2
 # Packages nhopkg functions
 #================================2
-## Function check_if_exist_local_package(). Check if selected package exists. If not exist fails.
+## check_if_exist_local_package(). Check if selected package exists. If not exist fails.
 # Usage: check_if_exist_local_package package (or file)
-function check_if_exist_local_package()
+check_if_exist_local_package()
 {
 	if [[ ! -f "${1}" ]]; then
 		echo -n "${1}: " >&2
@@ -621,10 +621,10 @@ function check_if_exist_local_package()
 		exit 1
 	fi
 }
-## Function get_basic_data(). Get basic data from package and checks it.
+## get_basic_data(). Get basic data from package and checks it.
 # Usage: get_basic_data package_info_file
 # Gives: pkgname, pkgversion and pkgrevision variables.
-function get_basic_data()
+get_basic_data()
 {
 	# Get basic package info.
 	pkgname=$(grep "# Name:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -638,10 +638,10 @@ function get_basic_data()
 		exit 1
 	fi
 }
-## Function get_nhoid_data(). Get data from package and checks that is a correct package.
+## get_nhoid_data(). Get data from package and checks that is a correct package.
 # Usage: get_nhoid_data nhoid_file
 # Gives: nhoid (local), pkgowner, pkgname, pkgversion, pkgrevision, pkglicense, pkggroup, pkgurl, pkgdescription, pkgsha256, pkgarch and pkginstalledsize variables.
-function get_nhoid_data()
+get_nhoid_data()
 {
 	local nhoid=$(grep "^#%NHO-" "${1}" 2> /dev/null | sed -e 's@^#%NHO-@@')
 	pkgowner=$(grep "^# Package Maintainer:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
@@ -781,7 +781,7 @@ version_compare() {
 #   PROVIDES_LIST=(name1 name2 ...)
 #   CONFLICTS_SPECS=(spec1 spec2 ...)  # ej: "foo>=2.0"
 # ---------------------------------------------------------
-function get_package_provides_and_conflicts()
+get_package_provides_and_conflicts()
 {
     local nhoid_file="$1"
     PROVIDES_LIST=()
@@ -812,7 +812,7 @@ function get_package_provides_and_conflicts()
 # Description: Check for conflicts with version operator support.
 # Sets global: REPLACES_PACKAGE (if a valid replacement exists)
 # ---------------------------------------------------------
-function check_package_conflicts()
+check_package_conflicts()
 {
     local nhoid_file="$1"
     local new_pkgname new_pkgversion new_pkgrevision
@@ -942,9 +942,9 @@ function check_package_conflicts()
         done
     done
 }
-## Function check_package_sha256sum(). Check sha256 of package.
+## check_package_sha256sum(). Check sha256 of package.
 # Usage: check_package_sha256sum (without arguments)
-function check_package_sha256sum()
+check_package_sha256sum()
 {
     if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
         return 0
@@ -983,9 +983,9 @@ function check_package_sha256sum()
     check_if_ok " *** SHA256 checksum of package did not match."
     cd "${CWD}"
 }
-## Function check_package_arch(). Check architecture of package and compare it with the system.
+## check_package_arch(). Check architecture of package and compare it with the system.
 # Usage: check_package_arch (without arguments)
-function check_package_arch()
+check_package_arch()
 {
 	if [[ "${NHOPKG_CHECKARCH}" != "yes" ]]; then
 		return 0
@@ -1034,9 +1034,9 @@ function check_package_arch()
 		exit 1
 	fi
 }
-## Function check_if_installed_package(). Checks if package is already installed in the system.
+## check_if_installed_package(). Checks if package is already installed in the system.
 # Usage: check_if_installed_package (without arguments)
-function check_if_installed_package()
+check_if_installed_package()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -1109,7 +1109,7 @@ function check_if_installed_package()
 # Parameters: package_spec (e.g., "gd", "gd>=1.0", "libfoo!=3.1")
 # Returns: Full path to package file in ${NHOPKG_LOCALSTATEDIR}/packages/, or empty if not found/invalid.
 # ---------------------------------------------------------
-function resolve_package_by_name() {
+resolve_package_by_name() {
     local spec="$1"
     local name op min_version best_match best_ver
 
@@ -1244,10 +1244,10 @@ function resolve_package_by_name() {
         return 1
     fi
 }
-## Shared function to check if a dependency package is in the repository.
+## Shared to check if a dependency package is in the repository.
 # Usage: check_if_repository_package_common <array_name>
 # where <array_name> is the name of the array to store packages (e.g., RCASEPACKAGES or ORCASEPACKAGES)
-function check_if_repository_package_common()
+check_if_repository_package_common()
 {
 	local array_name="$1"
 	local dep_spec="${FILE_DEP%% *}"
@@ -1319,24 +1319,24 @@ function check_if_repository_package_common()
 		fi
 	fi
 }
-## Function check_if_repository_package(). Checks if dependency packages are on repository.
+## check_if_repository_package(). Checks if dependency packages are on repository.
 # Usage: check_if_repository_package (without arguments)
-function check_if_repository_package()
+check_if_repository_package()
 {
     check_if_repository_package_common "RCASEPACKAGES"
 }
 
-## Function check_if_repository_optional_package(). Checks if dependency (optional) packages are on repository.
+## check_if_repository_optional_package(). Checks if dependency (optional) packages are on repository.
 # Usage: check_if_repository_optional_package (without arguments)
-function check_if_repository_optional_package()
+check_if_repository_optional_package()
 {
     check_if_repository_package_common "ORCASEPACKAGES"
 }
-## Function check_dependencies(). Generic function to check dependencies.
+## check_dependencies(). Generic to check dependencies.
 # Usage: check_dependencies file_to_check dep_type repo_check_func
 # dep_type: The grep pattern to identify dependencies (e.g., "^# BuildDep:", "^# OptionalBuildDep:")
-# repo_check_func: The function to call for repository checks (e.g., check_if_repository_package)
-function check_dependencies()
+# repo_check_func: The to call for repository checks (e.g., check_if_repository_package)
+check_dependencies()
 {
     local file_to_check="$1"
     local dep_type="$2"
@@ -1454,36 +1454,36 @@ function check_dependencies()
     fi
     local IFS="${OLDIFS}"
 }
-## Function check_build_dependencies(). Checks required build dependencies.
+## check_build_dependencies(). Checks required build dependencies.
 # Usage: check_build_dependencies file_to_check
-function check_build_dependencies()
+check_build_dependencies()
 {
     check_dependencies "$1" "^# BuildDep:" "check_if_repository_package"
 }
 
-## Function check_optional_build_dependencies(). Checks optional build dependencies.
+## check_optional_build_dependencies(). Checks optional build dependencies.
 # Usage: check_optional_build_dependencies file_to_check
-function check_optional_build_dependencies()
+check_optional_build_dependencies()
 {
     check_dependencies "$1" "^# OptionalBuildDep:" "check_if_repository_optional_package"
 }
 
-## Function check_post_dependencies(). Checks required dependencies.
+## check_post_dependencies(). Checks required dependencies.
 # Usage: check_post_dependencies file_to_check
-function check_post_dependencies()
+check_post_dependencies()
 {
     check_dependencies "$1" "^# Dep(post):" "check_if_repository_package"
 }
 
-## Function check_optional_post_dependencies(). Checks optional dependencies.
+## check_optional_post_dependencies(). Checks optional dependencies.
 # Usage: check_optional_post_dependencies file_to_check
-function check_optional_post_dependencies()
+check_optional_post_dependencies()
 {
     check_dependencies "$1" "^# OptionalDep(post):" "check_if_repository_optional_package"
 }
-## Function downloadpackages(). Download packages from a given list.
+## downloadpackages(). Download packages from a given list.
 # Usage: downloadpackages package_array_name
-function downloadpackages()
+downloadpackages()
 {
     local package_array_name="$1"
     local package
@@ -1510,22 +1510,22 @@ function downloadpackages()
         fi
     done
 }
-## Function downloadrequiredeps(). Download required dependencies.
+## downloadrequiredeps(). Download required dependencies.
 # Usage: downloadrequiredeps (without arguments)
-function downloadrequiredeps()
+downloadrequiredeps()
 {
     downloadpackages RCASEPACKAGES
 }
 
-## Function downloadoptdeps(). Download optional dependencies.
+## downloadoptdeps(). Download optional dependencies.
 # Usage: downloadoptdeps (without arguments)
-function downloadoptdeps()
+downloadoptdeps()
 {
     downloadpackages ORCASEPACKAGES
 }
-## Function installdownloadedeps(). Installs downloaded dependencies.
+## installdownloadedeps(). Installs downloaded dependencies.
 # Usage: installdownloadedeps (without arguments)
-function installdownloadedeps()
+installdownloadedeps()
 {
 	for DCASEPACKAGE in ${DCASEPACKAGES[*]};
 	do
@@ -1566,9 +1566,9 @@ function installdownloadedeps()
 		cleanup_tmp_dir
 	done
 }
-## Function askforinstallrequiredeps(). Asks to user if wants to install required dependencies. If NO nhopkg exits.
+## askforinstallrequiredeps(). Asks to user if wants to install required dependencies. If NO nhopkg exits.
 # Usage: askforinstallrequiredeps (without arguments)
-function askforinstallrequiredeps()
+askforinstallrequiredeps()
 {
 	unset DCASEPACKAGES
 	if [[ -z "${RCASEPACKAGES[0]}" ]]; then
@@ -1590,9 +1590,9 @@ function askforinstallrequiredeps()
 	check_if_ok " * Package will not be installed."
 	Q_INSTALL_REQUIRED_DEPS="0"
 }
-## Function installrequiredeps(). Installs required dependencies from repos if aren't installed yet.
+## installrequiredeps(). Installs required dependencies from repos if aren't installed yet.
 # Usage: installrequiredeps (without arguments)
-function installrequiredeps()
+installrequiredeps()
 {
 	# Check if install.
 	if [[ "${Q_INSTALL_REQUIRED_DEPS}" != "0" ]]; then
@@ -1604,9 +1604,9 @@ function installrequiredeps()
 	installdownloadedeps
 	unset RCASEPACKAGES
 }
-## Function askforinstalloptdeps(). Asks to user if wants to install optional dependencies. If NO nhopkg continues.
+## askforinstalloptdeps(). Asks to user if wants to install optional dependencies. If NO nhopkg continues.
 # Usage: askforinstalloptdeps (without arguments)
-function askforinstalloptdeps()
+askforinstalloptdeps()
 {
 	unset DCASEPACKAGES
 	if [[ -z "${ORCASEPACKAGES[0]}" ]]; then
@@ -1628,9 +1628,9 @@ function askforinstalloptdeps()
 	nhopkg_ask_follow
 	Q_INSTALL_OPT_DEPS="${?}"
 }
-## Function installoptdeps(). Installs optional dependencies from repos if aren't installed yet.
+## installoptdeps(). Installs optional dependencies from repos if aren't installed yet.
 # Usage: installoptdeps (without arguments)
-function installoptdeps()
+installoptdeps()
 {
 	# Check if install.
 	if [[ "${Q_INSTALL_OPT_DEPS}" != "0" ]]; then
@@ -1645,7 +1645,7 @@ function installoptdeps()
 #======================================4
 # Install (binary package) functions
 #======================================4
-## Function bin_install_progress(). Prints a progress bar for the installation process.
+## bin_install_progress(). Prints a progress bar for the installation process.
 # Usage: bin_install_progress command (Ex: tar xvfP -) logfile tarfile (Ex: data.tar.zst) filename (Package name. Ex: ${pkgname}) installedsize (Ex: ${pkginstalledsize})
 bin_install_progress()
 {
@@ -1712,7 +1712,7 @@ bin_install_progress()
 # Parameters: none
 # Returns: 0 if OK or signature not required; exits on failure.
 # ---------------------------------------------------------
-function verify_package_signature()
+verify_package_signature()
 {
     if [[ "${NHOPKG_VERIFY_SIGNATURE}" != "yes" ]]; then
         return 0
@@ -1760,7 +1760,7 @@ function verify_package_signature()
 }
 ## Funtion bin_install(). Installs binary package form data.tar.zst.
 # Usage: bin_install (without arguments)
-function bin_install()
+bin_install()
 {
 	echogn " --- Installing"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
@@ -1789,9 +1789,9 @@ function bin_install()
 		exit 1
 	fi
 }
-## Function bin_install_setting_up(). Configure installation from nhoid (npostinstall() function).
+## bin_install_setting_up(). Configure installation from nhoid (npostinstall() function).
 # Usage: bin_install_setting_up (without arguments)
-function bin_install_setting_up()
+bin_install_setting_up()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -1815,9 +1815,9 @@ function bin_install_setting_up()
 		fi
 	fi
 }
-## Function bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
+## bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
 # Usage: bin_install_create_config_files (without arguments)
-function bin_install_create_config_files()
+bin_install_create_config_files()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -1833,7 +1833,7 @@ function bin_install_create_config_files()
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
-		# Add npostremove() function to nhoid.
+		# Add npostremove() to nhoid.
 		echo >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
 		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
 		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}" \
@@ -1849,7 +1849,7 @@ function bin_install_create_config_files()
 		check_if_ok " *** Failed to install package."
 		# Touch info package file and make symlinks.
 		grep '^#' "${NHOPKG_TMPDIR}/nhoid" > "${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
-		# Add npostremove() function to nhoid.
+		# Add npostremove() to nhoid.
 		echo >> "${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
 		NPOSTREMOVE_FILE_NUM=$(grep -n "npostremove() {" "${NHOPKG_TMPDIR}/nhoid" | sed -e 's@:npostremove() {@@')
 		tail -n +${NPOSTREMOVE_FILE_NUM} "${NHOPKG_TMPDIR}/nhoid" >> "${NHOPKG_LOCALSTATEDIR}/packages/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}" \
@@ -1862,10 +1862,10 @@ function bin_install_create_config_files()
 #======================================5
 # Super Install (binary package from repo) functions.
 #======================================5
-## Function getpackage(). Search selected package on repository.
+## getpackage(). Search selected package on repository.
 # Usage: getpackage (without arguments)
 # Gives: pkgname, pkgversion, pkgrevision, pkgrepo, pkgos, pkgarch variables.
-function getpackage()
+getpackage()
 {
     local found=0
     local repo candidate
@@ -1937,10 +1937,10 @@ function getpackage()
     pkgos="${pkgos:-$(uname -s | awk '{print tolower($1)}')}"
     pkgarch="${pkgarch:-$(uname -m)}"
 }
-## Function downloadpackage(). Downloads package to install.
+## downloadpackage(). Downloads package to install.
 # Usage: downloadpackage (without arguments)
 # Gives: Downloaded package on cache/ directory.
-function downloadpackage()
+downloadpackage()
 {
 	# pkgos and pkgarch are already set by getpackage()
 	echogn " --- Downloading"
@@ -1955,9 +1955,9 @@ function downloadpackage()
 #======================================6
 # Remove (packages) functions.
 #======================================6
-## Function remove_progress(). Prints a progress bar for remove process.
+## remove_progress(). Prints a progress bar for remove process.
 # Usage: remove_progress (without arguments)
-function remove_progress()
+remove_progress()
 {
 	((DELETED_FILES++))
 	printf "\r %-5s: " "${pkgname}-${pkgversion}-${pkgrevision}" >&2
@@ -1990,10 +1990,10 @@ function remove_progress()
 	ETA_TIME_SEC=$(( $ETA_TIME % 60 ))
 	printf " %02dm%02ds ETA" $ETA_TIME_MIN $ETA_TIME_SEC >&2
 }
-## Function check_inverse_dependencies(). Checks what packages are depending of other.
+## check_inverse_dependencies(). Checks what packages are depending of other.
 # Usage: check_inverse_dependencies (without arguments)
 # Gives: INVERSEDEPS variable.
-function check_inverse_dependencies()
+check_inverse_dependencies()
 {
 	for package in ${installedpackages[*]};
 	do
@@ -2032,9 +2032,9 @@ function check_inverse_dependencies()
 		done
 	done
 }
-## Function remove_package(). Remove all files from package.
+## remove_package(). Remove all files from package.
 # Usage: remove_package() (without arguments)
-function remove_package()
+remove_package()
 {
 	# Progress Bar variables.
 	TOTAL_FILES=$(zstdgrep -vc "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
@@ -2084,9 +2084,9 @@ function remove_package()
 	# To end progress bar.
 	echo >&2
 }
-## Function remove_package_all(). Removes all packages (selected package and its inverse dependencies).
+## remove_package_all(). Removes all packages (selected package and its inverse dependencies).
 # Usage: remove_package_all (without arguments)
-function remove_package_all()
+remove_package_all()
 {
 	for package2delete in ${INVERSEDEPS[*]};
 	do
@@ -2105,9 +2105,9 @@ function remove_package_all()
 	fi
 	
 }
-## Function remove_package_config_files(). Remove configure files form removed package.
+## remove_package_config_files(). Remove configure files form removed package.
 # Usage: remove_package_config_files (without arguments)
-function remove_package_config_files()
+remove_package_config_files()
 {
 	# Remove configuration files.
 	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
@@ -2120,7 +2120,7 @@ function remove_package_config_files()
 # Description: Removes a package that is being replaced.
 # Parameters: package_name (e.g., "sdl2")
 # ---------------------------------------------------------
-function remove_replaced_package()
+remove_replaced_package()
 {
     local old_pkg="$1"
     if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkg}" ]]; then
@@ -2155,9 +2155,9 @@ function remove_replaced_package()
 #======================================7
 # Build (packages) functions.
 #======================================7
-# function set_files_and_patches() is required by the functions build_prepare(), fetch_git_source() and fetch_tarball_source()
+# set_files_and_patches() is required by the functions build_prepare(), fetch_git_source() and fetch_tarball_source()
 # it leaves all patches and other files ready to compile.
-function set_files_and_patches(){
+set_files_and_patches(){
 	if compgen -G "${NHOPKG_TMPDIR}/*" > /dev/null; then
         echog " - Additional files in package (patches):"
         for patch in "${NHOPKG_TMPDIR}"/*; do
@@ -2167,7 +2167,7 @@ function set_files_and_patches(){
         done
     fi
 }
-## function fetch_git_source() clones a Git repository and optionally checks out a reference (branch, tag, commit).
+## fetch_git_source() clones a Git repository and optionally checks out a reference (branch, tag, commit).
 # Usage: fetch_git_source <git_url> [git_ref]
 fetch_git_source() {
     local git_url="$1"
@@ -2216,7 +2216,7 @@ fetch_git_source() {
     srcfile_found=true
     return 0
 }
-## Function fetch_tarball_source() downloads and unpacks a tarball (.tar.gz, .tar.xz, etc.) into the build directory.
+## fetch_tarball_source() downloads and unpacks a tarball (.tar.gz, .tar.xz, etc.) into the build directory.
 # Usage: fetch_tarball_source <tarball_url>
 fetch_tarball_source() {
     local tarball_url="$1"
@@ -2292,9 +2292,9 @@ fetch_tarball_source() {
         return 1
     fi
 }
-## Function build_prepare(). Prepares system to build package.
+## build_prepare(). Prepares system to build package.
 # Usage: build_prepare (without arguments)
-function build_prepare() {
+build_prepare() {
     local srcfile_found=false
     mkdir -p "${NHOPKG_BUILDIR}"
     
@@ -2357,9 +2357,9 @@ function build_prepare() {
 
     return 0
 }
-## Function build_package(). Build package form nhoid functions.
+## build_package(). Build package form nhoid functions.
 # Usage: build_package (without arguments)
-function build_package()
+build_package()
 {
     # Receive the optional $part argument
     local part="$1"
@@ -2387,9 +2387,9 @@ function build_package()
         fi
     fi
 }
-## Function check_build_package(). Checks if build step is all Ok.
+## check_build_package(). Checks if build step is all Ok.
 # Usage: check_build_package (without arguments)
-function check_build_package()
+check_build_package()
 {
 	# First check is RETVAL file exist.
 	if [[ ! -e "${NHOPKG_TMPDIR}/.RETVAL" ]]; then
@@ -2409,9 +2409,9 @@ function check_build_package()
 		exit 1
 	fi
 }
-## Function build_package_install(). Install source package form nhoid functions.
+## build_package_install(). Install source package form nhoid functions.
 # Usage: build_package_install (with/without split arguments)
-function build_package_install()
+build_package_install()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -2435,9 +2435,9 @@ function build_package_install()
 		(ninstall${part:+_}${part} || echo 1 > "${NHOPKG_TMPDIR}/.RETVAL") &> "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log"
 	fi
 }
-## Function check_build_package_install(). Checks if install step is all Ok.
+## check_build_package_install(). Checks if install step is all Ok.
 # Usage: check_build_package_install (with/without split arguments)
-function check_build_package_install()
+check_build_package_install()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -2469,7 +2469,7 @@ function check_build_package_install()
 		exit 1
 	fi
 }
-## Function build_save_log_files(). Save logs on logs/ directory and compress (zstd).
+## build_save_log_files(). Save logs on logs/ directory and compress (zstd).
 # Usage: build_save_log_files (with/without split arguments)
 build_save_log_files()
 {
@@ -2499,9 +2499,9 @@ build_save_log_files()
         zstd --rm "$LOGDIR/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2>/dev/null
     fi
 }
-## Function build_search_for_files(). Search for files installed by package.
+## build_search_for_files(). Search for files installed by package.
 # Usage: build_search_for_files (with/without split arguments)
-function build_search_for_files()
+build_search_for_files()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -2551,17 +2551,17 @@ function build_search_for_files()
 		fi
 	done < <(grep -v '^#' "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" || true)
 }
-## Function get_build_time(). Calculates time on build and install a package.
+## get_build_time(). Calculates time on build and install a package.
 # Usage: get_build_time (without arguments)
 # gives: BUILD_TIME variable.
-function get_build_time()
+get_build_time()
 {
 	BUILD_TIME=$((${FINAL_DATE} - ${INITIAL_DATE}))
 	BUILD_TIME=$((${BUILD_TIME}/60))
 }
-## Function build_nhoid_to_bin(). Create a new nhoid file for binary packages from nhoid for source packages.
+## build_nhoid_to_bin(). Create a new nhoid file for binary packages from nhoid for source packages.
 # Usage: build_nhoid_to_bin (without arguments)
-function build_nhoid_to_bin()
+build_nhoid_to_bin()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
     if [[ -z "${part}" ]]; then
@@ -2650,11 +2650,11 @@ function build_nhoid_to_bin()
             fi
         done
     
-   	# Add npostinstall() and npostremove() function to nhoid.
+   	# Add npostinstall() and npostremove() to nhoid.
 	echo >> "${NHOPKG_TMPDIR}/nhoid"
 	
-	# Add npostinstall() or npostinstall_part() function to nhoid, with fallback
-# Determine function names for install and remove
+	# Add npostinstall() or npostinstall_part() to nhoid, with fallback
+# Determine names for install and remove
 INSTALL_GENERIC="npostinstall"
 REMOVE_GENERIC="npostremove"
 INSTALL_SPECIFIC="npostinstall${part:+_}${part}"
@@ -2688,9 +2688,9 @@ else
     echog "Warning: No ${REMOVE_SPECIFIC}() or npostremove() found. Using placeholder."
 fi
 }
-## Function build_make_binary_package(). Creates binary package from builded package.
+## build_make_binary_package(). Creates binary package from builded package.
 # Usage: build_make_binary_package (with/without split arguments)
-function build_make_binary_package()
+build_make_binary_package()
 {
 	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
 	if [[ -z "${part}" ]]; then
@@ -2777,10 +2777,10 @@ function build_make_binary_package()
 #======================================10
 # List (packages) functions.
 #======================================10
-## Function get_list_installed_packages(). Gets installed packages by Nhopkg in the system.
+## get_list_installed_packages(). Gets installed packages by Nhopkg in the system.
 # Usage: get_list_installed_packages (without arguments)
 # Gives: installedpackages array.
-function get_list_installed_packages()
+get_list_installed_packages()
 {
 	unset installedpackages
 	local f
@@ -2798,14 +2798,14 @@ function get_list_installed_packages()
 #======================================11
 # Info (packages) functions.
 #======================================11
-## Function get_package_info()
+## get_package_info()
 # Shows detailed information about a package from any source:
 # - Repository (any in NHOPKG_ACTIVE_REPOS)
 # - Locally installed package
 # - Local .nho file
 # Usage: get_package_info "package-name[-version-revision]"
 # Returns: 0 if found, 1 if not found
-function get_package_info()
+get_package_info()
 {
     local pkg_query="$1"
     local found=0
@@ -2981,7 +2981,7 @@ function get_package_info()
 # Parameters: repo_name (e.g., "core", "extra")
 # Returns: URL (or exits if none available)
 # ---------------------------------------------------------
-function get_repo_url()
+get_repo_url()
 {
     local repo="${1:-extra}"
     local repo_var="NHOPKG_REPO_${repo^^}"  # Convert to uppercase: "core" → "CORE"
@@ -3016,7 +3016,7 @@ function get_repo_url()
 # Parameters: pkg_name
 # Returns: 0 if it exists, 1 if it does not exist.
 # ---------------------------------------------------------
-function package_exists_in_repos()
+package_exists_in_repos()
 {
     local pkg_name="$1"
     local repo
@@ -3043,7 +3043,7 @@ function package_exists_in_repos()
 # Parameters: pkg_name
 # Returns: Variables pkgname, pkgversion, pkgrevision, pkgrepo.
 # ---------------------------------------------------------
-function get_latest_version_in_repos()
+get_latest_version_in_repos()
 {
     local pkg_name="$1"
     local repo candidate best_version="" best_repo=""
@@ -3086,7 +3086,7 @@ function get_latest_version_in_repos()
 # Parameters: none
 # Returns: 0 on success, exits with error on failure.
 # ---------------------------------------------------------
-function update_repositories()
+update_repositories()
 {
     local NHOPKG_OPTION_BACKUP="${NHOPKG_OPTION}"
     NHOPKG_OPTION="update"
