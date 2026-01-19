@@ -2471,26 +2471,33 @@ function check_build_package_install()
 }
 ## Function build_save_log_files(). Save logs on logs/ directory and compress (zstd).
 # Usage: build_save_log_files (with/without split arguments)
-function build_save_log_files()
+build_save_log_files()
 {
-	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
-	if [[ -z "${part}" ]]; then
-		part=""
-	fi
-	get_package_display_name "${part}"
+    part="$1"  # Parameter for subpackages. If there is no part, we use the main package
+    [ -z "$part" ] && part=""
+    get_package_display_name "$part"
 
-	echogn " --- Saving logs on"
-	echo " ${NHOPKG_LOCALSTATEDIR}/logs"
-	if [[ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]]; then
-		mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
-		# Compress with zstd
-		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2> /dev/null
-	fi
-	if [[ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]]; then
-		mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "${NHOPKG_LOCALSTATEDIR}/logs"
-		# Compress with zstd
-		zstd --rm "${NHOPKG_LOCALSTATEDIR}/logs/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2> /dev/null
-	fi
+    LOGDIR="${NHOPKG_LOCALSTATEDIR}/logs"
+
+    if [ -e "$LOGDIR" ] && [ ! -d "$LOGDIR" ]; then
+        echog " --- Veryfing logs path"
+        rm -f "$LOGDIR"
+    fi
+
+    mkdir -p "$LOGDIR"
+
+    echogn " --- Saving logs on"
+    echo " $LOGDIR"
+
+    if [ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" ]; then
+        mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" "$LOGDIR/"
+        zstd --rm "$LOGDIR/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-install-${INSTALL_DATE}.log" 2>/dev/null
+    fi
+
+    if [ -f "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" ]; then
+        mv "${NHOPKG_BUILDIR}/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" "$LOGDIR/"
+        zstd --rm "$LOGDIR/${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-build-${BUILD_DATE}.log" 2>/dev/null
+    fi
 }
 ## Function build_search_for_files(). Search for files installed by package.
 # Usage: build_search_for_files (with/without split arguments)
