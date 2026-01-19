@@ -4833,9 +4833,6 @@ case "${NHOPKG_OPTION}" in
         UPGRADE_NHOS+=("${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
     done
 
-    downloadrequiredeps
-    downloadoptdeps
-
     ## 7. Install dependencies first
     installdownloadedeps
 
