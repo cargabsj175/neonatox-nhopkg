@@ -151,6 +151,45 @@ noemptyfuncs()
 	return 0 # Best than others.
 }
 # ---------------------------------------------------------
+# get_packages_by_group()
+# Description:
+#   Lists all package filenames that belong to a given group
+#   across all active repositories.
+#
+#   It scans the local repository metadata and matches the
+#   "# Group:" field inside each package description file.
+#
+# Parameters:
+#   $1  Group name to search (e.g. "base", "core", "libs")
+#
+# Behavior:
+#   - Uses NHOPKG_ACTIVE_REPOS (defaults to "extra" if unset)
+#   - Skips symlinks
+#   - Prints only package file names (basename)
+#
+# Returns:
+#   0 always. Output is written to stdout.
+# ---------------------------------------------------------
+get_packages_by_group() {
+    group="$1"
+    repo_dir="$NHOPKG_LOCALSTATEDIR/repo"
+
+    [ -z "$NHOPKG_ACTIVE_REPOS" ] && NHOPKG_ACTIVE_REPOS="extra"
+
+    for repo in $NHOPKG_ACTIVE_REPOS; do
+        pkgdir="$repo_dir/$repo/packages"
+        [ -d "$pkgdir" ] || continue
+
+        find "$pkgdir" -maxdepth 1 -type f -print | while IFS= read -r pkg_file; do
+            [ -L "$pkg_file" ] && continue
+            pkg_group=$(sed -n 's/^# Group:[[:space:]]*//p' "$pkg_file")
+            if [ "$pkg_group" = "$group" ]; then
+                basename "$pkg_file"
+            fi
+        done
+    done
+}
+# ---------------------------------------------------------
 # install_init_unit()
 # Description: Install or remove init service units using
 #              external providers (BLFS).
@@ -504,6 +543,7 @@ nhopkg_help()
 	echog "Commands:"
 	echog " -B, --backup\tCreates binary package from installed package."
 	echog " -C, --super-build\tCompiles and installs source package from Git repo."
+	echog " -G, --install-group\tInstalls binaries packages from a specified group from the repository."
 	echog " -S, --super-install\tInstalls binary package form repository."
 	echog " -U, --update\tUpdate repository database."
 	echo
@@ -3310,8 +3350,8 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvCy"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature,upgrade"
+SHORTOPTIONS="RiSdrBbklno:wxstg:UehuvCyG"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature,upgrade,install-group"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -3632,6 +3672,15 @@ while [[ "${1}" != "--" ]]; do
 			else
 				echog " * You have selected more than one valid option." >&2
 				exit 1
+			fi
+		;;
+		-G|--install-group)
+			shift
+			if [ -z "$NHOPKG_OPTION" ]; then
+				NHOPKG_OPTION="install-group"
+			else
+				echog " * You have selected more than one valid option." >&2
+			exit 1
 			fi
 		;;
 		-v|--verbose)
@@ -4874,16 +4923,16 @@ case "${NHOPKG_OPTION}" in
 # ********************************************************************
 # Upgrade: update all installed packages
 # Flow:
-# 1. Update repos
-# 2. Detect upgradable packages
-# 3. Ask user
-# 4. Resolve deps (read-only)
-# 5. Download ALL packages
-# 6. Install deps
-# 7. Install upgrades
-# 8. Update databases
+# 1. Basic checks and repo update
+# 2. Get installed packages
+# 3. Detect available upgrades
+# 4. Ask user
+# 5. Resolve deps (READ-ONLY) + prepare download list
+# 6. Download EVERYTHING (deps + upgrades)
+# 7. Install dependencies first
+# 8. Install upgraded packages
+# 9. Finalize
 # ********************************************************************
-
     ## 1. Basic checks and repo update
     get_pwd_dir
     check_if_root_uid
@@ -5008,6 +5057,132 @@ case "${NHOPKG_OPTION}" in
     shooter_updates
     update_local_db
     echog " - System updated successfully!"
+    exit 0
+    ;;
+    install-group)
+# ********************************************************************
+# Section: Install group (from repos)
+# Uses file-based package list
+# Flow:
+# 0. Basic checks and validate groups (from parser global)
+# 1. Create temp package list file
+# 2. Collect packages from groups
+# 3. Normalize list (deduplicate + sanitize)
+# 4. Show plan
+# 5. Resolve dependencies (READ-ONLY)
+# 6. Download packages
+# 7. Download & install dependencies
+# 8. Install group packages
+# 9. Finalize
+# ********************************************************************
+    # 0. Basic checks and validate groups (from parser global)
+    get_pwd_dir
+    check_if_root_uid
+    
+    [ -z "$CASEPACKAGES" ] && {
+        echog " * Missing group name(s) for --install-group" >&2
+        exit 1
+    }
+
+    # 1. Create temp package list file
+    PKG_LIST_FILE="$(mktemp /tmp/nhopkg-install-group-XXXXXX.list)" || exit 1
+    trap 'rm -f "$PKG_LIST_FILE"' EXIT
+
+    # 2. Collect packages from groups
+    for GROUP in $CASEPACKAGES; do
+        case "$GROUP" in
+            --*|-*)
+                echog " * Invalid group name: $GROUP" >&2
+                exit 1
+                ;;
+        esac
+
+        get_packages_by_group "$GROUP" >> "$PKG_LIST_FILE"
+    done
+
+    # 3. Normalize list (deduplicate + sanitize)
+    sed -i '/^$/d; /^-/d' "$PKG_LIST_FILE"
+    sort -u "$PKG_LIST_FILE" -o "$PKG_LIST_FILE"
+
+    [ ! -s "$PKG_LIST_FILE" ] && {
+        echog " * No packages to install." >&2
+        exit 1
+    }
+
+    # 4. Show plan
+    echog " - Packages to be installed:"
+    sed 's/^/   /' "$PKG_LIST_FILE"
+
+    nhopkg_ask_follow
+    check_if_ok " * Packages will not be installed."
+
+    # 5. Resolve dependencies (READ-ONLY)
+    unset RCASEPACKAGES ORCASEPACKAGES
+
+    while IFS= read -r pkg; do
+        CASEPACKAGE="$pkg"
+        getpackage || exit 1
+
+        check_package_conflicts \
+            "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+
+        [ "$NHOPKG_CHECKDEPS" = "yes" ] && \
+            check_post_dependencies \
+            "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+    done < "$PKG_LIST_FILE"
+
+    # 6. Download packages
+    echog " - Downloading packages..."
+
+    while IFS= read -r pkg; do
+        CASEPACKAGE="$pkg"
+        getpackage || exit 1
+        downloadpackage
+    done < "$PKG_LIST_FILE"
+
+    # 7. Download & install dependencies
+    if [ "$NHOPKG_CHECKDEPS" = "yes" ]; then
+        installdownloadedeps
+    fi
+
+    # 8. Install group packages
+    while IFS= read -r pkg; do
+        CASEPACKAGE="$pkg"
+        getpackage || exit 1
+
+        cleanup_tmp_dir
+        make_tmp_dir
+
+        tar xfC \
+            "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" \
+            "${NHOPKG_TMPDIR}" 2>/dev/null
+        check_if_ok " * Unable to uncompress package."
+
+        if [ -f "${NHOPKG_TMPDIR}/nhoid" ]; then
+            get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+        else
+            echog " * The selected package is not valid." >&2
+            cleanup_tmp_dir
+            exit 1
+        fi
+
+        check_package_sha256sum
+        check_package_arch
+        verify_package_signature
+
+        [ -n "$REPLACES_PACKAGE" ] && remove_replaced_package "$REPLACES_PACKAGE"
+
+        bin_install
+        bin_install_setting_up
+        bin_install_create_config_files
+
+        cleanup_tmp_dir
+    done < "$PKG_LIST_FILE"
+
+    # 9. Finalize
+    shooter_updates
+    update_local_db
+    echog " - Group installation finished successfully!"
     exit 0
     ;;
 	clean)
