@@ -40,7 +40,7 @@ NHOPKG_CHECKARCH=yes
 VERBOSE_MODE=no
 
 # Strip binaries and libraries if enabled (yes OR no) (experimental):
-STRIP_BINARIES=yes
+STRIP_BINARIES=no
 
 # Sign binary packages with PGP
 NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
