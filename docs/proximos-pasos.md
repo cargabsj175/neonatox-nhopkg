@@ -1,4 +1,4 @@
-[← Index](index.md)
+[← Index](README.md)
 
 # 13\. Next steps
 

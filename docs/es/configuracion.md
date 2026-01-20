@@ -1,4 +1,4 @@
-[← Índice](index.md)
+[← Índice](README.md)
 
 # 2\. Configuración
 

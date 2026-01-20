@@ -1,4 +1,4 @@
-[← Índice](index.md)
+[← Índice](README.md)
 
 # 4\. Comandos principales
 

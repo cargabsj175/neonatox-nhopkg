@@ -1,4 +1,4 @@
-[← Índice](index.md)
+[← Índice](README.md)
 
 # 5\. Seguridad y firmas GPG
 

@@ -1,4 +1,4 @@
-[← Índice](index.md)
+[← Índice](README.md)
 
 # 3\. Formato del paquete: `nhoid`
 
