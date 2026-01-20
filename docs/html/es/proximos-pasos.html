@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 13. Próximos pasos</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .roadmap {
+      background: #e3f2fd;
+      padding: 1em;
+      border-left: 4px solid #2196f3;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>13. Próximos pasos</h1>
+
+  <p>Aunque <strong>nhopkg v0.5.1</strong> ya es funcional y apto para producción, hay varias áreas donde puede mejorarse. Esta sección ofrece una hoja de ruta para contribuyentes, mantenedores de paquetes y usuarios avanzados.</p>
+
+  <h2>13.1. Para mantenedores de paquetes</h2>
+
+  <h3>Crear un paquete fuente (<code>.srcnho</code>)</h3>
+  <ol>
+    <li>Crea un directorio con el nombre del paquete y versión: <code>gimp-3.0.4/</code>.</li>
+    <li>Dentro, incluye:
+      <ul>
+        <li><code>nhoid</code>: metadatos y funciones de compilación.</li>
+        <li><code>patches/</code> (opcional): parches a aplicar.</li>
+        <li><code>others/</code> (opcional): scripts adicionales o archivos de configuración.</li>
+      </ul>
+    </li>
+    <li>Empaqueta con: <code>tar cp gimp-3.0.4/ | zstd > gimp-3.0.4.srcnho</code>.</li>
+  </ol>
+
+  <h3>Ejemplo mínimo de <code>nhoid</code></h3>
+  <pre><code>#%NHO-0.5
+# Name:			hello
+# Version:		2.10
+# Release:		n2025
+# Description:		The classic GNU Hello program
+# Packageurl:		https://ftp.gnu.org/gnu/hello/hello-2.10.tar.gz
+# SHA256:		a1b2c3...
+
+nbuild() {
+  ./configure --prefix=/usr
+  make
+}
+
+ninstall() {
+  DESTDIR="${NHOPKG_TMPDIR}" make install
+}</code></pre>
+
+  <h2>13.2. Para desarrolladores del gestor</h2>
+
+  <div class="roadmap">
+    <h3>Hoja de ruta técnica (v0.6+)</h3>
+    <ul>
+      <li><strong>Pruebas automatizadas</strong>: suite de tests unitarios e integración (usando <code>bats</code> o similar).</li>
+      <li><strong>Man pages</strong>: generar documentación en formato <code>man(7)</code> desde la ayuda actual.</li>
+      <li><strong>Soporte para deltas</strong>: implementar descargas incrementales (ej. con <code>zsync</code>).</li>
+      <li><strong>Modo sandbox</strong>: ejecutar <code>nbuild()</code> en un entorno aislado (chroot, user namespaces).</li>
+      <li><strong>API de scripting</strong>: permitir que otros scripts usen funciones de nhopkg como librería.</li>
+      <li><strong>Soporte para mirrors activos</strong>: probar conectividad antes de usar un mirror.</li>
+    </ul>
+  </div>
+
+  <h2>13.3. Para distribuciones personalizadas</h2>
+
+  <h3>Flujo recomendado de despliegue</h3>
+  <ol>
+    <li>Define tus repositorios en <code>/etc/nhopkg/nhopkg.conf</code>.</li>
+    <li>Organiza tus paquetes en grupos lógicos: <code>base</code>, <code>xorg</code>, <code>desktop</code>, etc.</li>
+    <li>Usa <code>--create-repo</code> para generar metadatos automáticamente.</li>
+    <li>Instala con <code>--install-group base</code> para sistemas mínimos.</li>
+    <li>Habilita firmas GPG obligatorias en entornos críticos.</li>
+  </ol>
+
+  <h2>13.4. Contribuir al proyecto</h2>
+
+  <p>nhopkg es software libre (GPLv3+). Puedes contribuir de varias formas:</p>
+  <ul>
+    <li>Reportando errores en el repositorio oficial.</li>
+    <li>Enviando parches para mejorar compatibilidad con <code>sh</code> o <code>busybox</code>.</li>
+    <li>Documentando recetas de empaquetado para software popular.</li>
+    <li>Traduciendo mensajes con <code>gettext</code>.</li>
+  </ul>
+
+  <h2>13.5. Recursos útiles</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Recurso</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>nhopkg --help</code></td>
+        <td>Ayuda completa en línea de comandos.</td>
+      </tr>
+      <tr>
+        <td><code>/usr/share/nhopkg/nhopkg.conf</code></td>
+        <td>Archivo de configuración por defecto.</td>
+      </tr>
+      <tr>
+        <td><code>/var/nhopkg/logs/</code></td>
+        <td>Registros de compilación e instalación.</td>
+      </tr>
+      <tr>
+        <td><a href="https://linuxfromscratch.org/blfs/">Beyond Linux From Scratch</a></td>
+        <td>Referencia para usuarios/grupos y unidades de servicio.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Conclusión</h2>
+
+  <p><strong>nhopkg</strong> no solo es un gestor de paquetes, sino una base sólida para construir sistemas Linux controlados, reproducibles y seguros. Los próximos pasos dependen de tu rol: como usuario, mantenedor o desarrollador, hay espacio para crecer junto con este proyecto.</p>
+
+</body>
+</html>

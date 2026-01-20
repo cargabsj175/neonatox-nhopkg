@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 1. Arquitectura general</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>1. Arquitectura general</h1>
+
+  <p><strong>nhopkg</strong> es un gestor de paquetes universal diseñado para funcionar en cualquier distribución GNU/Linux. Su arquitectura se centra en la simplicidad, portabilidad y transparencia.</p>
+
+  <h2>Lenguaje y compatibilidad</h2>
+  <ul>
+    <li>Escrito principalmente en <strong>Bash</strong>, pero con esfuerzo explícito por mantener compatibilidad con <code>sh</code> (por ejemplo, evitando arrays innecesarios y usando <code>getopt</code> estándar).</li>
+    <li>Diseñado para funcionar incluso en entornos mínimos como <strong>BusyBox</strong>.</li>
+    <li>No depende de intérpretes externos como Python, Perl o Rust.</li>
+  </ul>
+
+  <h2>Formatos de paquete</h2>
+  <p>nhopkg soporta dos tipos de paquetes:</p>
+  <ul>
+    <li><code>.nho</code>: paquetes binarios listos para instalar.</li>
+    <li><code>.srcnho</code>: paquetes fuente que contienen recetas de compilación (<code>nhoid</code>), parches y scripts de construcción.</li>
+  </ul>
+
+  <h2>Estructura de un paquete <code>.nho</code></h2>
+  <p>Un paquete binario es un archivo <code>tar</code> que contiene:</p>
+  <ul>
+    <li><code>nhoid</code>: metadatos del paquete (nombre, versión, dependencias, etc.).</li>
+    <li><code>data.tar.zst</code>: archivos del software comprimidos con <code>zstd</code>.</li>
+    <li><code>signature.gpg</code> (opcional): firma GPG del archivo <code>data.tar.zst</code>.</li>
+  </ul>
+
+  <h2>Directorios clave</h2>
+  <p>Los directorios principales utilizados por nhopkg (configurables en <code>/etc/nhopkg/nhopkg.conf</code>) son:</p>
+  <pre><code>NHOPKG_LOCALSTATEDIR=/var/nhopkg
+NHOPKG_BUILDIR=/usr/src/nhopkg
+NHOPKG_TRUSTED_KEYS_DIR=/etc/nhopkg/trusted-keys</code></pre>
+
+  <ul>
+    <li><code>/var/nhopkg/packages/</code>: almacena los metadatos de los paquetes instalados.</li>
+    <li><code>/var/nhopkg/files/</code>: contiene listas comprimidas de archivos instalados por cada paquete.</li>
+    <li><code>/var/nhopkg/repo/</code>: caché local de los repositorios sincronizados.</li>
+    <li><code>/var/nhopkg/cache/</code>: paquetes descargados temporalmente.</li>
+    <li><code>/var/nhopkg/logs/</code>: registros de compilación e instalación.</li>
+  </ul>
+
+  <h2>Portabilidad y minimalismo</h2>
+  <p>nhopkg fue concebido para ser utilizado en:</p>
+  <ul>
+    <li>Distribuciones personalizadas (LFS, BLFS).</li>
+    <li>Sistemas embebidos o de recursos limitados.</li>
+    <li>Entornos de producción donde la reproducibilidad y el control total son prioritarios.</li>
+  </ul>
+
+  <p>Gracias a su diseño modular y su bajo acoplamiento con el sistema base, puede integrarse fácilmente en cualquier entorno Linux sin imponer requisitos complejos.</p>
+
+</body>
+</html>

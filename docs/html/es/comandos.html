@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 4. Comandos principales</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>4. Comandos principales</h1>
+
+  <p><strong>nhopkg</strong> ofrece una amplia gama de comandos para gestionar paquetes binarios y fuentes. A continuación se listan todos los comandos disponibles, sus alias y su propósito.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comando</th>
+        <th>Alias</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>-i, --install</code></td>
+        <td></td>
+        <td>Instala un paquete binario local (<code>.nho</code>).</td>
+      </tr>
+      <tr>
+        <td><code>-S, --super-install</code></td>
+        <td><code>-d, --dios</code></td>
+        <td>Instala un paquete desde un repositorio remoto.</td>
+      </tr>
+      <tr>
+        <td><code>-r, --remove</code></td>
+        <td></td>
+        <td>Desinstala un paquete instalado por nhopkg.</td>
+      </tr>
+      <tr>
+        <td><code>-b, --build</code></td>
+        <td></td>
+        <td>Compila e instala un paquete fuente local (<code>.srcnho</code>).</td>
+      </tr>
+      <tr>
+        <td><code>-C, --super-build</code></td>
+        <td></td>
+        <td>Clona un repositorio Git, compila e instala un paquete desde fuentes remotas.</td>
+      </tr>
+      <tr>
+        <td><code>-B, --backup</code></td>
+        <td></td>
+        <td>Reconstruye un paquete binario (<code>.nho</code>) a partir de uno ya instalado.</td>
+      </tr>
+      <tr>
+        <td><code>-y, --upgrade</code></td>
+        <td></td>
+        <td>Actualiza todos los paquetes instalados a sus últimas versiones disponibles en los repositorios.</td>
+      </tr>
+      <tr>
+        <td><code>-G, --install-group</code></td>
+        <td></td>
+        <td>Instala todos los paquetes pertenecientes a un grupo lógico (definido en el campo <code># Group:</code> del <code>nhoid</code>).</td>
+      </tr>
+      <tr>
+        <td><code>-g, --create-repo</code></td>
+        <td></td>
+        <td>Crea un repositorio de paquetes a partir de un directorio que contiene archivos <code>.nho</code>.</td>
+      </tr>
+      <tr>
+        <td><code>-U, --update</code></td>
+        <td></td>
+        <td>Sincroniza los repositorios locales con los servidores remotos.</td>
+      </tr>
+      <tr>
+        <td><code>-l, --list</code></td>
+        <td></td>
+        <td>Lista todos los paquetes instalados en el sistema.</td>
+      </tr>
+      <tr>
+        <td><code>-n, --info</code></td>
+        <td></td>
+        <td>Muestra información detallada de un paquete (instalado, en repositorio o archivo local).</td>
+      </tr>
+      <tr>
+        <td><code>-w, --show</code></td>
+        <td></td>
+        <td>Muestra la lista de archivos contenidos en un paquete.</td>
+      </tr>
+      <tr>
+        <td><code>-s, --search</code></td>
+        <td></td>
+        <td>Busca paquetes en los repositorios por nombre o descripción.</td>
+      </tr>
+      <tr>
+        <td><code>-t, --list-repo</code></td>
+        <td></td>
+        <td>Lista todos los paquetes disponibles en los repositorios locales sincronizados.</td>
+      </tr>
+      <tr>
+        <td><code>-k, --check</code></td>
+        <td></td>
+        <td>Verifica la integridad de un paquete instalado (comprueba que todos sus archivos existen).</td>
+      </tr>
+      <tr>
+        <td><code>-x, --update-shooters</code></td>
+        <td></td>
+        <td>Actualiza cachés del sistema: esquemas GLib, iconos, entradas de escritorio, tipos MIME, man pages, fuentes y bibliotecas compartidas.</td>
+      </tr>
+      <tr>
+        <td><code>-u, --update-db</code></td>
+        <td></td>
+        <td>Actualiza la base de datos local usada por <code>locate</code> para resolver dependencias por archivo.</td>
+      </tr>
+      <tr>
+        <td><code>-e, --clean</code></td>
+        <td></td>
+        <td>Limpia la caché de paquetes descargados. Con <code>-R</code> también elimina el directorio de compilación.</td>
+      </tr>
+      <tr>
+        <td><code>--license</code></td>
+        <td></td>
+        <td>Muestra la licencia de nhopkg (GPLv3+).</td>
+      </tr>
+      <tr>
+        <td><code>--version</code></td>
+        <td></td>
+        <td>Muestra la versión de nhopkg y un mensaje especial si se ejecuta en un sistema LFS.</td>
+      </tr>
+      <tr>
+        <td><code>-h, --help</code></td>
+        <td></td>
+        <td>Muestra esta ayuda.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Opciones comunes</h2>
+
+  <p>Además de los comandos, nhopkg acepta varias opciones globales que modifican su comportamiento:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Opción</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--no-check-deps</code></td>
+        <td>Desactiva la verificación de dependencias.</td>
+      </tr>
+      <tr>
+        <td><code>--no-check-arch</code></td>
+        <td>Desactiva la verificación de arquitectura.</td>
+      </tr>
+      <tr>
+        <td><code>--no-check-sha256</code></td>
+        <td>Desactiva la verificación del checksum SHA256.</td>
+      </tr>
+      <tr>
+        <td><code>--force-check-deps</code></td>
+        <td>Fuerza la verificación de dependencias (aunque esté desactivada en la configuración).</td>
+      </tr>
+      <tr>
+        <td><code>--verify-package-signature</code></td>
+        <td>Fuerza la verificación de firmas GPG.</td>
+      </tr>
+      <tr>
+        <td><code>--no-verify-package-signature</code></td>
+        <td>Omite la verificación de firmas GPG.</td>
+      </tr>
+      <tr>
+        <td><code>--sign-package</code></td>
+        <td>Firma el paquete al construirlo (requiere clave GPG configurada).</td>
+      </tr>
+      <tr>
+        <td><code>--purge</code></td>
+        <td>Al desinstalar, también elimina los paquetes que dependen del objetivo.</td>
+      </tr>
+      <tr>
+        <td><code>--root &lt;dir&gt;</code></td>
+        <td>Instala el paquete en un directorio raíz alternativo (útil para chroots o imágenes).</td>
+      </tr>
+      <tr>
+        <td><code>-R, --recursive</code></td>
+        <td>Modo recursivo: no pregunta confirmaciones (asume "sí").</td>
+      </tr>
+      <tr>
+        <td><code>-v, --verbose</code></td>
+        <td>Modo verboso: muestra salida detallada durante compilación e instalación.</td>
+      </tr>
+      <tr>
+        <td><code>-o, --output &lt;dir&gt;</code></td>
+        <td>Escribe registros de operaciones en el directorio especificado.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Ejemplos de uso</h2>
+
+  <pre><code># Instalar un paquete binario local
+sudo nhopkg -i ~/gimp-3.0.4-n2025.linux-x86_64.nho
+
+# Instalar desde repositorio
+sudo nhopkg -S gimp
+
+# Compilar e instalar desde fuente local
+sudo nhopkg -b gimp-3.0.4.srcnho
+
+# Actualizar todo el sistema
+sudo nhopkg -y
+
+# Instalar todos los paquetes del grupo "graphics"
+sudo nhopkg -G graphics
+
+# Ver información de un paquete
+nhopkg -n gimp
+
+# Listar archivos de un paquete instalado
+nhopkg -w gimp</code></pre>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>nhopkg — 5. Security and GPG signatures</title>
+<style>
+body{font-family:system-ui,sans-serif;line-height:1.6;max-width:900px;margin:2rem auto;padding:0 1rem;}
+h1,h2,h3{color:#2c3e50;}
+code{background:#f4f4f4;padding:0.2em 0.4em;}
+pre{background:#f9f9f9;padding:1em;border-left:4px solid #ccc;}
+.note{background:#fff8e1;padding:1em;border-left:4px solid #ffc107;}
+a{color:#2980b9;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>5. Security and GPG signatures</h1>
+
+<p><strong>nhopkg</strong> includes built-in support for GPG signature verification, ensuring package authenticity and integrity before installation.</p>
+
+<h2>Overview</h2>
+<p>Binary packages (<code>.nho</code>) may include an optional <code>signature.gpg</code> file, which is a detached GPG signature of <code>data.tar.zst</code>.</p>
+
+<p>Trusted keys are stored in:</p>
+<pre><code>/etc/nhopkg/trusted-keys/</code></pre>
+
+<h2>Security configuration</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>NHOPKG_VERIFY_SIGNATURE</code></td><td>yes</td><td>Enable GPG verification</td></tr>
+<tr><td><code>NHOPKG_REQUIRE_SIGNATURE</code></td><td>no</td><td>Require signed packages</td></tr>
+<tr><td><code>NHOPKG_TRUSTED_KEYS_DIR</code></td><td>/etc/nhopkg/trusted-keys/</td><td>Trusted keyring directory</td></tr>
+<tr><td><code>NHOPKG_SIGN_PACKAGES</code></td><td>yes</td><td>Sign packages when building</td></tr>
+<tr><td><code>NHOPKG_SIGN_KEY</code></td><td>repo@neonatox.vegnux.com</td><td>Default signing key</td></tr>
+</table>
+
+<div class="note">
+<strong>Automatic keyring initialization:</strong> if <code>pubring.kbx</code> does not exist but
+<code>nhopkg-repo.pub</code> is present, nhopkg imports it automatically.
+</div>
+
+<h2>Verification flow</h2>
+<ol>
+<li>User installs a package.</li>
+<li>If verification is enabled, nhopkg checks <code>signature.gpg</code>.</li>
+<li>If missing and required → abort.</li>
+<li>If invalid → abort.</li>
+<li>If valid → continue.</li>
+</ol>
+
+<h2>Recommendations</h2>
+<ul>
+<li>Keep signature verification enabled in production.</li>
+<li>Enable mandatory signatures for critical systems.</li>
+<li>Protect your private signing key.</li>
+</ul>
+
+</body>
+</html>

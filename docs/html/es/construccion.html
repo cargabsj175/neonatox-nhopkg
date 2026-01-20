@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 9. Construcción de paquetes</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #fff8e1;
+      padding: 1em;
+      border-left: 4px solid #ffc107;
+      margin: 1.5em 0;
+    }
+    .important {
+      background: #ffebee;
+      padding: 1em;
+      border-left: 4px solid #f44336;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>9. Construcción de paquetes</h1>
+
+  <p><strong>nhopkg</strong> permite construir paquetes binarios (<code>.nho</code>) a partir de recetas de compilación definidas en paquetes fuente (<code>.srcnho</code>) o directamente desde repositorios Git.</p>
+
+  <p>Este proceso es fundamental para distribuciones personalizadas, ya que garantiza reproducibilidad, control total sobre las dependencias y la posibilidad de generar paquetes optimizados para el sistema objetivo.</p>
+
+  <h2>Flujo general de construcción</h2>
+
+  <ol>
+    <li><strong>Preparación del entorno</strong>: descarga o descompresión del código fuente.</li>
+    <li><strong>Resolución de dependencias</strong>: verificación e instalación de dependencias de compilación y ejecución.</li>
+    <li><strong>Compilación</strong>: ejecución de la función <code>nbuild()</code> (solo en el paquete principal).</li>
+    <li><strong>Instalación en staging</strong>: ejecución de <code>ninstall()</code> (principal) o <code>ninstall_&lt;part&gt;()</code> (subpaquetes).</li>
+    <li><strong>Detección de archivos instalados</strong>: escaneo de los directorios del sistema.</li>
+    <li><strong>Generación del paquete binario</strong>: compresión de los archivos y metadatos en un archivo <code>.nho</code>.</li>
+    <li><strong>Opcional: firma GPG</strong> del paquete (si está habilitado).</li>
+  </ol>
+
+  <h2>Comandos de construcción</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comando</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--build</code> o <code>-b</code></td>
+        <td>Construye e instala un paquete a partir de un archivo <code>.srcnho</code> local.</td>
+      </tr>
+      <tr>
+        <td><code>--super-build</code> o <code>-C</code></td>
+        <td>Clona un repositorio Git, construye e instala un paquete directamente desde fuentes remotas.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Fuentes de código</h2>
+
+  <p>El código fuente puede provenir de dos fuentes distintas, según lo definido en el <code>nhoid</code>:</p>
+
+  <h3>1. Repositorio Git</h3>
+  <p>Si el campo <code># Packageurl:</code> comienza con <code>git+</code> o termina en <code>.git</code>, nhopkg clonará el repositorio y, opcionalmente, cambiará a una referencia específica usando <code># Packageref:</code>.</p>
+
+  <pre><code># Packageurl:	git+https://gitlab.gnome.org/GNOME/gimp.git
+# Packageref:	GIMP_3_0_4</code></pre>
+
+  <h3>2. Tarball (local o remoto)</h3>
+  <p>Si <code># Packageurl:</code> apunta a un archivo comprimido (ej. <code>.tar.xz</code>), nhopkg lo descargará y descomprimirá. Si el tarball está incluido dentro del <code>.srcnho</code>, se usará directamente.</p>
+
+  <pre><code># Packageurl:	https://download.gimp.org/gimp-3.0.4.tar.xz</code></pre>
+
+  <div class="note">
+    <strong>Importante:</strong> Para tarballs (locales o remotos), el campo <code># SHA256:</code> es obligatorio y debe corresponder al hash del archivo fuente.
+  </div>
+
+  <h2>Funciones de compilación e instalación</h2>
+
+  <p>El archivo <code>nhoid</code> debe contener al menos dos funciones Bash:</p>
+
+  <ul>
+    <li><code>nbuild()</code>: compila el software (ej. con <code>meson</code>, <code>cmake</code>, <code>make</code>). Solo se ejecuta una vez, para el paquete principal.</li>
+    <li><code>ninstall()</code>: instala los archivos en el directorio de construcción (<code>${NHOPKG_TMPDIR}</code>).</li>
+  </ul>
+
+  <p>Ejemplo:</p>
+
+  <pre><code>nbuild() {
+  meson setup build --prefix=/usr
+  ninja -C build
+}
+
+ninstall() {
+  DESTDIR="${NHOPKG_TMPDIR}" ninja -C build install
+}</code></pre>
+
+  <h2>Subpaquetes (<em>Split Packages</em>)</h2>
+
+  <p>nhopkg soporta la generación automática de múltiples paquetes a partir de una sola receta usando el campo <code># Splitpackage:</code>.</p>
+
+  <pre><code># Splitpackage:	dev docs</code></pre>
+
+  <p>Esto generará tres paquetes:</p>
+  <ul>
+    <li><code>gimp-3.0.4-n2025.linux-x86_64.nho</code> (principal)</li>
+    <li><code>gimp-dev-3.0.4-n2025.linux-x86_64.nho</code></li>
+    <li><code>gimp-docs-3.0.4-n2025.linux-x86_64.nho</code></li>
+  </ul>
+
+  <div class="important">
+    <strong>Comportamiento clave de los subpaquetes:</strong>
+    <ul>
+      <li>Los subpaquetes <strong>no tienen su propia función <code>nbuild()</code></strong>.</li>
+      <li>Toda la lógica de compilación e instalación para un subpaquete debe ir dentro de su función <code>ninstall_&lt;part&gt;()</code>.</li>
+      <li>Esto significa que, si un subpaquete requiere comandos de compilación adicionales, deben ejecutarse dentro de <code>ninstall_dev()</code>, <code>ninstall_docs()</code>, etc.</li>
+    </ul>
+  </div>
+
+  <p>Ejemplo para un subpaquete <code>dev</code>:</p>
+
+  <pre><code>ninstall_dev() {
+  # No hay nbuild_dev(), todo va aquí
+  mkdir -p "${NHOPKG_TMPDIR}/usr/include"
+  cp -r include/* "${NHOPKG_TMPDIR}/usr/include/"
+  # Incluso podrías compilar algo específico aquí si fuera necesario
+}</code></pre>
+
+  <h2>Post-instalación y post-eliminación</h2>
+
+  <p>Además de <code>nbuild()</code> y <code>ninstall()</code>, se pueden definir funciones opcionales:</p>
+
+  <ul>
+    <li><code>npostinstall()</code>: se ejecuta tras instalar el paquete (ej. actualizar cachés).</li>
+    <li><code>npostremove()</code>: se ejecuta tras desinstalarlo (ej. limpiar cachés).</li>
+  </ul>
+
+  <p>Estas funciones también admiten variantes por subpaquete: <code>npostinstall_dev()</code>, <code>npostremove_docs()</code>, etc.</p>
+
+  <h2>Directorios clave</h2>
+
+  <ul>
+    <li><code>/usr/src/nhopkg/</code>: directorio de compilación (<code>NHOPKG_BUILDIR</code>).</li>
+    <li><code>/var/nhopkg/logs/</code>: almacena logs de compilación e instalación.</li>
+    <li><code>/tmp/.nhopkg.XXXXXXXXXX/</code>: directorio temporal seguro para cada operación.</li>
+  </ul>
+
+  <h2>Ejemplos de uso</h2>
+
+  <pre><code># Construir desde un .srcnho local
+sudo nhopkg --build gimp-3.0.4.srcnho
+
+# Construir desde Git (usa NHOPKG_GIT_SOURCES)
+sudo nhopkg --super-build gimp
+
+# Construir en modo verboso
+sudo nhopkg --verbose --build gimp-3.0.4.srcnho</code></pre>
+
+  <h2>Verificación y seguridad</h2>
+
+  <ul>
+    <li>Se verifica la arquitectura del sistema antes de compilar.</li>
+    <li>Se resuelven y descargan todas las dependencias antes de comenzar.</li>
+    <li>Si está habilitado, el paquete resultante se firma con GPG.</li>
+    <li>Los logs de compilación e instalación se guardan para auditoría.</li>
+  </ul>
+
+  <h2>Consideraciones importantes</h2>
+
+  <ul>
+    <li>La construcción requiere privilegios de root.</li>
+    <li>El directorio de compilación no se elimina automáticamente; se pregunta al usuario.</li>
+    <li>Los archivos generados en tiempo de ejecución (como <code>/etc/ld.so.cache</code>) se excluyen del paquete final.</li>
+    <li>El tamaño del paquete se calcula automáticamente en KB.</li>
+  </ul>
+
+</body>
+</html>

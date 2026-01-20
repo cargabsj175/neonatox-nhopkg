@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 11. Repositorios múltiples</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #e3f2fd;
+      padding: 1em;
+      border-left: 4px solid #2196f3;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>11. Repositorios múltiples</h1>
+
+  <p><strong>nhopkg</strong> soporta un sistema de <strong>repositorios múltiples</strong>, lo que permite organizar paquetes en categorías lógicas (por ejemplo, <code>extra</code>, <code>multilib</code>, <code>core</code>) y gestionarlos de forma independiente.</p>
+
+  <h2>Configuración de repositorios activos</h2>
+
+  <p>La variable <code>NHOPKG_ACTIVE_REPOS</code> en <code>/etc/nhopkg/nhopkg.conf</code> define qué repositorios están habilitados:</p>
+
+  <pre><code>NHOPKG_ACTIVE_REPOS="extra multilib"</code></pre>
+
+  <p>Esta lista determina qué repositorios se sincronizan con <code>--update</code> y desde dónde se instalan paquetes con <code>--super-install</code>.</p>
+
+  <h2>Definición de URLs por repositorio</h2>
+
+  <p>Cada repositorio activo debe tener una variable correspondiente que defina su URL (o URLs de mirrors):</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Repositorio</th>
+        <th>Variable de configuración</th>
+        <th>Ejemplo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>extra</code></td>
+        <td><code>NHOPKG_REPO_EXTRA</code></td>
+        <td><code>https://neonatox.vegnux.com/repo/n2026/x86_64/extra</code></td>
+      </tr>
+      <tr>
+        <td><code>multilib</code></td>
+        <td><code>NHOPKG_REPO_MULTILIB</code></td>
+        <td><code>https://neonatox.vegnux.com/repo/n2026/x86_64/multilib</code></td>
+      </tr>
+      <tr>
+        <td><code>core</code></td>
+        <td><code>NHOPKG_REPO_CORE</code></td>
+        <td><code>https://mirror1.example.com/core https://mirror2.example.com/core</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Cada variable puede contener <strong>múltiples URLs separadas por espacios</strong>, lo que permite definir mirrors redundantes.</p>
+
+  <h2>Asignación de paquetes a repositorios</h2>
+
+  <p>Los paquetes se asignan a un repositorio mediante el campo <code># Repository:</code> en su archivo <code>nhoid</code>:</p>
+
+  <pre><code># Repository:	extra</code></pre>
+
+  <p>Si este campo no está presente, <strong>nhopkg</strong> asume por defecto <code>extra</code> (compatibilidad hacia atrás).</p>
+
+  <div class="note">
+    <strong>Importante:</strong> Durante la instalación o actualización, nhopkg solo buscará un paquete en los repositorios listados en <code>NHOPKG_ACTIVE_REPOS</code>. Si un paquete pertenece a un repositorio no activo, será ignorado.
+  </div>
+
+  <h2>Sincronización de repositorios (<code>--update</code>)</h2>
+
+  <p>El comando <code>--update</code> sincroniza <strong>todos los repositorios activos</strong> en paralelo:</p>
+
+  <ol>
+    <li>Para cada repositorio en <code>NHOPKG_ACTIVE_REPOS</code>, nhopkg descarga:
+      <ul>
+        <li><code>core.packages.tar.zst</code>: metadatos de los paquetes.</li>
+        <li><code>core.files.tar.zst</code>: listas de archivos por paquete.</li>
+        <li><code>lastsync</code>: marca de tiempo de la última sincronización.</li>
+      </ul>
+    </li>
+    <li>Los archivos se almacenan en subdirectorios separados:
+      <ul>
+        <li><code>/var/nhopkg/repo/extra/</code></li>
+        <li><code>/var/nhopkg/repo/multilib/</code></li>
+      </ul>
+    </li>
+  </ol>
+
+  <p>Esto evita conflictos entre repositorios y permite una resolución de dependencias precisa.</p>
+
+  <h2>Creación de repositorios (<code>--create-repo</code>)</h2>
+
+  <p>El comando <code>--create-repo</code> es especialmente potente en entornos multi-repositorio:</p>
+
+  <ol>
+    <li>Analiza todos los archivos <code>.nho</code> en un directorio de entrada.</li>
+    <li>Extrae el campo <code># Repository:</code> de cada <code>nhoid</code>.</li>
+    <li>Clasifica los paquetes en subdirectorios según su repositorio destino.</li>
+    <li>Genera metadatos (<code>core.packages.tar.zst</code>, <code>core.files.tar.zst</code>, <code>lastsync</code>) <strong>por repositorio</strong>.</li>
+    <li>Copia los archivos <code>.nho</code> a sus respectivos subdirectorios.</li>
+  </ol>
+
+  <p>Por ejemplo, si ejecutas:</p>
+
+  <pre><code>sudo nhopkg --create-repo /path/to/packages</code></pre>
+
+  <p>y tus paquetes tienen <code># Repository: extra</code> y <code># Repository: multilib</code>, obtendrás:</p>
+
+  <pre><code>/path/to/packages/
+├── extra/
+│   ├── core.packages.tar.zst
+│   ├── core.files.tar.zst
+│   ├── lastsync
+│   └── *.nho
+└── multilib/
+    ├── core.packages.tar.zst
+    ├── core.files.tar.zst
+    ├── lastsync
+    └── *.nho</code></pre>
+
+  <h2>Resolución de paquetes</h2>
+
+  <p>Al instalar un paquete con <code>--super-install</code>, nhopkg:</p>
+
+  <ol>
+    <li>Busca el paquete en <strong>todos los repositorios activos</strong>.</li>
+    <li>Si lo encuentra en varios, usa el primero (el orden depende del sistema de archivos).</li>
+    <li>Descarga e instala el paquete desde el repositorio correcto.</li>
+  </ol>
+
+  <p>Esto garantiza que siempre se use la versión más adecuada para el repositorio configurado.</p>
+
+  <h2>Ventajas del sistema multi-repositorio</h2>
+
+  <ul>
+    <li><strong>Organización clara</strong>: separación lógica de paquetes (base, gráficos, multilib, etc.).</li>
+    <li><strong>Control de versiones</strong>: cada repositorio puede tener su propio ciclo de vida.</li>
+    <li><strong>Seguridad</strong>: repositorios críticos (como <code>core</code>) pueden mantenerse separados y firmados de forma independiente.</li>
+    <li><strong>Escalabilidad</strong>: fácil de extender a nuevos repositorios sin modificar el núcleo de nhopkg.</li>
+  </ul>
+
+  <h2>Ejemplo de flujo de trabajo</h2>
+
+  <pre><code># 1. Configurar repositorios
+echo 'NHOPKG_ACTIVE_REPOS="extra multilib"' >> /etc/nhopkg/nhopkg.conf
+echo 'NHOPKG_REPO_EXTRA=https://mi-repo.com/extra' >> /etc/nhopkg/nhopkg.conf
+echo 'NHOPKG_REPO_MULTILIB=https://mi-repo.com/multilib' >> /etc/nhopkg/nhopkg.conf
+
+# 2. Sincronizar
+sudo nhopkg --update
+
+# 3. Instalar un paquete del repositorio 'extra'
+sudo nhopkg --super-install gimp
+
+# 4. Instalar un paquete del repositorio 'multilib'
+sudo nhopkg --super-install lib32-glibc</code></pre>
+
+</body>
+</html>

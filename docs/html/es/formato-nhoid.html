@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 3. Formato del paquete: <code>nhoid</code></title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #fff8e1;
+      padding: 1em;
+      border-left: 4px solid #ffc107;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>3. Formato del paquete: <code>nhoid</code></h1>
+
+  <p>El archivo <code>nhoid</code> es el núcleo de cualquier paquete <strong>nhopkg</strong>. Define metadatos, dependencias, fuentes y comportamiento.</p>
+
+  <p>Existen dos tipos de paquetes, y sus <code>nhoid</code> son fundamentalmente distintos:</p>
+  <ul>
+    <li><strong>Paquetes fuente</strong> (<code>.srcnho</code>): contienen recetas para compilar e instalar software.</li>
+    <li><strong>Paquetes binarios</strong> (<code>.nho</code>): contienen archivos listos para instalar en el sistema.</li>
+  </ul>
+
+  <h2>Estructura común</h2>
+
+  <p>Todos los <code>nhoid</code> deben comenzar con la versión del formato:</p>
+  <pre><code>#%NHO-0.5</code></pre>
+
+  <p>Cada línea sigue el patrón: <code># NombreDelCampo:	&lt;valor&gt;</code> (usando un tabulador después de los dos puntos).</p>
+
+  <h2>Campos comunes a ambos tipos</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Obligatorio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code># Name:</code></td>
+        <td>Nombre del paquete (solo letras, números, guiones y guiones bajos).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Version:</code></td>
+        <td>Versión del software (sin el número de release).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Release:</code></td>
+        <td>Número de release del paquete (ej. <code>n2025</code>).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Description:</code></td>
+        <td>Descripción breve del paquete.</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Package Maintainer:</code></td>
+        <td>Correo del mantenedor.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># License:</code></td>
+        <td>Licencia del software.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Url:</code></td>
+        <td>Sitio web oficial del proyecto.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Group:</code></td>
+        <td>Grupo lógico (para instalación por grupos).</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Repository:</code></td>
+        <td>Repositorio destino (ej. <code>extra</code>, <code>multilib</code>).</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Arch:</code></td>
+        <td>Arquitectura objetivo. Usa <code>noarch</code>, <code>all</code> o <code>any</code> si es independiente.</td>
+        <td>No (pero recomendado)</td>
+      </tr>
+      <tr>
+        <td><code># Dep(post):</code></td>
+        <td>Dependencias en tiempo de ejecución (con operadores de versión opcionales).</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># OptionalDep(post):</code></td>
+        <td>Dependencias opcionales en tiempo de ejecución.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Provides:</code></td>
+        <td>Interfaces o nombres virtuales que este paquete satisface.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Conflicts:</code></td>
+        <td>Paquetes incompatibles (con operadores de versión).</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># Splitpackage:</code></td>
+        <td>Lista de subpaquetes (ej. <code>dev docs</code>).</td>
+        <td>No</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Paquetes fuente (<code>.srcnho</code>)</h2>
+
+  <p>Estos paquetes contienen la receta para construir software. Pueden usar **Git** o **tarball** como fuente.</p>
+
+  <h3>Opción A: Fuente Git</h3>
+  <div class="note">
+    <strong>Regla:</strong> Si se usa Git, <strong>no se incluye</strong> archivo fuente ni <code>SHA256</code>.
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Obligatorio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code># Packageurl:</code></td>
+        <td>URL del repositorio Git (debe empezar con <code>git+</code> o terminar en <code>.git</code>).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Packageref:</code></td>
+        <td>Referencia Git (tag, rama o commit).</td>
+        <td>Sí</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Ejemplo: <code>git+https://gitlab.gnome.org/GNOME/gimp.git</code> + <code>GIMP_3_0_4</code></p>
+
+  <h3>Opción B: Tarball (local o remoto)</h3>
+  <div class="note">
+    <strong>Regla:</strong> Si se usa tarball (ya sea embebido en el <code>.srcnho</code> o descargado), <strong>el campo <code>SHA256</code> es obligatorio</strong> y corresponde al hash del archivo fuente.
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Obligatorio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code># Packageurl:</code></td>
+        <td>URL del tarball (si es remoto) o nombre del archivo dentro del <code>.srcnho</code> (si es local).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># SHA256:</code></td>
+        <td>Checksum SHA256 del archivo fuente (tarball).</td>
+        <td>Sí</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Dependencias de construcción (solo en fuente)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Obligatorio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code># BuildDep:</code></td>
+        <td>Dependencias requeridas para compilar.</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code># OptionalBuildDep:</code></td>
+        <td>Dependencias opcionales para compilar.</td>
+        <td>No</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Paquetes binarios (<code>.nho</code>)</h2>
+
+  <div class="note">
+    <strong>Reglas clave:</strong>
+    <ul>
+      <li><strong>Nunca</strong> contienen <code>Packageurl</code>, <code>Packageref</code>, ni archivos fuente.</li>
+      <li><strong>Siempre</strong> incluyen el campo <code>SHA256</code>, que corresponde al hash de <code>data.tar.zst</code>.</li>
+      <li><strong>Siempre</strong> incluyen los campos técnicos de construcción.</li>
+    </ul>
+  </div>
+
+  <h3>Campos exclusivos de binarios</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Descripción</th>
+        <th>Obligatorio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code># OS:</code></td>
+        <td>Sistema operativo (normalmente <code>linux</code>).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Installed-Size:</code></td>
+        <td>Tamaño estimado en KB del paquete instalado.</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Build-Duration:</code></td>
+        <td>Tiempo de compilación en segundos.</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Build-Date:</code></td>
+        <td>Fecha y hora de construcción (formato ISO).</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># Build-Host:</code></td>
+        <td>Nombre del host donde se construyó.</td>
+        <td>Sí</td>
+      </tr>
+      <tr>
+        <td><code># SHA256:</code></td>
+        <td>Checksum SHA256 de <code>data.tar.zst</code>.</td>
+        <td>Sí</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Funciones de post-instalación/eliminación</h2>
+
+  <p>Ambos tipos pueden incluir funciones Bash (definidas al final del archivo):</p>
+  <ul>
+    <li><code>nbuild()</code>: solo en paquetes fuente.</li>
+    <li><code>ninstall()</code>: solo en paquetes fuente.</li>
+    <li><code>npostinstall()</code>: se ejecuta tras instalar (ambos tipos, pero más común en binarios).</li>
+    <li><code>npostremove()</code>: se ejecuta tras desinstalar.</li>
+  </ul>
+  <p>Para subpaquetes, se usan sufijos: <code>npostinstall_dev()</code>, etc.</p>
+
+  <h2>Ejemplo: paquete fuente (Git)</h2>
+  <pre><code>#%NHO-0.5
+# Name:			greetd
+# Version:		0.9.0
+# Release:		n2025
+# Description:		Lightweight display manager
+# Packageurl:		git+https://git.sr.ht/~kennylevinsen/greetd
+# Packageref:		v0.9.0
+# Dep(post):		pam systemd
+# BuildDep:		meson>=0.56 ninja
+
+nbuild() {
+  meson setup build --prefix=/usr
+  ninja -C build
+}</code></pre>
+
+  <h2>Ejemplo: paquete binario</h2>
+  <pre><code>#%NHO-0.5
+# Name:			greetd
+# Version:		0.9.0
+# Release:		n2025
+# Description:		Lightweight display manager
+# Arch:			x86_64
+# OS:			linux
+# Installed-Size:	1200 KB
+# Build-Duration:	45
+# Build-Date:		2026-01-14T10:30:00Z
+# Build-Host:		buildhost.local
+# SHA256:		a1b2c3d4e5f6...
+# Dep(post):		pam systemd
+# Repository:		extra</code></pre>
+
+</body>
+</html>

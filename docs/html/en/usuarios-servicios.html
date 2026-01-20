@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 6. User and service management</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #e8f4f8;
+      padding: 1em;
+      border-left: 4px solid #2980b9;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Index</a></nav>
+
+  <h1>6. User and service management</h1>
+
+  <p><strong>nhopkg</strong> provides two essential functions for production systems:</p>
+  <ul>
+    <li><code>nhouser()</code>: creates or verifies system users and groups in an idempotent way.</li>
+    <li><code>install_init_unit()</code>: installs service units for <code>systemd</code> or <code>sysvinit</code> from external sources such as BLFS.</li>
+  </ul>
+
+  <p>Both functions are intended to be used inside package post-install scripts (<code>npostinstall()</code>), following <strong>Beyond Linux From Scratch (BLFS)</strong> conventions.</p>
+
+  <h2>6.1. User and group management: <code>nhouser()</code></h2>
+
+  <p>The <code>nhouser</code> function allows safe, repeatable creation of system accounts. It is idempotent: if the user already exists, nothing is changed.</p>
+
+  <h3>Syntax</h3>
+  <pre><code>nhouser --check|--create [options]</code></pre>
+
+  <h3>Available options</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Option</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>--check</code></td><td>Check if the user/group exists (no changes).</td></tr>
+      <tr><td><code>--create</code></td><td>Create the user/group if it does not exist.</td></tr>
+      <tr><td><code>--user &lt;name&gt;</code></td><td>User name.</td></tr>
+      <tr><td><code>--group &lt;name&gt;</code></td><td>Primary group.</td></tr>
+      <tr><td><code>--uid &lt;id&gt;</code></td><td>Numeric user ID (recommended by BLFS).</td></tr>
+      <tr><td><code>--gid &lt;id&gt;</code></td><td>Numeric group ID.</td></tr>
+      <tr><td><code>--shell &lt;path&gt;</code></td><td>Assigned shell (e.g. <code>/sbin/nologin</code>).</td></tr>
+      <tr><td><code>--groups &lt;list&gt;</code></td><td>Secondary groups (comma-separated).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Real-world examples (BLFS)</h3>
+
+  <h4>Example 1: <code>cups</code> user</h4>
+  <pre><code>nhouser --create \
+  --user lp \
+  --group lp \
+  --uid 9 \
+  --gid 9 \
+  --shell /sbin/nologin</code></pre>
+
+  <h4>Example 2: <code>greetd</code> user</h4>
+  <pre><code>nhouser --create \
+  --user greetd \
+  --group greetd \
+  --uid 51 \
+  --gid 51 \
+  --shell /sbin/nologin</code></pre>
+
+  <h4>Example 3: <code>dhcpcd</code> user</h4>
+  <pre><code>nhouser --create \
+  --user dhcp \
+  --group dhcp \
+  --uid 82 \
+  --gid 82 \
+  --shell /sbin/nologin</code></pre>
+
+  <div class="note">
+    <strong>Note:</strong> The UID/GID values shown here match BLFS/LFS standards, ensuring compatibility with existing policies and scripts.
+  </div>
+
+  <h2>6.2. Service management: <code>install_init_unit()</code></h2>
+
+  <p>This function installs service units from BLFS repositories, automatically detecting whether the system uses <code>systemd</code> or <code>sysvinit</code>.</p>
+
+  <h3>Syntax</h3>
+  <pre><code>install_init_unit install|remove &lt;service&gt;</code></pre>
+
+  <h3>Required variables</h3>
+  <ul>
+    <li><code>INITSYSTEM</code>: <code>systemd</code> or <code>sysvinit</code></li>
+    <li><code>SYSTEMD_BLFS_URL</code> / <code>SYSTEMD_BLFS_DIR</code></li>
+    <li><code>SYSV_BLFS_URL</code> / <code>SYSV_BLFS_DIR</code></li>
+  </ul>
+
+  <h3>Examples</h3>
+
+  <h4>Install <code>slapd</code> service (OpenLDAP)</h4>
+  <pre><code>install_init_unit install slapd</code></pre>
+
+  <h4>Remove <code>cups</code> service</h4>
+  <pre><code>install_init_unit remove cups</code></pre>
+
+  <h4>Integration in <code>npostinstall()</code></h4>
+  <pre><code>npostinstall() {
+  nhouser --create --user lp --group lp --uid 9 --gid 9 --shell /sbin/nologin
+  install_init_unit install cups
+  [ -x /usr/bin/systemctl ] && systemctl daemon-reload
+}</code></pre>
+
+  <h2>6.3. System configuration</h2>
+
+  <pre><code>export INITSYSTEM="systemd"
+export SYSTEMD_BLFS_URL="https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-systemd-20250101.tar.xz"
+export SYSTEMD_BLFS_DIR="/usr/src/blfs-bootscripts-systemd"
+export SYSV_BLFS_URL="https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-20250101.tar.xz"
+export SYSV_BLFS_DIR="/usr/src/blfs-bootscripts"</code></pre>
+
+  <h2>Conclusion</h2>
+
+  <p>With <code>nhouser()</code> and <code>install_init_unit()</code>, <strong>nhopkg</strong> provides a mature, BLFS-aligned solution for managing users and services in production environments.</p>
+
+</body>
+</html>

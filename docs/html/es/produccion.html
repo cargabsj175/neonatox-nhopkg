@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 12. ¿Listo para producción?</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .ready {
+      background: #e8f5e9;
+      padding: 1em;
+      border-left: 4px solid #4caf50;
+      margin: 1.5em 0;
+    }
+    .caution {
+      background: #fff8e1;
+      padding: 1em;
+      border-left: 4px solid #ffc107;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>12. ¿Listo para producción?</h1>
+
+  <p>Sí. <strong>nhopkg v0.5.1 está técnicamente preparado para su uso en entornos de producción</strong>, especialmente en distribuciones personalizadas, sistemas embebidos o entornos tipo LFS/BLFS donde se prioriza la transparencia, simplicidad y control total.</p>
+
+  <div class="ready">
+    <strong>Conclusión técnica:</strong> nhopkg no es un prototipo ni una herramienta experimental. Es un gestor de paquetes maduro, con características comparables a <code>pacman</code> (Arch), <code>xbps</code> (Void) o <code>apk</code> (Alpine), pero diseñado para ser minimalista, portable y fácil de auditar.
+  </div>
+
+  <h2>Características que lo hacen apto para producción</h2>
+
+  <ul>
+    <li><strong>Gestión robusta de dependencias</strong> con soporte para operadores de versión (<code>>=</code>, <code>&lt;</code>, etc.).</li>
+    <li><strong>Verificación de firmas GPG</strong> con inicialización automática del keyring desde <code>nhopkg-repo.pub</code>.</li>
+    <li><strong>Actualizaciones seguras</strong>: elimina la versión antigua antes de instalar la nueva, evitando estados parciales corruptos.</li>
+    <li><strong>Soporte multi-repositorio</strong> con clasificación automática de paquetes por el campo <code># Repository:</code>.</li>
+    <li><strong>Construcción reproducible</strong> de paquetes binarios desde fuentes Git o tarballs, con logs detallados.</li>
+    <li><strong>Subpaquetes (<em>split packages</em>)</strong> para separar bibliotecas, desarrollo, documentación, etc.</li>
+    <li><strong>Integración con BLFS</strong> mediante funciones como <code>nhouser()</code> e <code>install_init_unit()</code>.</li>
+    <li><strong>Portabilidad</strong>: escrito en Bash pero compatible con <code>sh</code> y <code>busybox</code>.</li>
+  </ul>
+
+  <h2>Escenarios ideales de uso</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Escenario</th>
+        <th>Razón</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Distribuciones personalizadas (LFS/BLFS)</td>
+        <td>Control total sobre cada paquete, sin abstracciones innecesarias.</td>
+      </tr>
+      <tr>
+        <td>Sistemas embebidos o IoT</td>
+        <td>Bajo acoplamiento, sin dependencias pesadas, compatible con BusyBox.</td>
+      </tr>
+      <tr>
+        <td>Entornos de producción controlados</td>
+        <td>Reproducibilidad, firmas GPG, y actualizaciones atómicas seguras.</td>
+      </tr>
+      <tr>
+        <td>Live ISOs o instaladores</td>
+        <td>Capacidad de generar repositorios completos desde un directorio de <code>.nho</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Consideraciones y limitaciones</h2>
+
+  <div class="caution">
+    <p><strong>nhopkg no incluye rollback automático</strong>. Si una instalación falla, no deshace los cambios previos. Sin embargo, su flujo de actualización (eliminar antes de instalar) minimiza este riesgo.</p>
+  </div>
+
+  <p>Otras consideraciones:</p>
+  <ul>
+    <li>No tiene soporte para deltas o diffs (descarga completa siempre).</li>
+    <li>No incluye un sistema de plugins o extensiones complejas.</li>
+    <li>La internacionalización (<code>gettext</code>) está presente, pero muchos mensajes aún están hardcoded.</li>
+  </ul>
+
+  <h2>Recomendaciones para entornos críticos</h2>
+
+  <ol>
+    <li><strong>Habilita firmas GPG obligatorias</strong>:
+      <pre><code>NHOPKG_VERIFY_SIGNATURE=yes
+NHOPKG_REQUIRE_SIGNATURE=yes</code></pre>
+    </li>
+    <li><strong>Mantén un repositorio de respaldo</strong> con paquetes binarios probados.</li>
+    <li><strong>Prueba las actualizaciones en un entorno aislado</strong> antes de aplicarlas en producción.</li>
+    <li><strong>Documenta los grupos de paquetes</strong> (ej. <code>base</code>, <code>server</code>) para facilitar despliegues consistentes.</li>
+  </ol>
+
+  <h2>Conclusión final</h2>
+
+  <p><strong>nhopkg v0.5.1 es una base sólida y segura para una distribución de producción</strong>. Su diseño refleja los principios de Unix: hace una cosa y la hace bien. No busca reemplazar a gestores complejos como <code>dnf</code> o <code>apt</code>, sino ofrecer una alternativa ligera, transparente y confiable para quienes construyen sus propios sistemas Linux.</p>
+
+  <p>Si tu objetivo es una distribución controlada, reproducible y mantenible, <strong>nhopkg está listo</strong>.</p>
+
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 7. Grupos de paquetes</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #e8f5e9;
+      padding: 1em;
+      border-left: 4px solid #4caf50;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>7. Grupos de paquetes</h1>
+
+  <p><strong>nhopkg</strong> permite organizar paquetes en <strong>grupos lógicos</strong> mediante el campo <code># Group:</code> en el archivo <code>nhoid</code>. Esto facilita la instalación masiva de conjuntos de software relacionados (por ejemplo, un entorno de escritorio, un servidor o un conjunto de herramientas de desarrollo).</p>
+
+  <h2>Definición de grupos</h2>
+
+  <p>Para asignar un paquete a un grupo, se debe incluir una línea en su <code>nhoid</code> con el siguiente formato:</p>
+
+  <pre><code># Group:	&lt;nombre-del-grupo&gt;</code></pre>
+
+  <p>Donde <code>&lt;nombre-del-grupo&gt;</code> es un identificador alfanumérico (puede contener guiones bajos o guiones).</p>
+
+  <h3>Ejemplos</h3>
+
+  <pre><code># Group:	graphics</code></pre>
+  <pre><code># Group:	base</code></pre>
+  <pre><code># Group:	development</code></pre>
+
+  <h2>Instalación por grupo</h2>
+
+  <p>Una vez que los paquetes están clasificados en grupos, se pueden instalar todos los miembros de un grupo con un solo comando:</p>
+
+  <pre><code>sudo nhopkg --install-group &lt;nombre-del-grupo&gt;</code></pre>
+
+  <p>Por ejemplo:</p>
+
+  <pre><code># Instalar todos los paquetes del grupo "graphics"
+sudo nhopkg --install-group graphics
+
+# Instalar el sistema base mínimo
+sudo nhopkg --install-group base</code></pre>
+
+  <h2>Funcionamiento interno</h2>
+
+  <p>El comando <code>--install-group</code> realiza los siguientes pasos:</p>
+
+  <ol>
+    <li><strong>Escanea los repositorios locales sincronizados</strong> (<code>/var/nhopkg/repo/*/packages/</code>).</li>
+    <li><strong>Busca todos los archivos <code>nhoid</code></strong> que contengan la línea <code># Group: &lt;grupo&gt;</code>.</li>
+    <li><strong>Compila una lista única de paquetes</strong> pertenecientes al grupo.</li>
+    <li><strong>Resuelve las dependencias</strong> de todos los paquetes del grupo.</li>
+    <li><strong>Muestra un plan de instalación</strong> y pide confirmación al usuario.</li>
+    <li><strong>Descarga e instala</strong> primero las dependencias y luego los paquetes del grupo.</li>
+  </ol>
+
+  <div class="note">
+    <strong>Nota:</strong> La función que implementa esta lógica es <code>get_packages_by_group()</code>, definida en el script principal. Esta función es eficiente y está diseñada para trabajar con múltiples repositorios activos.
+  </div>
+
+  <h2>Uso práctico en distribuciones personalizadas</h2>
+
+  <p>Los grupos son especialmente útiles para definir perfiles de instalación en una distribución personalizada. Algunos ejemplos comunes:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Grupo</th>
+        <th>Propósito</th>
+        <th>Paquetes de ejemplo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>base</code></td>
+        <td>Sistema mínimo funcional</td>
+        <td><code>glibc</code>, <code>bash</code>, <code>coreutils</code>, <code>systemd</code></td>
+      </tr>
+      <tr>
+        <td><code>xorg</code></td>
+        <td>Servidor gráfico X11</td>
+        <td><code>xorg-server</code>, <code>mesa</code>, <code>xf86-video-intel</code></td>
+      </tr>
+      <tr>
+        <td><code>desktop</code></td>
+        <td>Entorno de escritorio completo</td>
+        <td><code>gnome</code>, <code>firefox</code>, <code>gimp</code></td>
+      </tr>
+      <tr>
+        <td><code>server</code></td>
+        <td>Paquetes para servidores</td>
+        <td><code>openssh</code>, <code>nginx</code>, <code>postgresql</code></td>
+      </tr>
+      <tr>
+        <td><code>development</code></td>
+        <td>Herramientas de compilación</td>
+        <td><code>gcc</code>, <code>make</code>, <code>git</code>, <code>valgrind</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Consideraciones importantes</h2>
+
+  <ul>
+    <li>Un paquete <strong>solo puede pertenecer a un grupo</strong> a la vez (el campo <code># Group:</code> es único en el <code>nhoid</code>).</li>
+    <li>La instalación por grupo <strong>respeta todas las políticas de seguridad</strong> (verificación de firmas, arquitectura, etc.).</li>
+    <li>Si un paquete del grupo ya está instalado, <strong>se omitirá</strong> a menos que haya una actualización disponible.</li>
+    <li>El comando fallará si <strong>no se encuentra ningún paquete</strong> para el grupo especificado.</li>
+  </ul>
+
+  <h2>Ejemplo completo de flujo de trabajo</h2>
+
+  <pre><code># 1. Sincronizar repositorios
+sudo nhopkg --update
+
+# 2. Ver qué paquetes hay en el grupo "base"
+nhopkg --list-repo | grep "Group: base"
+
+# 3. Instalar el grupo "base"
+sudo nhopkg --install-group base
+
+# Salida esperada:
+#  - Packages to be installed:
+#    glibc-2.40-n2025
+#    bash-5.2.32-n2025
+#    coreutils-9.5-n2025
+#    ...
+# Do you want to continue?[yes/NO]: yes
+# ...
+#  - Group installation finished successfully!</code></pre>
+
+</body>
+</html>

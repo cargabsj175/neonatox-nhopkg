@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 4. Main commands</title>
+<style>
+body{ font-family:system-ui,sans-serif; max-width:900px; margin:2rem auto;}
+table{ width:100%; border-collapse:collapse;}
+th,td{ padding:0.6em; border-bottom:1px solid #ddd;}
+th{ background:#f0f0f0;}
+code{ background:#f4f4f4; padding:0.2em 0.4em;}
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>4. Main commands</h1>
+
+<table>
+<tr><th>Command</th><th>Description</th></tr>
+<tr><td><code>-i, --install</code></td><td>Install a local binary package</td></tr>
+<tr><td><code>-S, --super-install</code></td><td>Install a package from a remote repository</td></tr>
+<tr><td><code>-b, --build</code></td><td>Build and install a local source package</td></tr>
+<tr><td><code>-y, --upgrade</code></td><td>Upgrade all installed packages</td></tr>
+<tr><td><code>-r, --remove</code></td><td>Remove an installed package</td></tr>
+<tr><td><code>-l, --list</code></td><td>List installed packages</td></tr>
+</table>
+
+<h2>Examples</h2>
+<pre><code>sudo nhopkg -S gimp
+sudo nhopkg -y
+nhopkg -n gimp</code></pre>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 9. Package building</title>
+<style>
+body{ font-family:system-ui,sans-serif; max-width:900px; margin:2rem auto;}
+h1,h2,h3{ color:#2c3e50; }
+code{ background:#f4f4f4; padding:0.2em 0.4em; }
+pre{ background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>9. Package building</h1>
+
+<p><strong>nhopkg</strong> can build binary packages (<code>.nho</code>) from source recipes (<code>.srcnho</code>) or directly from Git repositories.</p>
+
+<h2>Build workflow</h2>
+<ol>
+  <li>Source preparation</li>
+  <li>Dependency resolution</li>
+  <li>Compilation (<code>nbuild()</code>)</li>
+  <li>Installation to staging directory (<code>ninstall()</code>)</li>
+  <li>File detection</li>
+  <li>Binary package generation</li>
+  <li>Optional GPG signing</li>
+</ol>
+
+<h2>Build commands</h2>
+<pre><code># Build from local source package
+sudo nhopkg --build foo.srcnho
+
+# Build directly from Git
+sudo nhopkg --super-build foo</code></pre>
+
+<h2>Split packages</h2>
+<p>Multiple binary packages can be generated from a single recipe:</p>
+<pre><code># Splitpackage: dev docs</code></pre>
+
+<p>Each subpackage uses its own <code>ninstall_&lt;name&gt;()</code> function.</p>
+
+</body>
+</html>

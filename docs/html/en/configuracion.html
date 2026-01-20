@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 2. Configuration</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width:900px; margin:2rem auto; }
+h1,h2,h3{ color:#2c3e50; }
+code{ background:#f4f4f4; padding:0.2em 0.4em; }
+pre{ background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+table{ width:100%; border-collapse:collapse; }
+th,td{ padding:0.5em; border-bottom:1px solid #ddd; text-align:left; }
+th{ background:#f0f0f0; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>2. Configuration</h1>
+
+<p>The main configuration file for <strong>nhopkg</strong> is:</p>
+<pre><code>/etc/nhopkg/nhopkg.conf</code></pre>
+
+<p>If it does not exist, a default configuration is loaded from:</p>
+<pre><code>/usr/share/nhopkg/nhopkg.conf</code></pre>
+
+<p>All variables can be temporarily overridden using command-line options.</p>
+
+<h2>Configuration priority</h2>
+<ol>
+  <li>Configuration file</li>
+  <li>Command-line options (highest priority)</li>
+</ol>
+
+<h2>Minimal example</h2>
+<pre><code>NHOPKG_ACTIVE_REPOS="extra"
+NHOPKG_REPO_EXTRA="https://example.com/repo/extra"
+NHOPKG_VERIFY_SIGNATURE=no</code></pre>
+
+</body>
+</html>

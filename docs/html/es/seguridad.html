@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 5. Seguridad y firmas GPG</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #fff8e1;
+      padding: 1em;
+      border-left: 4px solid #ffc107;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>5. Seguridad y firmas GPG</h1>
+
+  <p><strong>nhopkg</strong> incluye soporte integrado para verificación de firmas GPG, lo que permite garantizar la autenticidad e integridad de los paquetes binarios antes de su instalación.</p>
+
+  <h2>Funcionamiento general</h2>
+
+  <p>Cada paquete binario (<code>.nho</code>) puede contener opcionalmente un archivo <code>signature.gpg</code>, que es una firma GPG detachada del archivo <code>data.tar.zst</code>.</p>
+
+  <p>Durante la instalación, <strong>nhopkg</strong> verifica esta firma contra un keyring de confianza ubicado en:</p>
+  <pre><code>/etc/nhopkg/trusted-keys/</code></pre>
+
+  <h2>Configuración de seguridad</h2>
+
+  <p>El comportamiento de seguridad se controla mediante variables en <code>/etc/nhopkg/nhopkg.conf</code>:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Variable</th>
+        <th>Valor por defecto</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>NHOPKG_VERIFY_SIGNATURE</code></td>
+        <td><code>yes</code></td>
+        <td>Habilita la verificación de firmas GPG al instalar paquetes.</td>
+      </tr>
+      <tr>
+        <td><code>NHOPKG_REQUIRE_SIGNATURE</code></td>
+        <td><code>no</code></td>
+        <td>Exige que todos los paquetes estén firmados. Solo tiene efecto si <code>NHOPKG_VERIFY_SIGNATURE=yes</code>.</td>
+      </tr>
+      <tr>
+        <td><code>NHOPKG_TRUSTED_KEYS_DIR</code></td>
+        <td><code>/etc/nhopkg/trusted-keys/</code></td>
+        <td>Directorio del keyring de confianza (debe contener <code>pubring.kbx</code>).</td>
+      </tr>
+      <tr>
+        <td><code>NHOPKG_SIGN_PACKAGES</code></td>
+        <td><code>yes</code></td>
+        <td>Firma automáticamente los paquetes binarios al construirlos (solo para mantenedores).</td>
+      </tr>
+      <tr>
+        <td><code>NHOPKG_SIGN_KEY</code></td>
+        <td><code>repo@neonatox.vegnux.com</code></td>
+        <td>Clave GPG predeterminada usada para firmar paquetes.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Inicialización automática del keyring</h2>
+
+  <div class="note">
+    <strong>Característica clave:</strong> Si no existe el keyring (<code>pubring.kbx</code>) pero sí hay una clave pública en:
+    <pre><code>/etc/nhopkg/trusted-keys/nhopkg-repo.pub</code></pre>
+    <strong>nhopkg</strong> la importará automáticamente la primera vez que se requiera verificación.
+  </div>
+
+  <p>Esto facilita la distribución de repositorios seguros sin requerir pasos manuales adicionales por parte del usuario final.</p>
+
+  <h2>Flujo de verificación</h2>
+
+  <ol>
+    <li>El usuario ejecuta <code>sudo nhopkg -i paquete.nho</code>.</li>
+    <li>Si <code>NHOPKG_VERIFY_SIGNATURE=yes</code>, nhopkg busca <code>signature.gpg</code> dentro del paquete.</li>
+    <li>Si no hay firma:
+      <ul>
+        <li>Y <code>NHOPKG_REQUIRE_SIGNATURE=yes</code> → <strong>aborta con error</strong>.</li>
+        <li>De lo contrario → muestra advertencia y continúa.</li>
+      </ul>
+    </li>
+    <li>Si hay firma, la verifica contra el keyring en <code>/etc/nhopkg/trusted-keys/</code>.</li>
+    <li>Si la firma es válida → continúa con la instalación.</li>
+    <li>Si la firma es inválida o no confiable → <strong>aborta con error</strong>.</li>
+  </ol>
+
+  <h2>Firmado de paquetes (para mantenedores)</h2>
+
+  <p>Al construir un paquete con <code>--build</code> o <code>--super-build</code>, si <code>NHOPKG_SIGN_PACKAGES=yes</code>, nhopkg:</p>
+  <ol>
+    <li>Genera <code>data.tar.zst</code>.</li>
+    <li>Ejecuta: <code>gpg --detach-sign --armor data.tar.zst</code>.</li>
+    <li>Renombra <code>data.tar.zst.asc</code> a <code>signature.gpg</code>.</li>
+    <li>Incluye <code>signature.gpg</code> en el paquete final <code>.nho</code>.</li>
+  </ol>
+
+  <h2>Ejemplo de uso seguro</h2>
+
+  <pre><code># Instalar con verificación forzada
+sudo nhopkg --verify-package-signature -i gimp-3.0.4-n2025.linux-x86_64.nho
+
+# Desactivar verificación temporalmente (solo para desarrollo)
+sudo nhopkg --no-verify-package-signature -i paquete-local.nho</code></pre>
+
+  <h2>Recomendaciones</h2>
+
+  <ul>
+    <li>Mantén <code>NHOPKG_VERIFY_SIGNATURE=yes</code> en entornos de producción.</li>
+    <li>Usa <code>NHOPKG_REQUIRE_SIGNATURE=yes</code> si deseas una política estricta de solo paquetes firmados.</li>
+    <li>Distribuye siempre <code>nhopkg-repo.pub</code> junto con tu repositorio para facilitar la inicialización segura.</li>
+    <li>Protege tu clave privada de firma (<code>NHOPKG_SIGN_KEY</code>) en un entorno aislado.</li>
+  </ul>
+
+</body>
+</html>

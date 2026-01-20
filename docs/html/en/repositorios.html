@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 11. Multiple repositories</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;}
+h1,h2,h3{color:#2c3e50;}
+code{background:#f4f4f4;padding:0.2em 0.4em;}
+pre{background:#f9f9f9;padding:1em;border-left:4px solid #ccc;}
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>11. Multiple repositories</h1>
+
+<p><strong>nhopkg</strong> supports multiple repositories to organize packages by purpose and lifecycle.</p>
+
+<h2>Active repositories</h2>
+<pre><code>NHOPKG_ACTIVE_REPOS="extra multilib"</code></pre>
+
+<h2>Repository URLs</h2>
+<pre><code>NHOPKG_REPO_EXTRA=https://example.com/extra
+NHOPKG_REPO_MULTILIB=https://example.com/multilib</code></pre>
+
+<h2>Package assignment</h2>
+<pre><code># Repository: extra</code></pre>
+
+<p>Only repositories listed in <code>NHOPKG_ACTIVE_REPOS</code> are searched.</p>
+
+<h2>Creating repositories</h2>
+<pre><code>sudo nhopkg --create-repo /path/to/packages</code></pre>
+
+</body>
+</html>

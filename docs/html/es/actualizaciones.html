@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 8. Actualizaciones seguras</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #e3f2fd;
+      padding: 1em;
+      border-left: 4px solid #2196f3;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>8. Actualizaciones seguras</h1>
+
+  <p>El comando <code>--upgrade</code> (o <code>-y</code>) de <strong>nhopkg</strong> permite actualizar todos los paquetes instalados a sus versiones más recientes disponibles en los repositorios configurados.</p>
+
+  <p>A diferencia de otros gestores, <strong>nhopkg</strong> implementa un flujo de actualización robusto, seguro y atómico en la medida de lo posible, minimizando el riesgo de corrupción parcial del sistema.</p>
+
+  <h2>Flujo de actualización</h2>
+
+  <p>El proceso de actualización sigue estos pasos críticos:</p>
+
+  <ol>
+    <li><strong>Sincroniza los repositorios</strong> locales con los servidores remotos (<code>--update</code> implícito).</li>
+    <li><strong>Lista todos los paquetes instalados</strong> en el sistema.</li>
+    <li><strong>Compara las versiones instaladas</strong> con las disponibles en los repositorios.</li>
+    <li><strong>Identifica los paquetes que tienen actualizaciones</strong> (versión nueva &gt; versión instalada).</li>
+    <li><strong>Muestra un plan de actualización</strong> y solicita confirmación al usuario.</li>
+    <li><strong>Resuelve y descarga todas las dependencias</strong> necesarias (incluyendo las de los paquetes a actualizar).</li>
+    <li><strong>Instala primero las dependencias</strong> descargadas.</li>
+    <li><strong>Para cada paquete a actualizar</strong>:
+      <ul>
+        <li>Elimina la versión antigua del sistema.</li>
+        <li>Instala la nueva versión.</li>
+      </ul>
+    </li>
+    <li><strong>Ejecuta tareas post-instalación</strong> globales (<code>shooter_updates</code>).</li>
+    <li><strong>Actualiza la base de datos local</strong> (<code>updatedb</code>).</li>
+  </ol>
+
+  <div class="note">
+    <strong>Característica clave:</strong> La versión antigua se elimina <em>antes</em> de instalar la nueva. Esto evita conflictos de archivos y garantiza que el sistema siempre esté en un estado coherente, incluso si la instalación falla.
+  </div>
+
+  <h2>Resolución de dependencias</h2>
+
+  <p>Durante la actualización, <strong>nhopkg</strong> realiza una resolución completa de dependencias en modo de solo lectura:</p>
+
+  <ul>
+    <li>Analiza las dependencias de los paquetes a actualizar usando los metadatos del repositorio.</li>
+    <li>Descarga <em>todas</em> las dependencias necesarias (tanto obligatorias como opcionales, si se aceptan) antes de comenzar cualquier instalación.</li>
+    <li>Instala las dependencias <em>antes</em> que los paquetes principales.</li>
+  </ul>
+
+  <p>Esto garantiza que no se produzcan errores por dependencias faltantes en mitad del proceso.</p>
+
+  <h2>Gestión de conflictos y reemplazos</h2>
+
+  <p>Antes de instalar cualquier paquete actualizado, <strong>nhopkg</strong> verifica posibles conflictos usando los campos <code># Conflicts:</code> y <code># Provides:</code> del <code>nhoid</code>.</p>
+
+  <ul>
+    <li>Si un paquete actualizado declara un conflicto con uno instalado, el proceso se aborta con un mensaje claro.</li>
+    <li>Si un paquete actualizado <em>reemplaza</em> a otro (porque provee la misma interfaz), el paquete antiguo se desinstala automáticamente tras confirmación del usuario.</li>
+  </ul>
+
+  <h2>Verificación de seguridad</h2>
+
+  <p>Todas las verificaciones de seguridad configuradas se aplican durante la actualización:</p>
+
+  <ul>
+    <li><strong>Checksum SHA256</strong>: se valida la integridad de cada paquete descargado.</li>
+    <li><strong>Arquitectura</strong>: se asegura que el paquete sea compatible con el sistema.</li>
+    <li><strong>Firma GPG</strong>: si está habilitada, se verifica la autenticidad de cada paquete.</li>
+  </ul>
+
+  <p>Si alguna verificación falla, la actualización se detiene inmediatamente.</p>
+
+  <h2>Comando y opciones</h2>
+
+  <pre><code># Actualizar todo el sistema
+sudo nhopkg --upgrade
+
+# O su alias corto
+sudo nhopkg -y</code></pre>
+
+  <p>Este comando no acepta argumentos adicionales (como nombres de paquetes). Para actualizar paquetes específicos, se debe usar <code>--super-install</code> en su lugar.</p>
+
+  <h2>Ejemplo de salida</h2>
+
+  <pre><code>$ sudo nhopkg --upgrade
+ - Updating repository databases...
+ :: Updating repository: extra (https://neonatox.vegnux.com/repo/n2026/x86_64/extra)
+   - Downloading database...
+ - All repositories updated successfully.
+ - Checking for available updates...
+ - Updates are available for the following packages:
+   gimp: 3.0.2-n2024 -> 3.0.4-n2025
+   firefox: 120.0-n2024 -> 121.0-n2025
+
+Do you want to continue?[yes/NO]: yes
+ - Downloading upgrade packages...
+ --- Downloading gimp-3.0.4-n2025.linux-x86_64.nho
+ --- Downloading firefox-121.0-n2025.linux-x86_64.nho
+ - Installing dependencies...
+ - Installing upgraded packages...
+ --- Removing gimp-3.0.2-n2024
+ --- Installing gimp-3.0.4-n2025
+ --- Removing firefox-120.0-n2024
+ --- Installing firefox-121.0-n2025
+ - System updates completed
+ - System updated successfully!</code></pre>
+
+  <h2>Consideraciones importantes</h2>
+
+  <ul>
+    <li>El comando <code>--upgrade</code> solo considera paquetes que están en los repositorios activos (<code>NHOPKG_ACTIVE_REPOS</code>).</li>
+    <li>No actualiza paquetes instalados desde fuentes locales (<code>.nho</code> o <code>.srcnho</code>) a menos que también existan en un repositorio.</li>
+    <li>El proceso es interactivo por defecto. Para uso automatizado, se puede combinar con <code>--recursive</code> para asumir "sí" a todas las preguntas.</li>
+  </ul>
+
+</body>
+</html>

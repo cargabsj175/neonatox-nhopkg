@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>nhopkg — 1. General architecture</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+h1, h2 { color: #2c3e50; }
+code { background:#f4f4f4; padding:0.2em 0.4em; border-radius:3px; }
+pre { background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+a { color:#2980b9; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>1. General architecture</h1>
+
+<p><strong>nhopkg</strong> is a universal package manager designed to work on any GNU/Linux distribution. Its architecture focuses on simplicity, portability, and transparency.</p>
+
+<h2>Language and compatibility</h2>
+<ul>
+  <li>Written mainly in <strong>Bash</strong>, with explicit effort to remain compatible with <code>sh</code>.</li>
+  <li>Designed to run even in minimal environments such as <strong>BusyBox</strong>.</li>
+  <li>No dependency on external runtimes like Python, Perl, or Rust.</li>
+</ul>
+
+<h2>Package formats</h2>
+<ul>
+  <li><code>.nho</code>: binary packages ready to install.</li>
+  <li><code>.srcnho</code>: source packages containing build recipes (<code>nhoid</code>).</li>
+</ul>
+
+<h2>Structure of a <code>.nho</code> package</h2>
+<ul>
+  <li><code>nhoid</code>: package metadata.</li>
+  <li><code>data.tar.zst</code>: compressed files.</li>
+  <li><code>signature.gpg</code> (optional): GPG signature.</li>
+</ul>
+
+<h2>Portability and minimalism</h2>
+<p>nhopkg is intended for:</p>
+<ul>
+  <li>Custom distributions (LFS / BLFS).</li>
+  <li>Embedded or low-resource systems.</li>
+  <li>Production environments requiring full control and reproducibility.</li>
+</ul>
+
+</body>
+</html>

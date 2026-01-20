@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 7. Package groups</title>
+<style>
+body{ font-family:system-ui,sans-serif; max-width:900px; margin:2rem auto;}
+h1,h2,h3{ color:#2c3e50; }
+code{ background:#f4f4f4; padding:0.2em 0.4em; }
+pre{ background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>7. Package groups</h1>
+
+<p><strong>nhopkg</strong> allows organizing packages into logical groups using the <code># Group:</code> field in the <code>nhoid</code> file.</p>
+
+<h2>Defining a group</h2>
+<pre><code># Group: graphics</code></pre>
+
+<h2>Installing by group</h2>
+<pre><code>sudo nhopkg --install-group graphics</code></pre>
+
+<h2>How it works</h2>
+<ol>
+  <li>Scans synced repositories</li>
+  <li>Finds matching group entries</li>
+  <li>Resolves dependencies</li>
+  <li>Installs all packages in the group</li>
+</ol>
+
+<p>Groups are ideal for defining system profiles such as <code>base</code>, <code>desktop</code>, or <code>server</code>.</p>
+
+</body>
+</html>

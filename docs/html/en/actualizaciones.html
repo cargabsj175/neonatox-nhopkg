@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>nhopkg — 8. Safe updates</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+h1,h2,h3{ color:#2c3e50; }
+code{ background:#f4f4f4; padding:0.2em 0.4em; }
+pre{ background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+.note{ background:#e3f2fd; padding:1em; border-left:4px solid #2196f3; }
+a{ color:#2980b9; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>8. Safe updates</h1>
+
+<p>The <code>--upgrade</code> (or <code>-y</code>) command allows updating all installed packages to their latest versions available in the configured repositories.</p>
+
+<p>Unlike other package managers, <strong>nhopkg</strong> follows a robust and predictable update workflow, minimizing the risk of partial system corruption.</p>
+
+<h2>Update workflow</h2>
+<ol>
+  <li>Synchronizes repositories.</li>
+  <li>Lists installed packages.</li>
+  <li>Compares installed and available versions.</li>
+  <li>Builds an upgrade plan and asks for confirmation.</li>
+  <li>Downloads all required dependencies.</li>
+  <li>Installs dependencies first.</li>
+  <li>Removes old package versions.</li>
+  <li>Installs new versions.</li>
+  <li>Runs post-install system updates.</li>
+  <li>Updates the local database.</li>
+</ol>
+
+<div class="note">
+<strong>Key behavior:</strong> old versions are removed <em>before</em> installing new ones to avoid file conflicts.
+</div>
+
+<h2>Security checks</h2>
+<ul>
+  <li>SHA256 checksum verification</li>
+  <li>Architecture compatibility</li>
+  <li>GPG signature verification (if enabled)</li>
+</ul>
+
+<pre><code># Upgrade the system
+sudo nhopkg --upgrade
+sudo nhopkg -y</code></pre>
+
+</body>
+</html>

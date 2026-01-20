@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 10. System maintenance</title>
+<style>
+body{ font-family:system-ui,sans-serif; max-width:900px; margin:2rem auto;}
+h1,h2,h3{ color:#2c3e50; }
+code{ background:#f4f4f4; padding:0.2em 0.4em; }
+pre{ background:#f9f9f9; padding:1em; border-left:4px solid #ccc; }
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>10. System maintenance</h1>
+
+<p><strong>nhopkg</strong> provides tools to keep the system clean, consistent and healthy.</p>
+
+<h2>Cache updates</h2>
+<p>The <code>--update-shooters</code> command refreshes system caches:</p>
+<ul>
+  <li>GSettings schemas</li>
+  <li>Icon cache</li>
+  <li>Desktop entries</li>
+  <li>MIME database</li>
+  <li>Man pages</li>
+  <li>Font cache</li>
+  <li>Shared libraries</li>
+</ul>
+
+<pre><code>sudo nhopkg --update-shooters</code></pre>
+
+<h2>Database update</h2>
+<pre><code>sudo nhopkg --update-db</code></pre>
+
+<h2>Cache cleanup</h2>
+<pre><code># Clean downloaded packages
+sudo nhopkg --clean
+
+# Clean cache and build directory
+sudo nhopkg --clean -R</code></pre>
+
+<h2>Integrity check</h2>
+<pre><code>nhopkg --check gimp</code></pre>
+
+<h2>Package backup</h2>
+<pre><code>sudo nhopkg --backup gimp</code></pre>
+
+</body>
+</html>

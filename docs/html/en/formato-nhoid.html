@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>nhopkg — 3. Package format: nhoid</title>
+<style>
+body{ font-family:system-ui,sans-serif; max-width:900px; margin:2rem auto;}
+table{ width:100%; border-collapse:collapse;}
+th,td{ padding:0.6em; border-bottom:1px solid #ddd;}
+th{ background:#f0f0f0;}
+code{ background:#f4f4f4; padding:0.2em 0.4em;}
+</style>
+</head>
+<body>
+
+<nav><a href="index.html">← Index</a></nav>
+
+<h1>3. Package format: <code>nhoid</code></h1>
+
+<p>The <code>nhoid</code> file is the core of any nhopkg package. It defines metadata, dependencies, sources, and behavior.</p>
+
+<h2>Format version</h2>
+<pre><code>#%NHO-0.5</code></pre>
+
+<h2>Common fields</h2>
+<table>
+<tr><th>Field</th><th>Description</th></tr>
+<tr><td><code># Name:</code></td><td>Package name</td></tr>
+<tr><td><code># Version:</code></td><td>Software version</td></tr>
+<tr><td><code># Release:</code></td><td>Package release number</td></tr>
+<tr><td><code># Description:</code></td><td>Short description</td></tr>
+<tr><td><code># Arch:</code></td><td>Target architecture</td></tr>
+</table>
+
+<h2>Post-install functions</h2>
+<ul>
+  <li><code>npostinstall()</code></li>
+  <li><code>npostremove()</code></li>
+</ul>
+
+</body>
+</html>

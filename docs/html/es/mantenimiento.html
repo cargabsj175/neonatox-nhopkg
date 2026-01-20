@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>nhopkg — 10. Mantenimiento del sistema</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5em 0;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .note {
+      background: #e8f5e9;
+      padding: 1em;
+      border-left: 4 p x solid #4caf50;
+      margin: 1.5em 0;
+    }
+    nav a {
+      text-decoration: none;
+      color: #2980b9;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <nav><a href="index.html">← Índice</a></nav>
+
+  <h1>10. Mantenimiento del sistema</h1>
+
+  <p><strong>nhopkg</strong> incluye una serie de comandos y funciones diseñadas para mantener el sistema limpio, coherente y actualizado. Estas herramientas son esenciales para la administración diaria de una distribución basada en nhopkg.</p>
+
+  <h2>10.1. Actualización de cachés del sistema (<code>--update-shooters</code>)</h2>
+
+  <p>El comando <code>--update-shooters</code> (o <code>-x</code>) ejecuta una serie de tareas post-instalación globales que aseguran que el sistema esté en un estado coherente tras instalar o actualizar paquetes.</p>
+
+  <p>Estas tareas son implementadas en la función <code>shooter_updates()</code> y se ejecutan automáticamente al final de una operación de instalación o actualización, pero también pueden invocarse manualmente.</p>
+
+  <h3>Tareas ejecutadas</h3>
+  <ul>
+    <li><strong>Esquemas GSettings</strong>: <code>glib-compile-schemas /usr/share/glib-2.0/schemas</code></li>
+    <li><strong>Caché de iconos</strong>: <code>gtk-update-icon-cache</code> para todos los temas de iconos.</li>
+    <li><strong>Base de datos de aplicaciones</strong>: <code>update-desktop-database</code>.</li>
+    <li><strong>Tipos MIME</strong>: <code>update-mime-database /usr/share/mime</code>.</li>
+    <li><strong>Páginas de manual</strong>: <code>mandb</code> o <code>makewhatis</code>.</li>
+    <li><strong>Caché de fuentes</strong>: <code>fc-cache -f</code>.</li>
+    <li><strong>Caché de bibliotecas compartidas</strong>: <code>ldconfig</code>.</li>
+  </ul>
+
+  <pre><code># Ejecutar manualmente las actualizaciones de caché
+sudo nhopkg --update-shooters</code></pre>
+
+  <h2>10.2. Gestión de la base de datos local (<code>--update-db</code>)</h2>
+
+  <p>La base de datos local, usada por <code>locate</code> (o <code>mlocate</code>), permite a nhopkg resolver dependencias basadas en archivos (por ejemplo, si un paquete requiere <code>/usr/bin/python3</code>).</p>
+
+  <p>El comando <code>--update-db</code> (o <code>-u</code>) actualiza esta base de datos, excluyendo directorios definidos en la variable <code>NO_DIRS_IN_DB</code> del archivo de configuración.</p>
+
+  <pre><code># Actualizar la base de datos local
+sudo nhopkg --update-db</code></pre>
+
+  <h2>10.3. Limpieza de caché (<code>--clean</code>)</h2>
+
+  <p>Con el tiempo, nhopkg acumula archivos en su caché:</p>
+  <ul>
+    <li>Paquetes descargados (<code>/var/nhopkg/cache/</code>).</li>
+    <li>Directorios de compilación (<code>/usr/src/nhopkg/</code>).</li>
+  </ul>
+
+  <p>El comando <code>--clean</code> (o <code>-e</code>) elimina estos archivos temporales.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comando</th>
+        <th>Efecto</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>nhopkg --clean</code></td>
+        <td>Elimina solo los paquetes descargados de la caché.</td>
+      </tr>
+      <tr>
+        <td><code>nhopkg --clean -R</code></td>
+        <td>Elimina la caché de paquetes <strong>y</strong> el directorio de compilación (<code>/usr/src/nhopkg/</code>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code># Limpiar caché de paquetes
+sudo nhopkg --clean
+
+# Limpiar caché y directorio de compilación
+sudo nhopkg --clean -R</code></pre>
+
+  <h2>10.4. Verificación de integridad (<code>--check</code>)</h2>
+
+  <p>El comando <code>--check</code> (o <code>-k</code>) verifica la integridad de un paquete instalado. Compara la lista de archivos registrada en <code>/var/nhopkg/files/&lt;paquete&gt;.files.tar.zst</code> con el sistema de archivos real.</p>
+
+  <p>Si un archivo está faltante o ha sido modificado, el comando lo reportará.</p>
+
+  <pre><code># Verificar la integridad del paquete 'gimp'
+nhopkg --check gimp</code></pre>
+
+  <h2>10.5. Listado e inspección de paquetes</h2>
+
+  <p>nhopkg ofrece varias formas de inspeccionar el estado del sistema:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comando</th>
+        <th>Descripción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--list</code> o <code>-l</code></td>
+        <td>Lista todos los paquetes instalados.</td>
+      </tr>
+      <tr>
+        <td><code>--info</code> o <code>-n</code></td>
+        <td>Muestra metadatos detallados de un paquete (instalado, en repositorio o en archivo local).</td>
+      </tr>
+      <tr>
+        <td><code>--show</code> o <code>-w</code></td>
+        <td>Muestra la lista de archivos contenidos en un paquete.</td>
+      </tr>
+      <tr>
+        <td><code>--list-repo</code> o <code>-t</code></td>
+        <td>Lista todos los paquetes disponibles en los repositorios locales sincronizados.</td>
+      </tr>
+      <tr>
+        <td><code>--search</code> o <code>-s</code></td>
+        <td>Busca paquetes en los repositorios por nombre o descripción.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>10.6. Reconstrucción de paquetes (<code>--backup</code>)</h2>
+
+  <p>El comando <code>--backup</code> (o <code>-B</code>) es una herramienta poderosa para la recuperación y migración. Reconstruye un paquete binario (<code>.nho</code>) a partir de un paquete ya instalado en el sistema.</p>
+
+  <p>Esto es útil para:
+    <ul>
+      <li>Crear copias de seguridad de paquetes personalizados.</li>
+      <li>Migrar paquetes entre sistemas.</li>
+      <li>Recrear un paquete si se pierde el original.</li>
+    </ul>
+  </p>
+
+  <pre><code># Reconstruir el paquete 'gimp' instalado
+sudo nhopkg --backup gimp</code></pre>
+
+  <div class="note">
+    <strong>Nota:</strong> El paquete reconstruido contendrá todos los archivos tal como están en el sistema, incluyendo cualquier modificación manual. No se incluyen las funciones de post-instalación originales.
+  </div>
+
+  <h2>Conclusión</h2>
+
+  <p>Con este conjunto de herramientas, <strong>nhopkg</strong> no solo gestiona paquetes, sino que también proporciona un entorno completo para el mantenimiento proactivo y reactivo de un sistema Linux, asegurando su estabilidad y rendimiento a largo plazo.</p>
+
+</body>
+</html>
