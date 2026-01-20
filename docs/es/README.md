@@ -6,19 +6,19 @@ Esta documentación está dividida en secciones independientes para facilitar su
 
 ## Índice
 
-  * [1\. Arquitectura general](arquitectura.html)
-  * [2\. Configuración](configuracion.html)
-  * [3\. Formato del paquete: `nhoid`](formato-nhoid.html)
-  * [4\. Comandos principales](comandos.html)
-  * [5\. Seguridad y firmas GPG](seguridad.html)
-  * [6\. Gestión de usuarios y servicios](usuarios-servicios.html)
-  * [7\. Grupos de paquetes](grupos.html)
-  * [8\. Actualizaciones seguras](actualizaciones.html)
-  * [9\. Construcción de paquetes](construccion.html)
-  * [10\. Mantenimiento del sistema](mantenimiento.html)
-  * [11\. Repositorios múltiples](repositorios.html)
-  * [12\. ¿Listo para producción?](produccion.html)
-  * [13\. Próximos pasos](proximos-pasos.html)
+  * [1\. Arquitectura general](arquitectura.md)
+  * [2\. Configuración](configuracion.md)
+  * [3\. Formato del paquete: `nhoid`](formato-nhoid.md)
+  * [4\. Comandos principales](comandos.md)
+  * [5\. Seguridad y firmas GPG](seguridad.md)
+  * [6\. Gestión de usuarios y servicios](usuarios-servicios.md)
+  * [7\. Grupos de paquetes](grupos.md)
+  * [8\. Actualizaciones seguras](actualizaciones.md)
+  * [9\. Construcción de paquetes](construccion.md)
+  * [10\. Mantenimiento del sistema](mantenimiento.md)
+  * [11\. Repositorios múltiples](repositorios.md)
+  * [12\. ¿Listo para producción?](produccion.md)
+  * [13\. Próximos pasos](proximos-pasos.md)
 
 
 

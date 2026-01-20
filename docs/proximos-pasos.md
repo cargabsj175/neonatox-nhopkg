@@ -1,4 +1,4 @@
-[← Index](index.html)
+[← Index](index.md)
 
 # 13\. Next steps
 

@@ -1,4 +1,4 @@
-[← Índice](index.html)
+[← Índice](index.md)
 
 # 12\. ¿Listo para producción?
 

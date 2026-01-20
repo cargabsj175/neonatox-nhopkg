@@ -1,4 +1,4 @@
-[← Índice](index.html)
+[← Índice](index.md)
 
 # 10\. Mantenimiento del sistema
 

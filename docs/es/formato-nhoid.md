@@ -1,4 +1,4 @@
-[← Índice](index.html)
+[← Índice](index.md)
 
 # 3\. Formato del paquete: `nhoid`
 

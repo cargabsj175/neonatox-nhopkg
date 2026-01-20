@@ -1,4 +1,4 @@
-[← Índice](index.html)
+[← Índice](index.md)
 
 # 7\. Grupos de paquetes
 

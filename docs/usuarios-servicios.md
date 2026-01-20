@@ -1,4 +1,4 @@
-[← Index](index.html)
+[← Index](index.md)
 
 # 6\. User and service management
 

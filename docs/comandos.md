@@ -1,4 +1,4 @@
-[← Index](index.html)
+[← Index](index.md)
 
 # 4\. Main commands
 

@@ -6,19 +6,19 @@ This documentation is divided into independent sections to make maintenance and 
 
 ## Table of Contents
 
-  * [1\. General architecture](arquitectura.html)
-  * [2\. Configuration](configuracion.html)
-  * [3\. Package format: `nhoid`](formato-nhoid.html)
-  * [4\. Main commands](comandos.html)
-  * [5\. Security and GPG signatures](seguridad.html)
-  * [6\. User and service management](usuarios-servicios.html)
-  * [7\. Package groups](grupos.html)
-  * [8\. Safe updates](actualizaciones.html)
-  * [9\. Package building](construccion.html)
-  * [10\. System maintenance](mantenimiento.html)
-  * [11\. Multiple repositories](repositorios.html)
-  * [12\. Ready for production?](produccion.html)
-  * [13\. Next steps](proximos-pasos.html)
+  * [1\. General architecture](arquitectura.md)
+  * [2\. Configuration](configuracion.md)
+  * [3\. Package format: `nhoid`](formato-nhoid.md)
+  * [4\. Main commands](comandos.md)
+  * [5\. Security and GPG signatures](seguridad.md)
+  * [6\. User and service management](usuarios-servicios.md)
+  * [7\. Package groups](grupos.md)
+  * [8\. Safe updates](actualizaciones.md)
+  * [9\. Package building](construccion.md)
+  * [10\. System maintenance](mantenimiento.md)
+  * [11\. Multiple repositories](repositorios.md)
+  * [12\. Ready for production?](produccion.md)
+  * [13\. Next steps](proximos-pasos.md)
 
 
 
