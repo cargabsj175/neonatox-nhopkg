@@ -1,95 +1,191 @@
-#	nhopkg.conf v. @PACKAGE_VERSION@ @RELEASEDATE@
+#==============================================================================
+# nhopkg.conf
+#------------------------------------------------------------------------------
+# Global configuration file for nhopkg.
 #
-# This is the nhopkg configuration file. See nhopkg.conf(5) for more information.
-# This file provides default configurations for users, and they can be changed in this file or
-# in the command line.
+# This file defines default paths, behavior options, repositories,
+# security settings and database locations used by nhopkg.
 #
-# Configuration data is parsed as follows:
-# 1. From command line options.
-# 2. From @sysconfdir@/nhopkg/nhopkg.conf file.
-# 3. From default nhopkg.conf file (@pkgdatadir@/nhopkg.conf).
-# If there are not command line options, defaults are in nhopkg.conf.
-# Configurations from command line options only are sets for this use.
+# Configuration precedence:
+#   1. Command line options
+#   2. System configuration file (@sysconfdir@/nhopkg/nhopkg.conf)
+#   3. Default configuration file (@pkgdatadir@/nhopkg.conf)
+#
+# Command line options always override values defined here.
+#==============================================================================
 
-# [main]
-# Default configuration for nhopkg.
+
+#==============================================================================
+# Section: Main
+#------------------------------------------------------------------------------
+# Core directories and base paths used internally by nhopkg.
+# These variables define where configuration files, runtime data,
+# temporary files, build directories and lock files are stored.
+#
+# Changing these values may break the system if done incorrectly.
+#==============================================================================
+
 prefix=@prefix@
 datarootdir=@datarootdir@
 SYSCONFDIR=@sysconfdir@
+
+# nhopkg specific directories
 NHOPKG_SYSCONFDIR=${SYSCONFDIR}/nhopkg
 NHOPKG_DATADIR=${datarootdir}/@PACKAGE@
 LOCALSTATEDIR=@localstatedir@
 NHOPKG_LOCALSTATEDIR=${LOCALSTATEDIR}/nhopkg
+
+# Temporary and build directories
 TMPDIR=/tmp
 TEMPLATE_TMPDIR=".nhopkg.XXXXXXXXXX"
 BUILDIR=/usr/src
 NHOPKG_BUILDIR=${BUILDIR}/nhopkg
+
+# Lock file to avoid multiple nhopkg instances running at the same time
 NHOPKG_LOCKFILE=/var/lock/nhopkg
 
-# [options]
-# Basic options for nhopkg.
-# Dependency manager for nhopkg (yes OR no):
+
+#==============================================================================
+# Section: Options
+#------------------------------------------------------------------------------
+# General behavior options for nhopkg.
+# These settings control dependency handling, verification checks,
+# verbosity and experimental features.
+#==============================================================================
+
+# Enable dependency checking (required and optional)
 NHOPKG_CHECKDEPS=yes
-# Inverse dependency manger for nhopkg (yes OR no):
+
+# Enable inverse dependency removal when uninstalling packages
 NHOPKG_PURGE=no
-# Check package md5sum for nhopkg (yes OR no):
+
+# Verify SHA256 checksums of packages
 NHOPKG_CHECKSHA256=yes
-# Check package arquitecture for nhopkg (yes OR no):
+
+# Verify package architecture compatibility
 NHOPKG_CHECKARCH=yes
-# Verbose mode for nhopkg (yes OR no):
+
+# Enable verbose output
 VERBOSE_MODE=no
 
-# Strip binaries and libraries if enabled (yes OR no) (experimental):
+# Strip binaries and libraries after installation (experimental)
 STRIP_BINARIES=no
 
-# Init system: systemd | sysvinit
+
+#==============================================================================
+# Section: Init System
+#------------------------------------------------------------------------------
+# Selects the init system used by the target system.
+# This affects which service files or scripts are installed.
+#
+# Supported values:
+#   - systemd
+#   - sysvinit
+#==============================================================================
+
 INITSYSTEM=systemd
 
-# Systemd (BLFS units)
+
+#==============================================================================
+# Section: BLFS Systemd Units
+#------------------------------------------------------------------------------
+# Configuration for BLFS-provided systemd unit files.
+# Used only when INITSYSTEM=systemd.
+#==============================================================================
+
 SYSTEMD_BLFS_VER=20251204
 SYSTEMD_BLFS_DIR=/usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}
 SYSTEMD_BLFS_URL=https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz
 
-# SysVinit (BLFS bootscripts)
+
+#==============================================================================
+# Section: BLFS SysVinit Scripts
+#------------------------------------------------------------------------------
+# Configuration for BLFS SysVinit boot scripts.
+# Used only when INITSYSTEM=sysvinit.
+#==============================================================================
+
 SYSV_BLFS_VER=20251220
 SYSV_BLFS_DIR=/usr/src/blfs-bootscripts-${SYSV_BLFS_VER}
 SYSV_BLFS_URL=https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz
 
-# Sign binary packages with PGP
+
+#==============================================================================
+# Section: Package Signing & Verification
+#------------------------------------------------------------------------------
+# GPG configuration for signing and verifying binary packages.
+#
+# Signing is usually enabled only for maintainers.
+# Verification is recommended for users.
+#==============================================================================
+
+# Directory containing trusted public keys
 NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
-# Sign packages when building (maintainers only)
+
+# Sign packages during build (maintainers only)
 NHOPKG_SIGN_PACKAGES=yes
 NHOPKG_SIGN_KEY="repo@neonatox.vegnux.com"
-# Verify signatures when installing
+
+# Verify package signatures during installation
 NHOPKG_VERIFY_SIGNATURE=yes
+
+# Require valid signature (abort install if missing or invalid)
 NHOPKG_REQUIRE_SIGNATURE=no
 
-# [server]
-# Repositories configuration for nhopkg.
-# Default repository of Nhopkg. You can change it.
-# Active repos (separated with spaces lowcase)
+
+#==============================================================================
+# Section: Server / Repositories
+#------------------------------------------------------------------------------
+# Repository configuration for nhopkg.
+#
+# Defines which repositories are active and where they are located.
+# Multiple mirrors can be defined per repository.
+#==============================================================================
+
+# Active repositories (space separated, lowercase)
 NHOPKG_ACTIVE_REPOS="core extra multilib"
-# Repositorry CORE (can content mirrors separated with spaces)
+
+# Repository URLs
 NHOPKG_REPO_CORE="@NHOPKG_REPO_CORE@"
-# Repositorry EXTRA (can content mirrors separated with spaces)
 NHOPKG_REPO_EXTRA="@NHOPKG_REPO_EXTRA@"
-# Repositorry MULTILIB (can content mirrors separated with spaces)
 NHOPKG_REPO_MULTILIB="@NHOPKG_REPO_MULTILIB@"
 
-# Default GIT repository of Nhopkg. You can change it.
+
+#==============================================================================
+# Section: Git Sources
+#------------------------------------------------------------------------------
+# Default Git repository used to fetch sources for .srcnho packages.
+#==============================================================================
+
 NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources
 
 
-# [language suppor]
-# Language suppor for nhopkg (yes OR no):
+#==============================================================================
+# Section: Language Support
+#------------------------------------------------------------------------------
+# gettext-based internationalization support.
+#
+# When enabled, messages are shown in the system language
+# if translations are available.
+#==============================================================================
+
 NHOPKG_GETTEXT=yes
-# Don't edit!
+
+# gettext internal variables (do not edit)
 TEXTDOMAIN=@PACKAGE_NAME@
 TEXTDOMAINDIR=@localedir@
 
-# [create source package]
-# FIND_DIRS contains directories where nhopkg looking for files installed. This option is needed to install packages from source.
-# The default option is: /bin /boot /etc /lib /opt /sbin /srv /usr
+
+#==============================================================================
+# Section: Source Package Creation
+#------------------------------------------------------------------------------
+# Settings used when generating binary packages from source.
+#
+# FIND_DIRS defines directories scanned to detect installed files.
+# NOUPGRADE_FILES defines files that must never be included
+# or upgraded by binary packages.
+#==============================================================================
+
 FIND_DIRS="/bin \
 /boot \
 /etc \
@@ -98,8 +194,7 @@ FIND_DIRS="/bin \
 /sbin \
 /srv \
 /usr"
-# No upgrate files --> /etc/nhopkg/uncompatible.files are deprecated.
-# Add files that you think mustn't be in a binary package in 0.5.x version.
+
 NOUPGRADE_FILES="mimeinfo.cache \
 info/dir \
 info/dir.old \
@@ -108,11 +203,19 @@ ${NHOPKG_BUILDIR} \
 /etc/mtab \
 /etc/fstab"
 
-# [database]
-# Nhopkg data base location.
+
+#==============================================================================
+# Section: Database
+#------------------------------------------------------------------------------
+# nhopkg internal file database configuration.
+#
+# Used to track installed files and resolve dependencies.
+#==============================================================================
+
+# Database file location
 NHOPKG_DB=${NHOPKG_LOCALSTATEDIR}/nhopkg.db
-# Dirs that you don't want in your DB. You can edit this variable, but the default is best.
-# The default option is: /dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src ${NHOPKG_BUILDIR} /usr/share/zoneinfo /var
+
+# Directories excluded from database indexing
 NO_DIRS_IN_DB="/dev \
 /home \
 /media \
@@ -125,4 +228,3 @@ NO_DIRS_IN_DB="/dev \
 /usr/src \
 /usr/share/zoneinfo \
 /var"
-
