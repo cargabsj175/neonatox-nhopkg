@@ -1,0 +1,152 @@
+--- nhopkg.in.orig	2026-01-25 14:52:49.413044221 -0300
++++ nhopkg.in	2026-01-25 15:23:51.806015913 -0300
+@@ -151,6 +151,64 @@
+ 	return 0 # Best than others.
+ }
+ # ---------------------------------------------------------
++# append_npostinstall()
++# Description: Extracts and accumulates the commands defined in the
++#              npostinstall() section of a package nhoid into a deferred
++#              postinstall script when --root is used.
++#
++#              This prevents execution of post-install actions on the host
++#              system and allows them to be executed later inside a chroot.
++#
++#              Empty or placeholder postinstall definitions
++#              (noemptyfuncs or :) are ignored.
++#
++# Parameters: none
++# Returns: 0 if no valid npostinstall section exists,
++#          if it is empty, or after successfully appending
++#          its commands to the postinstall script.
++# ---------------------------------------------------------
++append_npostinstall() {
++    [ -z "$NHOPKG_ROOT" ] && return 0
++
++    POSTROOT="$NHOPKG_ROOT/usr/local/bin"
++    POSTSCRIPT="$POSTROOT/postinstall.sh"
++    mkdir -p "$POSTROOT"
++
++    # Crear script si no existe
++    if [ ! -f "$POSTSCRIPT" ]; then
++        cat > "$POSTSCRIPT" <<'EOF'
++#!/bin/sh
++set -e
++
++# NeonatoX accumulated postinstall
++# Ejecutar SOLO dentro del chroot
++
++# Defensive placeholder (should never be used)
++noemptyfuncs() { :; }
++EOF
++        chmod +x "$POSTSCRIPT"
++    fi
++
++    # Extraer cuerpo real de npostinstall desde el nhoid
++    body="$(
++        sed -n '/^npostinstall() {/,/^}/p' "${NHOPKG_TMPDIR}/nhoid" \
++        | sed '1d;$d' \
++        | sed '/^[[:space:]]*$/d'
++    )"
++
++    # Ignorar placeholders
++    echo "$body" | grep -Eq '^(noemptyfuncs|:)[[:space:]]*$' && return 0
++
++    # Si quedó vacío, no hacer nada
++    [ -z "$body" ] && return 0
++
++    {
++        echo ""
++        echo "# --- ${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision} ---"
++        echo "$body"
++    } >> "$POSTSCRIPT"
++}
++# ---------------------------------------------------------
+ # get_packages_by_group()
+ # Description:
+ #   Lists all package filenames that belong to a given group
+@@ -1695,7 +1753,9 @@
+ }
+ ## installdownloadedeps(). Installs downloaded dependencies.
+ # Usage: installdownloadedeps (without arguments)
++# DEPRECATED: do not use in new code
+ installdownloadedeps()
++
+ {
+ 	for DCASEPACKAGE in ${DCASEPACKAGES[*]};
+ 	do
+@@ -1937,6 +1997,13 @@
+ 	if [ -f "${NHOPKG_TMPDIR}/data.tar.zst" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.xz" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.bz2" ]; then
+ 		# Checks if --root or --root= option are selected.
+ 		if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
++		
++			# --root mode: disable hook execution on host and prepare deferred postinstall script
++			export NHOPKG_NO_EXEC_HOOKS=1
++			export NHOPKG_ROOT="${INSTALL_ROOT}"
++			POSTROOT="${NHOPKG_ROOT}/usr/local/bin"
++			POSTSCRIPT="${POSTROOT}/postinstall.sh"
++			
+ 			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+ 			# Checks if all is good.
+ 			check_if_ok " *** Failed to install package."
+@@ -1963,28 +2030,40 @@
+ # Usage: bin_install_setting_up (without arguments)
+ bin_install_setting_up()
+ {
+-	local part="$1"  # Parameter for subpackages. If there is no part, we use the main package
+-	if [[ -z "${part}" ]]; then
+-	part=""
+-	fi
+-	get_package_display_name "$part"
++    local part="$1"
++    [ -z "$part" ] && part=""
+ 
+-	echogn " --- Setting up"
+-	echo " ${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
+-	if [ "${VERBOSE_MODE}" = "yes" ]; then
+-		if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
+-			npostinstall${part:+_}${part}
+-		else
+-			noemptyfuncs
+-		fi
+-	else
+-		if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
+-			npostinstall${part:+_}${part} &> /dev/null
+-		else
+-			noemptyfuncs
+-		fi
+-	fi
++    get_package_display_name "$part"
++
++    echogn " --- Setting up"
++    echo " ${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}"
++
++    # -------------------------------------------------
++    # MODO --root → NO ejecutar, solo acumular
++    # -------------------------------------------------
++    if [ -n "$NHOPKG_NO_EXEC_HOOKS" ]; then
++        append_npostinstall
++        return 0
++    fi
++
++    # -------------------------------------------------
++    # MODO NORMAL → ejecutar como siempre
++    # -------------------------------------------------
++    if [ "${VERBOSE_MODE}" = "yes" ]; then
++        if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
++            npostinstall${part:+_}${part}
++        else
++            noemptyfuncs
++        fi
++    else
++        if declare -f npostinstall${part:+_}${part} >/dev/null 2>&1; then
++            npostinstall${part:+_}${part} &> /dev/null
++        else
++            noemptyfuncs
++        fi
++    fi
+ }
++
+ ## bin_install_create_config_files(). Creates config files of installed package ( on files/ and packages/ directories).
+ # Usage: bin_install_create_config_files (without arguments)
+ bin_install_create_config_files()
