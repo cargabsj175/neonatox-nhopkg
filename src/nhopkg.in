@@ -2828,8 +2828,14 @@ build_nhoid_to_bin()
 	grep '^# Version:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Release:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# License:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"  2>/dev/null || true
-	# Force "multilib" as repo in multilib packages
+	# prefix lib32- for lib32 packages with defined groups
+	if [ "$part" = "lib32" ] && grep -q '^# Group:' "${NHOPKG_TMPDIR}/.nhoid"; then
+		grpval=$(grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" | sed 's/^# Group:\t//')
+		[ -n "$grpval" ] && echo "# Group:$'\t'lib32-$grpval" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+	else
+		grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+	fi
+	# Force "multilib" as repo in lib32 packages
 	if [ "$part" = "lib32" ]; then
 	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"
 	else
