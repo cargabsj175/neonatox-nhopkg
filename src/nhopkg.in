@@ -599,6 +599,7 @@ nhopkg_help()
 	echo "nhopkg --show gimp-3.0.4-n2025"
 	echo
 	echog "Commands:"
+	echog " -A, --add-to-repo\tIncrementally add one or more .nho packages to an existing repository."
 	echog " -B, --backup\tCreates binary package from installed package."
 	echog " -C, --super-build\tCompiles and installs source package from Git repo."
 	echog " -G, --install-group\tInstalls binaries packages from a specified group from the repository."
@@ -627,6 +628,7 @@ nhopkg_help()
 	echog " -h, --help\tShows this help page."
 	echo
 	echog "Options:"
+	echog " --repo-dir <dir>\tRepository root directory (used with --add-to-repo)."
 	echog " --force-check-arch\tForce check architecture."
 	echog " --force-check-deps\tForce check dependencies."
 	echog " --force-check-sha256\tForce check SHA256 Sum."
@@ -3436,8 +3438,8 @@ trap cleanup_all EXIT TERM
 # Section: Nhopkg parse options.
 #==============================================================================
 NHNAME=$(basename "$0")
-SHORTOPTIONS="RiSdXrBbklno:wxstg:UehuvCyG"
-LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature,upgrade,install-group,strip-binaries"
+SHORTOPTIONS="RiSdXrBbklno:wxstg:UehuvCyGA"
+LONGOPTIONS="recursive,root:,no-check-deps,no-check-arch,no-check-sha256,force-check-deps,force-check-arch,force-check-sha256,install,super-install,dios,remove,backup,purge,build,check,list,info,output:,show,update-shooters,search,list-repo,create-repo:,update,clean,help,license,license-all,version,update-db,verbose,super-build,sign-package,no-sign-package,verify-package-signature,no-verify-package-signature,upgrade,install-group,strip-binaries,add-to-repo,repo-dir:"
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n ${NHNAME} -- "$@")
 if [[ "${?}" != "0" ]]; then
 	nhopkg_usage
@@ -3686,6 +3688,25 @@ while [[ "${1}" != "--" ]]; do
 				echog " * You have selected more than one valid option." >&2
 				exit 1
 			fi
+			shift
+		;;
+		-A|--add-to-repo)
+			shift
+		if [[ -z "${NHOPKG_OPTION}" ]]; then
+			NHOPKG_OPTION="add-to-repo"
+		else
+			echog " * You have selected more than one valid option." >&2
+			exit 1
+		fi
+		;;
+		--repo-dir)
+			shift
+		if [[ -d "${1}" ]]; then
+			REPO_ROOT="$(echo ${1} | sed -e 's@/$@@')"
+		else
+			echog " * The selected directory doesn't exist in your system." >&2
+			exit 1
+		fi
 			shift
 		;;
 		-U|--update)
@@ -4865,6 +4886,7 @@ case "${NHOPKG_OPTION}" in
     cleanup_tmp_dir
     exit 0
     ;;
+            
 	update)
 # ********************************************************************
 #
@@ -5010,6 +5032,192 @@ case "${NHOPKG_OPTION}" in
 
 		echog " - All repositories updated successfully."
 		exit 0
+	;;
+	add-to-repo)
+	# ==========================================================
+	# Section: Incremental Repository Update (Safe Mode)
+	# ----------------------------------------------------------
+	# Adds .nho packages to repository root
+	# Keeps ONLY latest version per package
+	# Rebuilds:
+	#       core.packages.tar.zst
+	#       core.files.tar.zst
+	#       content.db.zst
+	#       lastsync
+	# Preserves deterministic metadata
+	#
+	# Flow:
+	# 1. Process incoming packages
+	# 2. Rebuild repository metadata (per affected repo)
+	# ==========================================================
+
+	get_pwd_dir
+	check_if_root_uid
+
+	[ -z "$CASEPACKAGES" ] && {
+		echog " * Must specify .nho packages."
+		exit 1
+	}
+
+	[ -z "$REPO_ROOT" ] && {
+		echog " * Must specify --repo-dir."
+		exit 1
+	}
+
+	[ ! -d "$REPO_ROOT" ] && {
+		echog " * Repository root does not exist."
+		exit 1
+	}
+
+	cleanup_tmp_dir
+	make_tmp_dir
+
+	# ----------------------------------------------------------
+	# 1. Process incoming packages
+	# ----------------------------------------------------------
+	for pkgpath in $CASEPACKAGES; do
+		case "$pkgpath" in
+			--*) continue ;;
+		esac
+
+		[ ! -f "$pkgpath" ] && {
+			echog " * Package not found: $pkgpath"
+			continue
+		}
+
+		echogn " :: Adding package:"
+		echo " $(basename "$pkgpath")"
+
+		# Extract nhoid safely
+		tar xfO "$pkgpath" nhoid > "$NHOPKG_TMPDIR/nhoid" 2>/dev/null || {
+			echog " * Invalid package."
+			continue
+		}
+
+		get_nhoid_data "$NHOPKG_TMPDIR/nhoid"
+
+		repo="${pkgrepo:-extra}"
+		repodir="$REPO_ROOT/$repo"
+
+		mkdir -p "$repodir"
+
+		# Remove older versions automatically
+		for old in "$repodir"/"$pkgname"-*.nho; do
+		   [ -f "$old" ] && rm -f "$old"
+		done
+
+		cp "$pkgpath" "$repodir/"
+
+		# Prepare repo staging structure
+		mkdir -p "$NHOPKG_TMPDIR/$repo/packages"
+		mkdir -p "$NHOPKG_TMPDIR/$repo/files"
+
+		meta_name="$pkgname-$pkgversion-$pkgrevision"
+
+		cp "$NHOPKG_TMPDIR/nhoid" \
+		   "$NHOPKG_TMPDIR/$repo/packages/$meta_name"
+
+		# Extract file list silently
+		tar xf "$pkgpath" -C "$NHOPKG_TMPDIR" data.tar.zst 2>/dev/null
+
+		if [ -f "$NHOPKG_TMPDIR/data.tar.zst" ]; then
+			zstd -dc "$NHOPKG_TMPDIR/data.tar.zst" 2>/dev/null | \
+			tar -tf - 2>/dev/null > \
+			"$NHOPKG_TMPDIR/$repo/files/$meta_name"
+
+			rm -f "$NHOPKG_TMPDIR/data.tar.zst"
+		fi
+	done
+
+	# ----------------------------------------------------------
+	# 2. Rebuild repository metadata (per affected repo)
+	# ----------------------------------------------------------
+	for repo in "$NHOPKG_TMPDIR"/*; do
+		[ -d "$repo" ] || continue
+
+		reponame=$(basename "$repo")
+		repodir="$REPO_ROOT/$reponame"
+
+		echogn " :: Updating repository:"
+		echo " $reponame"
+
+		mkdir -p "$repodir"
+
+		# ---------- PACKAGES ----------
+		tmpbuild="$repodir/.build.$$"
+		mkdir -p "$tmpbuild"
+
+		if [ -f "$repodir/core.packages.tar.zst" ]; then
+			zstd -dc "$repodir/core.packages.tar.zst" 2>/dev/null | \
+			tar xf - -C "$tmpbuild" 2>/dev/null
+		fi
+
+		for newmeta in "$repo/packages/"*; do
+			[ -f "$newmeta" ] || continue
+
+			get_basic_data "$newmeta"
+			full="$pkgname-$pkgversion-$pkgrevision"
+
+			rm -f "$tmpbuild/$pkgname"-*
+			rm -f "$tmpbuild/$pkgname"
+
+			cp "$newmeta" "$tmpbuild/$full"
+
+			ln -sf "$full" "$tmpbuild/$pkgname-$pkgversion"
+			ln -sf "$full" "$tmpbuild/$pkgname"
+		done
+
+		tar cf "$repodir/.packages.$$" -C "$tmpbuild" . 2>/dev/null
+		zstd -q -f "$repodir/.packages.$$"
+		mv -f "$repodir/.packages.$$.zst" \
+			  "$repodir/core.packages.tar.zst"
+
+		rm -rf "$tmpbuild" "$repodir/.packages.$$"
+
+		# ---------- FILES ----------
+		tmpfiles="$repodir/.files.$$"
+		mkdir -p "$tmpfiles"
+
+		if [ -f "$repodir/core.files.tar.zst" ]; then
+			zstd -dc "$repodir/core.files.tar.zst" 2>/dev/null | \
+			tar xf - -C "$tmpfiles" 2>/dev/null
+		fi
+
+		for newfile in "$repo/files/"*; do
+			[ -f "$newfile" ] || continue
+			name=$(basename "$newfile")
+			pkgbase=$(echo "$name" | sed 's/-[^-]*-[^-]*$//')
+
+			rm -f "$tmpfiles/$pkgbase"-*
+			cp "$newfile" "$tmpfiles/"
+		done
+
+		tar cf "$repodir/.filesbuild.$$" -C "$tmpfiles" . 2>/dev/null
+		zstd -q -f "$repodir/.filesbuild.$$"
+		mv -f "$repodir/.filesbuild.$$.zst" \
+			  "$repodir/core.files.tar.zst"
+
+		rm -rf "$tmpfiles" "$repodir/.filesbuild.$$"
+
+		# ---------- content.db ----------
+		(
+			cd "$repodir"
+			for f in *.nho; do
+				[ -f "$f" ] || continue
+				size=$(stat -c %s "$f" 2>/dev/null)
+				echo "$size $f"
+			done > content.db
+			zstd --rm -q -f content.db
+		)
+
+		date -u +%s > "$repodir/lastsync"
+
+		echog " - Repository $reponame updated."
+	done
+
+	cleanup_tmp_dir
+	echog " - Incremental repository update completed."
+	exit 0
 	;;
 	upgrade)
 # ********************************************************************
