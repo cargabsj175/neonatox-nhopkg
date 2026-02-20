@@ -2960,8 +2960,6 @@ build_make_binary_package()
 	echog " --- Searching files in the system."
 	build_search_for_files ${part}
 	## Configure the new binary package
-	# Package and compress files.
-	echog " --- Compressing package."
 	if [[ -n $(cat "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log") ]]; then
 		# Strip binaries and libraries if enabled  (experimental)
 		if [[ "${STRIP_BINARIES}" = "yes" ]]; then
@@ -2993,6 +2991,8 @@ build_make_binary_package()
 
 			echog "\t** Stripped $processed ELF files"
 		fi
+# Package and compress files.
+echog " --- Compressing package."
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled
 		if [[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]] && command -v gpg >/dev/null; then
