@@ -394,47 +394,35 @@ get_package_display_name()
 }
 # ---------------------------------------------------------
 # shooter_updates()
-# Description: This generates schemas, update database icons, desktop and mime types.
-# Parameters: updates
+# Description: Generates schemas, updates icons, desktop, mime, etc.
+# Parameters: updates (optional: "silent")
 # ---------------------------------------------------------
 shooter_updates() {
     local verbose=true update_count=0 update_errors=0
-    local GLIB_SCHEMAS ICON_CACHE DESKTOP_DB MIME_DB MANDB FC_CACHE LDCONFIG
-    
-    # Save the command name even if it doesn't exist
-    # If `command -v` finds it, save the path; otherwise, save the name as a string
-    get_command() {
-        local cmd_path
-        cmd_path=$(command -v "$1" 2>/dev/null)
-        echo "${cmd_path:-$1}"
-    }
-    
-    GLIB_SCHEMAS=$(get_command glib-compile-schemas)
-    ICON_CACHE=$(get_command gtk-update-icon-cache)
-    DESKTOP_DB=$(get_command update-desktop-database)
-    MIME_DB=$(get_command update-mime-database)
-    MANDB=$(get_command mandb)
-    FC_CACHE=$(get_command fc-cache)
-    LDCONFIG=$(get_command ldconfig)
-    
+    local GLIB_SCHEMAS ICON_CACHE DESKTOP_DB MIME_DB MANDB FC_CACHE LDCONFIG GDK_PIXBUF
+
+    # Detect commands
+    GLIB_SCHEMAS=$(command -v glib-compile-schemas 2>/dev/null)
+    ICON_CACHE=$(command -v gtk-update-icon-cache 2>/dev/null)
+    DESKTOP_DB=$(command -v update-desktop-database 2>/dev/null)
+    MIME_DB=$(command -v update-mime-database 2>/dev/null)
+    MANDB=$(command -v mandb 2>/dev/null)
+    FC_CACHE=$(command -v fc-cache 2>/dev/null)
+    LDCONFIG=$(command -v ldconfig 2>/dev/null)
+    GDK_PIXBUF=$(command -v gdk-pixbuf-query-loaders 2>/dev/null)
+
     [[ "$1" == "silent" ]] && verbose=false
 
     run_update() {
         local cmd="$1" desc="$2"; shift 2
-        # Check if cmd is an absolute path (starts with /)
-        if [[ "$cmd" != /* ]]; then
-            # It's not a path, it's just the command name (not found)
-            $verbose && echogn " --- Tool not found (skipping): " && echo "$cmd"
-            return 2
-        fi
-        
-        # It's a path, check if it's executable
-        [[ -x "$cmd" ]] || { 
-            $verbose && echogn " --- Tool not executable (skipping): " && echo "$cmd"
-            return 2
-        }
+        # Si no existe o no es ejecutable, salir silenciosamente
+        [[ -z "$cmd" || ! -x "$cmd" ]] && return 0
 
-        $verbose && echogn " --- Updating: " && echo "${desc}"
+        if $verbose; then
+            echogn " --- Updating: "
+            echo "${desc}"
+        fi
+
         if "$cmd" "$@" &>/dev/null; then
             ((update_count++))
             $verbose && echog "\t** OK: Update completed successfully"
@@ -443,42 +431,61 @@ shooter_updates() {
             $verbose && echog "\t** Fail: Update failed"
         fi
     }
-	# 1. Update GLib Schemes
-	run_update "$GLIB_SCHEMAS" "schemas" /usr/share/glib-2.0/schemas
 
-    # 2. Update icon cache globally
-    if [[ -n "$ICON_CACHE" && -x "$ICON_CACHE" && -d /usr/share/icons && -w /usr/share/icons ]]; then
-        run_update "$ICON_CACHE" "icons" -q -t -f /usr/share/icons
+    # 1. Update GLib Schemas
+    run_update "$GLIB_SCHEMAS" "$(echogn "schemas")" /usr/share/glib-2.0/schemas
+
+    # 2. Update icon cache (Silent per theme, only existing dirs)
+    if [[ -n "$ICON_CACHE" && -x "$ICON_CACHE" && -d /usr/share/icons ]]; then
+        if $verbose; then
+            echogn " --- Updating: "
+            echogn "icons"
+            echo
+        fi
+        for dir in /usr/share/icons/*/; do
+            [[ -d "$dir" ]] && "$ICON_CACHE" -q -t -f "$dir" &>/dev/null
+        done
+        ((update_count++))
+        $verbose && echog "\t** OK: Update completed successfully"
     fi
 
-	# 3. Update desktop database
-	run_update "$DESKTOP_DB" "desktop entries" /usr/share/applications
-    
-	# 4. Update MIME types
-	run_update "$MIME_DB" "MIME database" /usr/share/mime
+    # 3. Update desktop database
+    run_update "$DESKTOP_DB" "$(echogn "desktop entries")" /usr/share/applications
 
-	# 5. Update manual database (if there are changes)
+    # 4. Update MIME types
+    run_update "$MIME_DB" "$(echogn "MIME database")" /usr/share/mime
+
+    # 5. Update manual database (if changes exist)
     if [[ -n "$MANDB" && -x "$MANDB" && -d /usr/share/man ]]; then
-        [[ -e /var/cache/man/index.db ]] && \
-        find /usr/share/man -newer /var/cache/man/index.db -type f -quit &>/dev/null && \
-        run_update "$MANDB" "manual pages" -q
-    fi
-	
-	# 6. Update font cache (if there are changes)
-    if [[ -n "$FC_CACHE" && -x "$FC_CACHE" && -d /usr/share/fonts ]]; then
-        [[ -d /var/cache/fontconfig ]] && \
-        find /usr/share/fonts -newer /var/cache/fontconfig -type f -quit &>/dev/null && \
-        run_update "$FC_CACHE" "font cache" -f
-    fi
-	
-	# 7. Update library cache (if there are changes)
-    if [[ -n "$LDCONFIG" && -x "$LDCONFIG" ]]; then
-        [[ -e /etc/ld.so.cache ]] && \
-        find /usr/lib /lib -newer /etc/ld.so.cache -type f -quit &>/dev/null && \
-        run_update "$LDCONFIG" "shared libraries"
+        if [[ -e /var/cache/man/index.db ]]; then
+            if find /usr/share/man -newer /var/cache/man/index.db -type f -quit &>/dev/null; then
+                run_update "$MANDB" "$(echogn "manual pages")" -q
+            fi
+        fi
     fi
 
-	# Summary
+    # 6. Update font cache (if changes exist)
+    if [[ -n "$FC_CACHE" && -x "$FC_CACHE" && -d /usr/share/fonts ]]; then
+        if [[ -d /var/cache/fontconfig ]]; then
+            if find /usr/share/fonts -newer /var/cache/fontconfig -type f -quit &>/dev/null; then
+                run_update "$FC_CACHE" "$(echogn "font cache")" -f
+            fi
+        fi
+    fi
+
+    # 7. Update library cache (if changes exist)
+    if [[ -n "$LDCONFIG" && -x "$LDCONFIG" ]]; then
+        if [[ -e /etc/ld.so.cache ]]; then
+            if find /usr/lib /lib -newer /etc/ld.so.cache -type f -quit &>/dev/null; then
+                run_update "$LDCONFIG" "$(echogn "shared libraries")"
+            fi
+        fi
+    fi
+
+    # 8. Update GDK Pixbuf loaders
+    run_update "$GDK_PIXBUF" "$(echogn "gdk-pixbuf loaders")" --update-cache
+
+    # Summary
     if $verbose; then
         if ((update_count > 0 || update_errors > 0)); then
             echog " - System updates completed"
