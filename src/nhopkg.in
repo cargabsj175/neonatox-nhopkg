@@ -1391,9 +1391,11 @@ resolve_package_by_name() {
     local candidates=()
     while IFS= read -r -d '' pkg; do
         local basename_pkg=$(basename "$pkg")
-        if [ "${basename_pkg%%-*}" = "$name" ]; then
-			candidates+=("$pkg")
-		fi
+        case "$basename_pkg" in
+			"$name" | "$name"-*)
+				candidates+=("$pkg")
+				;;
+		esac
     done < <(find "${NHOPKG_LOCALSTATEDIR}/packages/" -maxdepth 1 -type f -name "${name}*" -print0 2>/dev/null)
 
     # Validate candidates by internal name and version
