@@ -151,6 +151,43 @@ noemptyfuncs()
 	return 0 # Best than others.
 }
 # ---------------------------------------------------------
+# resolve_virtual_package()
+# Parameters: resolve_virtual_package <name>
+# Sets: RESOLVED_PKGFILE, RESOLVED_REPO
+# ---------------------------------------------------------
+resolve_virtual_package()
+{
+    local search_name="$1"
+    local repo pkgdir pkgfile provides_line provs p
+
+    RESOLVED_PKGFILE=""
+    RESOLVED_REPO=""
+
+    for repo in ${NHOPKG_ACTIVE_REPOS}; do
+        pkgdir="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
+        [[ -d "$pkgdir" ]] || continue
+
+        while IFS= read -r pkgfile; do
+            [[ -L "$pkgfile" ]] && continue
+
+            provides_line=$(grep "^# Provides:" "$pkgfile" 2>/dev/null)
+            [[ -n "$provides_line" ]] || continue
+
+            provs=$(echo "$provides_line" | sed 's/^# Provides:[[:space:]]*//')
+
+            for p in $provs; do
+                case "$p" in
+                    "$search_name"|"$search_name"=*)
+                        RESOLVED_PKGFILE="$pkgfile"
+                        RESOLVED_REPO="$repo"
+                        break 3
+                        ;;
+                esac
+            done
+        done < <(find "$pkgdir" -maxdepth 1 -type f 2>/dev/null | sort -V)
+    done
+}
+# ---------------------------------------------------------
 # append_npostinstall()
 # Description: Extracts and accumulates the commands defined in the
 #              npostinstall() section of a package nhoid into a deferred
@@ -180,8 +217,79 @@ append_npostinstall() {
 #!/bin/sh
 set -e
 
+nhouser() {
+    MODE=""
+    VERBOSE=0
+
+    USER= U_ID= COMMENT= HOME= SHELL=
+    GNAME= G_ID= GROUPS=
+    GROUP_DONE=0
+
+    log() { [ "$VERBOSE" = 1 ] && echo "$*"; }
+
+    user_exists() { id "$1" >/dev/null 2>&1; }
+    group_exists() { grep -q "^$1:" /etc/group; }
+
+    usage() {
+        echo "nhouser --check|--create --user NAME [options]"
+        echo "nhouser --check|--create --group NAME [--gid GID]"
+    }
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --check|--create) MODE="$1" ;;
+            --verbose) VERBOSE=1 ;;
+            --user) USER="$2"; shift ;;
+            --uid) U_ID="$2"; shift ;;
+            --uname) COMMENT="$2"; shift ;;
+            --udir) HOME="$2"; shift ;;
+            --shell) SHELL="$2"; shift ;;
+            --group) GNAME="$2"; shift ;;
+            --gid) G_ID="$2"; shift ;;
+            --groups) GROUPS="$2"; shift ;;
+            --help) usage; return 0 ;;
+            *) echo "Opción inválida: $1" >&2; return 1 ;;
+        esac
+        shift
+    done
+
+    [ -z "$MODE" ] && { echo "Missing --check or --create" >&2; return 1; }
+    [ -z "$USER$GNAME" ] && { echo "Missing --user or --group" >&2; return 1; }
+
+    [ -n "$U_ID" ] && case $U_ID in *[!0-9]*) echo "Invalid UID: $U_ID" >&2; return 1;; esac
+    [ -n "$G_ID" ] && case $G_ID in *[!0-9]*) echo "Invalid GID: $G_ID" >&2; return 1;; esac
+
+    # Explicit group
+    if [ -n "$GNAME" ] && ! group_exists "$GNAME"; then
+        log "Creating group $GNAME"
+        groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+        GROUP_DONE=1
+    fi
+
+    # User
+    if [ -n "$USER" ]; then
+        if [ -n "$GNAME" ] && [ "$GROUP_DONE" = 0 ] && ! group_exists "$GNAME"; then
+            log "Creating a primary group $GNAME"
+            groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+        fi
+
+        if ! user_exists "$USER" || [ "$MODE" = "--create" ]; then
+            log "Creating user $USER"
+            useradd -m \
+                ${U_ID:+-u "$U_ID"} \
+                ${COMMENT:+-c "$COMMENT"} \
+                ${HOME:+-d "$HOME"} \
+                ${SHELL:+-s "$SHELL"} \
+                ${GNAME:+-g "$GNAME"} \
+                ${GROUPS:+-G "$GROUPS"} \
+                "$USER" || return 1
+        else
+            log "User $USER already exists"
+        fi
+    fi
+}
 # NeonatoX accumulated postinstall
-# Ejecutar SOLO dentro del chroot
+# Run only on chroot
 
 # Defensive placeholder (should never be used)
 noemptyfuncs() { :; }
@@ -348,7 +456,7 @@ nhouser() {
     [ -n "$U_ID" ] && case $U_ID in *[!0-9]*) echo "Invalid UID: $U_ID" >&2; return 1;; esac
     [ -n "$G_ID" ] && case $G_ID in *[!0-9]*) echo "Invalid GID: $G_ID" >&2; return 1;; esac
 
-    # Grupo explícito
+    # Explicit group
     if [ -n "$GNAME" ] && ! group_exists "$GNAME"; then
         log "Creating group $GNAME"
         groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
@@ -1391,7 +1499,7 @@ resolve_package_by_name() {
     local candidates=()
     while IFS= read -r -d '' pkg; do
         local basename_pkg=$(basename "$pkg")
-        case "$basename_pkg" in
+		case "$basename_pkg" in
 			"$name" | "$name"-*)
 				candidates+=("$pkg")
 				;;
@@ -1500,7 +1608,9 @@ check_if_repository_package_common()
 		pkgrepo="${repo_dir}"
 	else
 		# It's a package name (possibly with >=, etc.)
-		local pkg_name="${dep_spec%%[<>=!]*}"
+		local pkg_name
+		pkg_name="${dep_spec%%[<>=!]*}"
+		pkg_name=$(printf "%s" "$pkg_name" | tr -d '[:space:]')
 		if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
 			NHOPKG_ACTIVE_REPOS="extra"
 		fi
@@ -1521,7 +1631,27 @@ check_if_repository_package_common()
 				break
 			fi
 		done
+		# Resolve virtual packages too (start)
+		if [[ $found -eq 0 ]]; then
+		resolve_virtual_package "$pkg_name"
 
+		if [[ -n "$RESOLVED_PKGFILE" ]]; then
+			MATCHPACKAGE=$(basename "$RESOLVED_PKGFILE")
+			pkgrepo="$RESOLVED_REPO"
+			found=1
+		fi
+	fi
+
+		if [[ $found -eq 0 ]]; then
+			resolve_virtual_package "$pkg_name"
+
+			if [[ -n "$RESOLVED_PKGFILE" ]]; then
+				MATCHPACKAGE=$(basename "$RESOLVED_PKGFILE")
+				pkgrepo="$RESOLVED_REPO"
+				found=1
+			fi
+		fi
+		# Resolve virtual packages too (end)
 		if [[ $found -eq 0 ]]; then
 			echo -n " *** ${dep_spec} " >&2
 			echog "is not on repository." >&2
@@ -2171,6 +2301,31 @@ getpackage()
         fi
     fi
 
+	# ===== Fallback: search via Provides =====
+	if [[ $found -eq 0 ]]; then
+		resolve_virtual_package "${CASEPACKAGE}"
+		
+		if [[ -n "$RESOLVED_PKGFILE" ]]; then
+			local real_name
+			real_name=$(grep "^# Name:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+
+			if [[ "$real_name" != "$CASEPACKAGE" ]]; then
+				echog " :: '${CASEPACKAGE}' is a virtual package."
+				echog " :: Installing '${real_name}' (provides ${CASEPACKAGE})."
+			fi
+		fi
+
+		if [[ -n "$RESOLVED_PKGFILE" ]]; then
+			pkgname=$(grep "^# Name:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgversion=$(grep "^# Version:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgrevision=$(grep "^# Release:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgrepo="$RESOLVED_REPO"
+			pkgos=$(grep "^# OS:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgarch=$(grep "^# Arch:" "$RESOLVED_PKGFILE" 2>/dev/null | awk -F'\t' '{print $2}')
+			found=1
+		fi
+	fi
+	# ===== End Provides fallback =====
     if [[ $found -eq 0 ]]; then
         echo -n " *** ${CASEPACKAGE} " >&2
         echog "is not on repository." >&2
@@ -2990,8 +3145,8 @@ build_make_binary_package()
 
 			echog "\t** Stripped $processed ELF files"
 		fi
-# Package and compress files.
-echog " --- Compressing package."
+	# Package and compress files.
+	echog " --- Compressing package."
 		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled
 		if [[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]] && command -v gpg >/dev/null; then
