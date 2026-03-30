@@ -1,0 +1,793 @@
+#!/bin/bash
+# /usr/lib/nhopkg/libnhopkg
+# Shared functions for nhopkg and standalone tools
+
+# Nhopkg version.
+NHOPKG_VERSION="@PACKAGE_VERSION@"
+# Edit this variable could cause problems.
+NHOID_VERSION="0.5"
+# Get default IFS variable.
+OLDIFS="${IFS}"
+
+# Configuration of the "locate" binary, preferably "mlocate" if available.
+if command -v mlocate &>/dev/null; then
+	export BINLOCATE=$(command -v mlocate | grep -o '[^/]*$')
+elif command -v locate &>/dev/null; then
+	export BINLOCATE=$(command -v locate | grep -o '[^/]*$' )
+fi
+#==============================================================================
+# Section: Nhopkg colorized script.
+#==============================================================================
+NORMAL="\\033[0;39m"
+BOLD="\\033[1;39m"
+#==============================================================================
+# Section: Nhopkg progress bar variables.
+#==============================================================================
+PROGRESS_BAR_BEGIN='='
+PROGRESS_BAR_END='>'
+PROGRESS_BAR_EMPTY=' '
+#==============================================================================
+# Section: Nhopkg multilanguage (gettext).
+#==============================================================================
+# Is needed export TEXTDOMAIN and TEXTDOMAINDIR variables to work correctly with gettext.
+export TEXTDOMAIN TEXTDOMAINDIR
+
+#==============================================================================
+# Section: Message functions
+#==============================================================================
+# echog()
+# Description: Print messages in system languaje with new line.
+# Parameters: "Message to user."
+# Returns: 0 in success.
+# ---------------------------------------------------------
+echog()
+{
+	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
+		gettext -es "${*}"
+	else
+		printf "%b\n" "${*}"
+	fi
+	# Success.
+	return 0
+}
+# ---------------------------------------------------------
+# echogn()
+# Description: Print messages in system languaje without new line.
+# Parameters: "Message to user."
+# Returns: 0 in success.
+# ---------------------------------------------------------
+echogn()
+{
+	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
+		gettext -ens "${*}"
+	else
+		printf "%b" "${*}"
+	fi
+	# Success.
+	return 0
+}
+
+#======================================0
+# Basic nhopkg functions
+#======================================0
+# ---------------------------------------------------------
+# get_good_file_name()
+# Description: This is used to get the good file name to search dependencies.
+# Parameters: file_name
+# Returns: 0 in success and GOOD_FILE_NAME variable.
+# ---------------------------------------------------------
+get_good_file_name()
+{
+	REAL_FILE_NAME="${1}"
+	REAL_FILE_NAME_WITH_SPACES=$(echo "${REAL_FILE_NAME}" | sed -e 's@/@ @g')
+	REAL_FILE_NAME_BAR_NUMS=$(echo "${REAL_FILE_NAME_WITH_SPACES}" | wc -w)
+	if (( ${REAL_FILE_NAME_BAR_NUMS} <= 2 )) && \
+	(( ${REAL_FILE_NAME_BAR_NUMS} > 0 )); then
+		GOOD_FILE_NAME="${REAL_FILE_NAME}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "3" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "4" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "5" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/}"
+	elif [[ "${REAL_FILE_NAME_BAR_NUMS}" = "6" ]]; then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/*/}"
+	elif (( "${REAL_FILE_NAME_BAR_NUMS}" > "6" )); then
+		GOOD_FILE_NAME="${REAL_FILE_NAME#/*/*/*/*/*/}"
+	fi
+	# Success.
+	return 0
+}
+# ---------------------------------------------------------
+# noemptyfuncs()
+# Description: This is used if you don't want a bash error if any is empty.
+# Parameters: none
+# Returns: 0 in any way.
+# ---------------------------------------------------------
+noemptyfuncs()
+{
+	return 0 # Best than others.
+}
+#==============================================================================
+# Section: Directory and permission functions
+#==============================================================================
+# ---------------------------------------------------------
+# get_pwd_dir()
+# Description: Sets directory name and its owner of directory where Nhopkg is running.
+# Parameters: none
+# Returns: CWD and DIROWNER variables. Return 0 if success.
+# ---------------------------------------------------------
+get_pwd_dir()
+{
+	if [[ -d $(pwd) ]]; then
+		CWD=$(pwd)
+	else
+		CWD="/tmp"
+	fi
+	# Get owner of dir.
+	DIROWNER=$(ls -n "${CWD}" | tail -1 | awk '{print $3":"$4}')
+	if [[ -z "${DIROWNER}" ]] || [[ "${DIROWNER}" = ":" ]]; then
+		# By default 0:0 (root:root).
+		DIROWNER="0:0"
+	fi
+	return 0
+}
+# ---------------------------------------------------------
+# check_if_root_uid()
+# Description: Check if Nhopkg is running as root.
+# Parameters: none
+# Returns: exit 1 if not root. Return 0 if success.
+# ---------------------------------------------------------
+check_if_root_uid()
+{
+	if [[ "${UID}" != "0" ]]; then
+		echog "To run Nhopkg you need have root powers."
+		exit 1
+	fi
+	return 0
+}
+
+# ---------------------------------------------------------
+# make_tmp_dir()
+# Description: Creates secure temporal directory for nhopkg.
+# Parameters: none
+# Returns: NHOPKG_TMPDIR variable (is temporal directory). Return 0 if success.
+# ---------------------------------------------------------
+make_tmp_dir()
+{
+	NHOPKG_TMPDIR=$(mktemp -udt "${TEMPLATE_TMPDIR}" -p "${TMPDIR}")
+	mkdir -p "${NHOPKG_TMPDIR}"
+	check_if_ok " * Unable to create temporary directory."
+	return 0
+}
+# ---------------------------------------------------------
+# check_if_ok()
+# Description: Checks that the previous command was ok. If fails exits with error.
+# Parameters: none
+# Returns: Return 0 if success. Error message and exit 1 if error.
+# ---------------------------------------------------------
+check_if_ok() {
+	if [[ "${?}" != "0" ]]; then
+		NHO_MSG_ERROR="${1}"
+		if [[ -n "${NHO_MSG_ERROR}" ]]; then			
+			echog "${NHO_MSG_ERROR}" >&2
+		fi
+		# Clean up and exits.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	return 0
+}
+
+#======================================1
+# Clean nhopkg functions
+#======================================1
+## Funtion cleanup_tmp_dir(). Clean up temporal directory recursively.
+# Usage: cleanup_tmp_dir (without arguments)
+cleanup_tmp_dir()
+{
+	if [[ -d "${NHOPKG_TMPDIR}" ]]; then
+		echog " --- Deleting temporary directory."
+		# Force and recursive mode.
+		rm -Rf "${NHOPKG_TMPDIR}"
+	fi
+}
+## Funtion cleanup_all(). Clean up nhopkg.
+# Usage: cleanup_all (without arguments)
+cleanup_all()
+{
+	if [[ -f "${NHOPKG_LOCKFILE}" ]]; then
+		rm -f "${NHOPKG_LOCKFILE}"
+		# If tmpdir exist, delete it.
+		cleanup_tmp_dir
+	fi
+}
+## cleanup_build_dir(). Clean up nhopkg build directory.
+# Usage: cleanup_build_dir (without arguments)
+cleanup_build_dir()
+{
+	if [[ -d "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}" ]]; then
+		echog "Compilation directory will be removed from your system."
+		nhopkg_ask_follow
+		case "${?}" in
+			0)
+				echogn " --- Deleting"
+				echo " ${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}."
+				rm -Rf "${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+			;;
+			1)
+				echo -n " --- ${NHOPKG_BUILDIR}/${pkgname}-${pkgversion} "
+				echog "will not be deleted."
+			;;
+		esac
+	fi
+}
+
+#==============================================================================
+# Section: General functions for packages (main nhopkg and tools)
+#==============================================================================
+## get_basic_data(). Get basic data from package and checks it.
+# Usage: get_basic_data package_info_file
+# Gives: pkgname, pkgversion and pkgrevision variables.
+get_basic_data()
+{
+	# Get basic package info.
+	pkgname=$(grep "# Name:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgversion=$(grep "# Version:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgrevision=$(grep "# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# Checks that are all fields.
+	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]]\
+	|| [[ -z "${pkgrevision}" ]] || [[ -z "${pkgdescription}" ]]; then
+		echog " * Failed to get package info." >&2
+		exit 1
+	fi
+}
+## get_nhoid_data(). Get data from package and checks that is a correct package.
+# Usage: get_nhoid_data nhoid_file
+# Gives: nhoid (local), pkgowner, pkgname, pkgversion, pkgrevision, pkglicense, pkggroup, pkgurl, pkgdescription, pkgsha256, pkgarch and pkginstalledsize variables.
+get_nhoid_data()
+{
+	local nhoid=$(grep "^#%NHO-" "${1}" 2> /dev/null | sed -e 's@^#%NHO-@@')
+	pkgowner=$(grep "^# Package Maintainer:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgname=$(grep "^# Name:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgversion=$(grep "^# Version:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgrevision=$(grep "^# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkglicense=$(grep "^# License:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkggroup=$(grep "^# Group:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# Get package repository (repository where the package will be hosted.)
+	pkgrepo=$(grep "^# Repository:" "${1}" 2>/dev/null | awk -F'\t' '{print $2}')
+	# Backward compatibility (If not present, assume it is "extra")
+	pkgrepo="${pkgrepo:-extra}"
+	pkgurl=$(grep "^# Url:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgsha256=$(grep -a "^# SHA256:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	pkgmd5=$(grep -a "^# MD5:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	pkgsha512=$(grep -a "^# SHA512:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	pkgbsum=$(grep -a "^# BSUM:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	pkgarch=$(grep "^# Arch:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkgos=$(grep "^# OS:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkginstalledsize=$(grep "^# Installed-Size:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+	# Source from URL (git or tarball)
+	pkgsrcurl=$(grep "^# Packageurl:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	pkggitref=$(grep "^# Packageref:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# Set split variable
+	SPLITPACKAGE=$(grep "^# Splitpackage:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
+	# If there are subpackages, look for specific descriptions
+	if [[ -n "$SPLITPACKAGE" ]]; then
+		for part in $SPLITPACKAGE; do
+			local desc_key="^# Description_${part}:"
+			local part_desc=$(grep "$desc_key" "$1" | awk -F'\t' '{print $2}')
+	# If you don't have a specific description, use the general + note
+			if [[ -z "$part_desc" ]]; then
+				part_desc="${pkgdescription} (${part} files.)"
+			fi
+	# Create dynamic variable: ex. pkgdescription_dev, pkgdescription_docs, etc.
+			eval "pkgdescription_${part}=\"\$part_desc\""
+		done
+	fi
+	# Checks that is a correct package.
+	if [[ -z "${nhoid}" ]]; then
+		echog " * The selected package is not valid." >&2
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	# Checks that is a package created in the same version.
+	if [[ "${nhoid}" > "${NHOID_VERSION}" ]]; then
+		echog "The selected package is created in newer version of Nhopkg."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	elif [[ "${nhoid}" < "${NHOID_VERSION}" ]]; then
+		echog "The selected package is created in older version of Nhopkg."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	elif [[ "${nhoid}" != "${NHOID_VERSION}" ]]; then
+		echogn "The selected package is created in other version of Nhopkg:"
+		echo " ${nhoid}."
+		echog "Nhopkg is on development and can't use packages of other versions. We working on this."
+		# Clean and exits with error.
+		cleanup_tmp_dir
+		exit 1
+	fi
+	source "${1}" 2> /dev/null
+	check_if_ok " * Unable to get data from package."
+}
+
+#==============================================================================
+# Section: Security functions
+#==============================================================================
+# ---------------------------------------------------------
+# verify_file_hash()
+# Description: Verifies file integrity using multiple hash algorithms.
+#  Supports: MD5, SHA256, SHA512, BSUM (b2sum)
+#  Avoids re-download if file exists and hash matches.
+#
+# Parameters:
+#   $1 - File path to verify
+#   $2 - Expected hash value
+#   $3 - Hash type (md5, sha256, sha512, bsum)
+#   $4 - Package name (for messages)
+#
+# Returns:
+#   0 - Hash matches or verification skipped
+#   1 - Hash mismatch
+#   2 - No hash tool available
+# ---------------------------------------------------------
+verify_file_hash() {
+	local file="$1"
+	local expected_hash="$2"
+	local hash_type="$3"
+	local pkg_name="${4:-unknown}"
+	local computed_hash hash_cmd hash_arg
+
+	# Check if file exists
+	if [[ ! -f "$file" ]]; then
+		echog " *** File not found: ${file}" >&2
+		return 1
+	fi
+
+	# Select hash command
+	case "$hash_type" in
+		md5|MD5)
+			hash_cmd="md5sum"
+			hash_arg="{print \$1}"
+			;;
+		sha256|SHA256)
+			hash_cmd="sha256sum"
+			hash_arg="{print \$1}"
+			;;
+		sha512|SHA512)
+			hash_cmd="sha512sum"
+			hash_arg="{print \$1}"
+			;;
+		bsum|BSUM|b2sum|B2SUM)
+			hash_cmd="b2sum"
+			hash_arg="{print \$1}"
+			;;
+		*)
+			echog " *** Unknown hash type: ${hash_type}" >&2
+			return 2
+			;;
+	esac
+
+	# Check if hash command exists
+	if ! command -v "$hash_cmd" &>/dev/null; then
+		echog " *** Hash tool not available: ${hash_cmd}" >&2
+		return 2
+	fi
+
+	# Compute hash
+	computed_hash=$($hash_cmd "$file" 2>/dev/null | awk "$hash_arg")
+	
+	if [[ -z "$computed_hash" ]]; then
+		echog " *** Failed to compute ${hash_type} hash" >&2
+		return 1
+	fi
+
+	# Normalize hashes (lowercase)
+	expected_hash=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
+	computed_hash=$(echo "$computed_hash" | tr '[:upper:]' '[:lower:]')
+
+	# Compare
+	if [[ "$computed_hash" = "$expected_hash" ]]; then
+		echog " --- ${hash_type} verification OK: ${pkg_name}"
+		return 0
+	else
+		echog " *** ${hash_type} MISMATCH: ${pkg_name}" >&2
+		echog "	 Expected:   ${expected_hash}" >&2
+		echog "	 Computed:   ${computed_hash}" >&2
+		echog "	 File:	   ${file}" >&2
+		return 1
+	fi
+}
+
+# ---------------------------------------------------------
+# get_hash_from_nhoid()
+# Description: Extracts hash value and type from nhoid file.
+#  Supports multiple hash tags with optional filename.
+#
+# Parameters:
+#   $1 - nhoid file path
+#   $2 - Hash type to search (md5, sha256, sha512, bsum)
+#
+# Returns:
+#   Sets HASH_VALUE and HASH_FILE global variables
+#   0 - Hash found
+#   1 - Hash not found
+# ---------------------------------------------------------
+get_hash_from_nhoid() {
+	local nhoid_file="$1"
+	local hash_type="$2"
+	local hash_tag hash_line
+
+	HASH_VALUE=""
+	HASH_FILE=""
+
+	case "$hash_type" in
+		md5|MD5)	  hash_tag="# MD5:" ;;
+		sha256|SHA256) hash_tag="# SHA256:" ;;
+		sha512|SHA512) hash_tag="# SHA512:" ;;
+		bsum|BSUM)	hash_tag="# BSUM:" ;;
+		*) return 1 ;;
+	esac
+
+	hash_line=$(grep "^${hash_tag}" "$nhoid_file" 2>/dev/null | head -n1)
+	
+	if [[ -z "$hash_line" ]]; then
+		return 1
+	fi
+
+	# Extract hash and optional filename (tab separated)
+	HASH_VALUE=$(echo "$hash_line" | awk -F'\t' '{print $2}' | awk '{print $1}')
+	HASH_FILE=$(echo "$hash_line" | awk -F'\t' '{print $2}' | awk '{print $2}')
+
+	if [[ -n "$HASH_VALUE" ]]; then
+		return 0
+	fi
+	return 1
+}
+
+# ---------------------------------------------------------
+# check_package_hash()
+# Description: Main hash verification function for packages.
+#  Tries multiple hash types in priority order.
+#  Avoids re-download if cached file hash matches.
+#
+# Parameters:
+#   $1 - nhoid file path
+#   $2 - File to verify (optional, defaults to data.tar.zst in NHOPKG_TMPDIR)
+#
+# Returns:
+#   0 - Verification OK or skipped
+#   1 - Verification failed
+# ---------------------------------------------------------
+check_package_hash() {
+	local nhoid_file="$1"
+	local target_file="${2:-${NHOPKG_TMPDIR}/data.tar.zst}"
+	local hash_types="sha256 sha512 md5 bsum"
+	local hash_type hash_found=0
+
+	# Skip if verification disabled
+	if [[ "${NHOPKG_CHECKSHA256}" != "yes" ]]; then
+		return 0
+	fi
+
+	# Skip for Git sources (no tarball)
+	if [[ -n "${pkgsrcurl}" ]] && [[ "${pkgsrcurl}" == *".git"* || "${pkgsrcurl}" == git+* ]]; then
+		echog " --- Skipping hash check: Git repository"
+		return 0
+	fi
+
+	# Try each hash type in priority order
+	for hash_type in $hash_types; do
+		if get_hash_from_nhoid "$nhoid_file" "$hash_type"; then
+			hash_found=1
+			
+			# If file doesn't exist, we need to download first
+			if [[ ! -f "$target_file" ]]; then
+				echog " --- Hash defined (${hash_type}), file will be verified after download"
+				return 0
+			fi
+			
+			# Verify existing file
+			if verify_file_hash "$target_file" "$HASH_VALUE" "$hash_type" "${pkgname:-package}"; then
+				return 0
+			else
+				echog " *** Hash verification failed, file may be corrupted" >&2
+				return 1
+			fi
+		fi
+	done
+
+	# No hash found in nhoid
+	if [[ $hash_found -eq 0 ]]; then
+		echog " *** WARNING: No hash defined in package" >&2
+		if [[ "${NHOPKG_REQUIRE_HASH}" = "yes" ]]; then
+			echog " *** Hash required but not found. Aborting." >&2
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
+# ---------------------------------------------------------
+# download_with_hash_check()
+# Description: Downloads file only if needed.
+#  Uses NHOPKG_BUILDIR as persistent cache.
+#  Prevents unnecessary re-downloads across sessions.
+#
+# Parameters:
+#   $1 - Download URL
+#   $2 - Destination file path (temp dir)
+#   $3 - nhoid file (for hash verification)
+#   $4 - Hash type (optional, auto-detect)
+#
+# Returns:
+#   0 - Download successful or file already valid
+#   1 - Download or verification failed
+# ---------------------------------------------------------
+download_with_hash_check() {
+	local url="$1"
+	local dest_file="$2"
+	local nhoid_file="$3"
+	local hash_type="${4:-auto}"
+	local hash_types="sha256 sha512 md5 bsum"
+	local filename tarball_basename cached_file
+
+	filename=$(basename "${url}")
+	tarball_basename="${pkgname}-${pkgversion}.tar.*"
+	cached_file="${NHOPKG_BUILDIR}/${filename}"
+
+	# === 1. Check persistent cache in NHOPKG_BUILDIR ===
+	if [[ -f "$cached_file" ]]; then
+		for hash_type in $hash_types; do
+			if get_hash_from_nhoid "$nhoid_file" "$hash_type"; then
+				if verify_file_hash "$cached_file" "$HASH_VALUE" "$hash_type" "${pkgname:-package}"; then
+					echog " --- Using cached file: ${cached_file}"
+					# Copy to temp destination for extraction
+					cp -f "$cached_file" "$dest_file"
+					check_if_ok " *** Failed to copy cached file."
+					return 0
+				else
+					echog " --- Cached file hash mismatch, removing: ${cached_file}"
+					rm -f "$cached_file"
+					break
+				fi
+			fi
+		done
+	fi
+
+	# === 2. Check if already in temp destination (current session) ===
+	if [[ -f "$dest_file" ]]; then
+		for hash_type in $hash_types; do
+			if get_hash_from_nhoid "$nhoid_file" "$hash_type"; then
+				if verify_file_hash "$dest_file" "$HASH_VALUE" "$hash_type" "${pkgname:-package}"; then
+					echog " --- File already downloaded in session: ${dest_file}"
+					# Also cache it for future sessions
+					mkdir -p "$(dirname "$cached_file")"
+					cp -f "$dest_file" "$cached_file" 2>/dev/null || true
+					return 0
+				else
+					echog " --- Temp file hash mismatch, will re-download"
+					rm -f "$dest_file"
+					break
+				fi
+			fi
+		done
+	fi
+
+	# === 3. Download ===
+	echogn " --- Downloading: "
+	echo "${filename}"
+	
+	wget --https-only -cqt 3 -T 20 -O "$dest_file" "$url"
+	
+	if [[ $? -ne 0 ]]; then
+		echog " *** Download failed" >&2
+		return 1
+	fi
+
+	# === 4. Verify after download ===
+	for hash_type in $hash_types; do
+		if get_hash_from_nhoid "$nhoid_file" "$hash_type"; then
+			if ! verify_file_hash "$dest_file" "$HASH_VALUE" "$hash_type" "${pkgname:-package}"; then
+				echog " *** Downloaded file verification failed, removing" >&2
+				rm -f "$dest_file"
+				return 1
+			fi
+			# Cache successful download for future sessions
+			mkdir -p "$(dirname "$cached_file")"
+			cp -f "$dest_file" "$cached_file" 2>/dev/null || true
+			return 0
+		fi
+	done
+
+	# No hash to verify, but download succeeded - still cache it
+	mkdir -p "$(dirname "$cached_file")"
+	cp -f "$dest_file" "$cached_file" 2>/dev/null || true
+	return 0
+}
+
+# ---------------------------------------------------------
+# verify_local_tarball_hash()
+# Description: Verifies hash of local tarball files in NHOPKG_TMPDIR.
+#  Supports MD5, SHA256, SHA512, BSUM.
+# Parameters:
+#   $1 - Tarball file path
+#   $2 - nhoid file path (to extract expected hash)
+# Returns:
+#   0 - Hash matches or no hash defined
+#   1 - Hash mismatch
+# ---------------------------------------------------------
+verify_local_tarball_hash() {
+	local tarball_file="$1"
+	local nhoid_file="$2"
+	local tarball_basename expected_hash computed_hash hash_type hash_cmd
+
+	tarball_basename=$(basename "${tarball_file}")
+	
+	# Try to find hash in nhoid (supports multiple formats)
+	# Format 1: # SHA256:	hash  tarball-name.tar.gz
+	# Format 2: # SHA256:	hash
+	for hash_type in sha256 sha512 md5 bsum; do
+		local hash_line
+		case "$hash_type" in
+			md5)	  hash_line=$(grep -a "^# MD5:" "${nhoid_file}" 2>/dev/null | head -n1) ;;
+			sha256)   hash_line=$(grep -a "^# SHA256:" "${nhoid_file}" 2>/dev/null | head -n1) ;;
+			sha512)   hash_line=$(grep -a "^# SHA512:" "${nhoid_file}" 2>/dev/null | head -n1) ;;
+			bsum)	 hash_line=$(grep -a "^# BSUM:" "${nhoid_file}" 2>/dev/null | head -n1) ;;
+		esac
+		
+		[[ -z "$hash_line" ]] && continue
+		
+		# Extract hash and optional filename (tab separated)
+		expected_hash=$(echo "$hash_line" | awk -F'\t' '{print $2}' | awk '{print $1}')
+		local hash_filename=$(echo "$hash_line" | awk -F'\t' '{print $2}' | awk '{print $2}')
+		
+		# If filename specified in nhoid, match it
+		if [[ -n "$hash_filename" ]] && [[ "$hash_filename" != "$tarball_basename" ]]; then
+			continue
+		fi
+		
+		[[ -z "$expected_hash" ]] && continue
+		
+		# Select hash command
+		case "$hash_type" in
+			md5)	hash_cmd="md5sum" ;;
+			sha256) hash_cmd="sha256sum" ;;
+			sha512) hash_cmd="sha512sum" ;;
+			bsum)   hash_cmd="b2sum" ;;
+		esac
+		
+		# Check if command exists
+		if ! command -v "$hash_cmd" &>/dev/null; then
+			continue
+		fi
+		
+		# Compute hash
+		computed_hash=$($hash_cmd "$tarball_file" 2>/dev/null | awk '{print $1}')
+		
+		# Normalize (lowercase)
+		expected_hash=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
+		computed_hash=$(echo "$computed_hash" | tr '[:upper:]' '[:lower:]')
+		
+		if [[ "$computed_hash" = "$expected_hash" ]]; then
+			echog " --- ${hash_type^^} verification OK: ${tarball_basename}"
+			return 0
+		else
+			echog " *** ${hash_type^^} MISMATCH: ${tarball_basename}" >&2
+			echog "	 Expected: ${expected_hash}" >&2
+			echog "	 Computed: ${computed_hash}" >&2
+			return 1
+		fi
+	done
+	
+	# No hash found - optional verification
+	if [[ "${NHOPKG_REQUIRE_HASH}" = "yes" ]]; then
+		echog " *** ERROR: No hash defined for ${tarball_basename}" >&2
+		return 1
+	fi
+	
+	echog " --- No hash defined for ${tarball_basename}, skipping verification"
+	return 0
+}
+
+
+#==============================================================================
+# Section: Metadata functions (repo and installed)
+#==============================================================================
+
+# ---------------------------------------------------------
+# generate_repo_db()
+# Description: Genera repo.db con metadatos completos por repositorio
+# Parameters: repo_name (optional, "all" for all active repos)
+# Returns: 0 on success
+# ---------------------------------------------------------
+generate_repo_db() {
+	local repo="${1:-all}"
+	local repos=()
+	
+	[[ "$repo" == "all" ]] && repos=(${NHOPKG_ACTIVE_REPOS}) || repos=("$repo")
+	
+	for r in "${repos[@]}"; do
+		local pkgdir="${NHOPKG_LOCALSTATEDIR}/repo/${r}/packages"
+		local outdir="${NHOPKG_LOCALSTATEDIR}/repo/${r}"  # ← FIX: definir por iteración
+		local dbfile="${outdir}/repo.db"
+		
+		[[ -d "$pkgdir" ]] || continue
+		mkdir -p "$outdir"
+		> "$dbfile"  # ← FIX: truncar archivo del repo actual
+		
+		for pkgfile in "$pkgdir"/*; do
+			[[ -f "$pkgfile" && ! -L "$pkgfile" ]] || continue
+			[[ $(basename "$pkgfile") == *-*-* ]] || continue
+			
+			# Extraer campos del nhoid
+			local name ver rel desc lic arch url size sha deps
+			name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			ver=$(grep "^# Version:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			rel=$(grep "^# Release:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			desc=$(grep "^# Description:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			lic=$(grep "^# License:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			arch=$(grep "^# Arch:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			url=$(grep "^# Url:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+			size=$(grep "^# Installed-Size:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+			sha=$(grep "^# SHA256:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}' | awk '{print $1}')
+			
+			# Extraer dependencias
+			deps=$(grep "^# Dep(post):" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}' | tr '\n' ' ' | sed 's/  */ /g;s/^ //;s/ $//')
+			
+			# Escribir entrada
+			{
+				echo "Name: ${name}"
+				echo "Version: ${ver}"
+				echo "Release: ${rel}"
+				echo "Description: ${desc}"
+				echo "License: ${lic}"
+				echo "Arch: ${arch}"
+				echo "URL: ${url}"
+				echo "Installed-Size: ${size}"
+				[[ -n "$sha" ]] && echo "SHA256: ${sha}"
+				echo "Depends: ${deps}"
+				echo "---"
+			} >> "$dbfile"
+		done
+		echog " - Generated: ${dbfile}"
+	done
+	return 0
+}
+
+# ---------------------------------------------------------
+# generate_installed_db()
+# Description: Genera installed.db con formato pkgname|version|release
+# Parameters: output_file (optional, default: ${NHOPKG_LOCALSTATEDIR}/installed.db)
+# Returns: 0 on success
+# ---------------------------------------------------------
+generate_installed_db() {
+	local output="${1:-${NHOPKG_LOCALSTATEDIR}/installed.db}"
+	local tmpfile="${NHOPKG_TMPDIR}/installed.db.tmp"
+	
+	mkdir -p "$(dirname "$output")"
+	> "$tmpfile"
+	
+	for pkgfile in "${NHOPKG_LOCALSTATEDIR}/packages/"*; do
+		[[ -f "$pkgfile" && ! -L "$pkgfile" ]] || continue
+		local name version release
+		name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+		version=$(grep "^# Version:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+		release=$(grep "^# Release:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+		[[ -n "$name" && -n "$version" && -n "$release" ]] && \
+			echo "${name}|${version}|${release}" >> "$tmpfile"
+	done
+	
+	sort -u "$tmpfile" > "$output"
+	rm -f "$tmpfile"
+	echog " - Generated: ${output}"
+	return 0
+}

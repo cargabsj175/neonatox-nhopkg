@@ -1,0 +1,192 @@
+#!/bin/sh
+
+###############################################################################
+#	nhopkg-overlay (tool) v. @PACKAGE_VERSION@ @RELEASEDATE@  <https://github.com/cargabsj175/neonatox-nhopkg/>
+#
+#	Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>
+#
+#	This program is free software: you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation, either version 3 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################################
+
+#==============================================================================
+# Section: Basic configurations.
+#==============================================================================
+## Nhopkg basic variables and configurations. Please don't edit these.
+# Get the config file.
+prefix="@prefix@"
+NHOPKG_CONF="@sysconfdir@/nhopkg/nhopkg.conf"
+NHOPKG_CONF_DEFAULT="@pkgdatadir@/nhopkg.conf"
+if [ -e "${NHOPKG_CONF}" ]; then
+	source "${NHOPKG_CONF}" 2> /dev/null
+elif [ -e "${NHOPKG_CONF_DEFAULT}" ]; then
+	echog " * Unable to locate Nhopkg configuration file!"
+	echog " - Loading default Nhopkg configuration file..."
+	source "${NHOPKG_CONF_DEFAULT}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg configuration file!"
+	exit 1
+fi
+
+if [ -e "${NHOPKG_LIB}" ]; then
+	source "${NHOPKG_LIB}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg core common functions file!"
+fi
+
+# ===============================
+# Configuration
+# ===============================
+OVERLAY_BASE="/var/lib/nhopkg-overlay"
+OVERLAY_UPPER="$OVERLAY_BASE/upper"
+OVERLAY_WORK="$OVERLAY_BASE/work"
+OVERLAY_ROOT="$OVERLAY_BASE/root"
+
+HOST_WORKDIR="$(pwd)"
+
+# ===============================
+# Utils
+# ===============================
+die() {
+    echogn "ERROR: "
+    echo "$*"
+    exit 1
+}
+
+is_mounted() {
+	# Compatible con busybox: maneja rutas al final de /proc/mounts
+	grep -qE "(^|[[:space:]])$1([[:space:]]|$)" /proc/mounts 2>/dev/null
+}
+
+# Desmonta recursivamente con fallback para busybox sin -R
+recursive_umount() {
+	_path="$1"
+	# Intentar umount -R primero (util-linux)
+	if is_mounted "$_path"; then
+		umount -R "$_path" 2>/dev/null && return 0
+		# Fallback: loop hasta que no quede nada montado
+		while is_mounted "$_path"; do
+			umount "$_path" 2>/dev/null || break
+		done
+	fi
+}
+
+# ===============================
+# Cleanup
+# ===============================
+cleanup() {
+	echog "Cleaning overlay..."
+
+	if [ -d "$OVERLAY_ROOT" ]; then
+		# Matar procesos que usen el overlay
+		command -v fuser >/dev/null 2>&1 && fuser -km "$OVERLAY_ROOT" 2>/dev/null || true
+		sleep 0.5
+
+		# Desmontar recursivamente
+		recursive_umount "$OVERLAY_ROOT"
+
+		# Desmontar explícitamente mounts conocidos
+		for mp in dev/pts dev proc sys run work; do
+			recursive_umount "$OVERLAY_ROOT/$mp"
+		done
+	fi
+
+	# Intento final en la base
+	recursive_umount "$OVERLAY_BASE"
+
+	# Limpiar directorio
+	if [ -d "$OVERLAY_BASE" ]; then
+		rm -rf "$OVERLAY_BASE" 2>/dev/null || \
+			echog "WARNING: Could not remove $OVERLAY_BASE, still busy" >&2
+	fi
+}
+
+trap cleanup EXIT INT TERM
+
+# ===============================
+# Checks
+# ===============================
+[ "$(id -u)" -eq 0 ] || die "Must be executed as root"
+command -v nhopkg >/dev/null 2>&1 || die "nhopkg not found"
+command -v mount >/dev/null 2>&1 || die "mount not available"
+
+# Verificar soporte de overlay en el kernel
+if ! grep -q overlay /proc/filesystems 2>/dev/null; then
+	die "Overlay filesystem not supported by kernel"
+fi
+
+# ===============================
+# Setup overlay
+# ===============================
+setup_overlay() {
+	echog "Creating overlay structure"
+	mkdir -p "$OVERLAY_UPPER" "$OVERLAY_WORK" "$OVERLAY_ROOT" \
+		|| die "Could not create overlay"
+
+	echog "Mounting overlay"
+	mount -t overlay overlay \
+		-o lowerdir=/,upperdir="$OVERLAY_UPPER",workdir="$OVERLAY_WORK" \
+		"$OVERLAY_ROOT" \
+		|| die "Failed to mount overlay"
+}
+
+# ===============================
+# Bind mounts
+# ===============================
+setup_binds() {
+	for d in dev proc sys run; do
+		mkdir -p "$OVERLAY_ROOT/$d"
+		mount --bind "/$d" "$OVERLAY_ROOT/$d" \
+			|| die "Failed bind /$d"
+	done
+
+	# pts para terminal interactiva
+	mkdir -p "$OVERLAY_ROOT/dev/pts"
+	mount -t devpts devpts "$OVERLAY_ROOT/dev/pts" 2>/dev/null || true
+
+	mkdir -p "$OVERLAY_ROOT/work"
+	mount --bind "$HOST_WORKDIR" "$OVERLAY_ROOT/work" \
+		|| die "Failed bind workdir"
+}
+
+# ===============================
+# Enter environment
+# ===============================
+enter_overlay() {
+	echo "======================================"
+	echog " Overlay active"
+	echog " System: ISOLATED (overlay)"
+	echogn " Work: /work -> "
+	echo "$HOST_WORKDIR"
+	echo "======================================"
+
+	# Verificar que /bin/sh existe en el chroot
+	if [ ! -x "$OVERLAY_ROOT/bin/sh" ]; then
+		die "No shell found at $OVERLAY_ROOT/bin/sh"
+	fi
+
+	chroot "$OVERLAY_ROOT" /bin/sh -c "
+		cd /work || exit 1
+		exec /bin/sh
+	"
+}
+
+# ===============================
+# MAIN
+# ===============================
+setup_overlay
+setup_binds
+enter_overlay
+
+exit 0

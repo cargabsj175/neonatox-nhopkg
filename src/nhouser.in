@@ -1,0 +1,228 @@
+#!/bin/sh
+
+###############################################################################
+#	nhouser (tool) v. @PACKAGE_VERSION@ @RELEASEDATE@  <https://github.com/cargabsj175/neonatox-nhopkg/>
+#
+#	Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>
+#
+#	This program is free software: you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation, either version 3 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################################
+# Description: Creates or verifies system users and groups.
+#			  Supports idempotent operation for package scripts,
+#			  allowing safe execution during build, install, or
+#			  post-install phases.
+#			  User and group creation is performed only when needed,
+#			  following BLFS/LFS conventions.
+# Parameters: Command-line options (--check, --create, --user, --group,
+#			 --uid, --gid, --shell, --groups, etc.)
+###############################################################################
+#==============================================================================
+# Section: Basic configurations.
+#==============================================================================
+## Nhopkg basic variables and configurations. Please don't edit these.
+# Get the config file.
+prefix="@prefix@"
+NHOPKG_CONF="@sysconfdir@/nhopkg/nhopkg.conf"
+NHOPKG_CONF_DEFAULT="@pkgdatadir@/nhopkg.conf"
+if [[ -e "${NHOPKG_CONF}" ]]; then
+	source "${NHOPKG_CONF}" 2> /dev/null
+elif [[ -e "${NHOPKG_CONF_DEFAULT}" ]]; then
+	echog " * Unable to locate Nhopkg configuration file!"
+	echog " - Loading default Nhopkg configuration file..."
+	source "${NHOPKG_CONF_DEFAULT}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg configuration file!"
+	exit 1
+fi
+
+# Get core common functions
+if [[ -e "${NHOPKG_LIB}" ]]; then
+	source "${NHOPKG_LIB}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg core common functions file!"
+fi
+
+find_free_id() {
+	type="$1"   # uid | gid
+	i="${2:-100}"
+
+	while :; do
+		if [ "$type" = "uid" ]; then
+			getent passwd "$i" >/dev/null 2>&1 || { echo "$i"; return; }
+		else
+			getent group "$i" >/dev/null 2>&1 || { echo "$i"; return; }
+		fi
+		i=$((i+1))
+	done
+}
+
+MODE=""
+VERBOSE=0
+
+USER=""
+U_ID=""
+COMMENT=""
+HOME_DIR=""
+SHELL_BIN=""
+GNAME=""
+G_ID=""
+GROUPS=""
+GROUP_DONE=0
+
+user_exists() {
+	id "$1" >/dev/null 2>&1
+}
+
+group_exists() {
+	getent group "$1" >/dev/null 2>&1
+}
+
+usage() {
+			echog "Usage:"
+			echo "	nhouser --check|--create --user NAME [options]"
+			echo "	nhouser --check|--create --group NAME [--gid GID]"
+			echo
+			echog "Users and groups management for nhopkg."
+			echo
+			echog "  --version	Shows version."
+			echog "  -h, --help	Shows this help page."
+			echo
+			echog "Options:"
+			echo "  --user NAME"
+			echo "  --uid UID"
+			echo "  --uname COMMENT"
+			echo "  --udir HOME"
+			echo "  --shell SHELL"
+			echo "  --group NAME"
+			echo "  --gid GID"
+			echo "  --groups "g1,g2""
+			echo
+			echog " -v, --verbose\tVerbose operations."
+}
+
+# -------------------------
+# Parse args
+# -------------------------
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--check|--create) MODE="$1" ;;
+		--user) USER="$2"; shift ;;
+		--uid) U_ID="$2"; shift ;;
+		--uname) COMMENT="$2"; shift ;;
+		--udir) HOME_DIR="$2"; shift ;;
+		--shell) SHELL_BIN="$2"; shift ;;
+		--group) GNAME="$2"; shift ;;
+		--gid) G_ID="$2"; shift ;;
+		--groups) GROUPS="$2"; shift ;;
+		-h|--help) usage; exit 0 ;;
+		--version) 
+			echo "nhouser @PACKAGE_VERSION@"
+			echo "Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>";
+			exit 0 ;;
+		-v|--verbose)
+			shift
+			if [[ "${VERBOSE_MODE}" != "yes" ]]; then
+				VERBOSE_MODE="yes"
+			fi
+		;;
+		*) echo "Invalid option: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+# -------------------------
+# Validations
+# -------------------------
+[ -z "$MODE" ] && { echo "Missing --check or --create" >&2; exit 1; }
+[ -z "$USER$GNAME" ] && { echo "Missing --user or --group" >&2; exit 1; }
+
+case "$U_ID" in
+	""|*[!0-9]*) [ -n "$U_ID" ] && { echo "Invalid UID: $U_ID" >&2; exit 1; } ;;
+esac
+
+case "$G_ID" in
+	""|*[!0-9]*) [ -n "$G_ID" ] && { echo "Invalid GID: $G_ID" >&2; exit 1; } ;;
+esac
+
+# -------------------------
+# Group handling
+# -------------------------
+if [ -n "$GNAME" ]; then
+	if group_exists "$GNAME"; then
+		EXIST_GID=$(getent group "$GNAME" | cut -d: -f3)
+
+		if [ -n "$G_ID" ] && [ "$EXIST_GID" != "$G_ID" ]; then
+			[ "${VERBOSE_MODE}" = "yes" ] && echog "GID mismatch for group $GNAME (have $EXIST_GID, expected $G_ID)"
+		fi
+	else
+		[ "$MODE" = "--check" ] && exit 1
+
+		if [ -n "$G_ID" ]; then
+			EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
+
+			if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
+				[ "${VERBOSE_MODE}" = "yes" ] && echog "GID $G_ID in use by $EXIST_NAME, searching free GID..."
+				G_ID=$(find_free_id gid "$G_ID")
+				[ "${VERBOSE_MODE}" = "yes" ] && echog "Using GID $G_ID"
+			fi
+		fi
+
+		[ "${VERBOSE_MODE}" = "yes" ] && echog " * Creating group $GNAME"
+		groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || exit 1
+	fi
+fi
+
+# -------------------------
+# User handling
+# -------------------------
+if [ -n "$USER" ]; then
+	if user_exists "$USER"; then
+		EXIST_UID=$(getent passwd "$USER" | cut -d: -f3)
+
+		if [ -n "$U_ID" ] && [ "$EXIST_UID" != "$U_ID" ]; then
+			[ "${VERBOSE_MODE}" = "yes" ] && echog " * UID mismatch for $USER (have $EXIST_UID, expected $U_ID)"
+		fi
+	else
+		[ "$MODE" = "--check" ] && exit 1
+
+		if [ -n "$U_ID" ]; then
+			EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
+
+			if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
+				if [ "${VERBOSE_MODE}" = "yes" ]; then
+					echogn " * UID $U_ID in use by $EXIST_NAME, searching..."
+				fi
+
+				U_ID=$(find_free_id uid "$U_ID")
+
+				[ "${VERBOSE_MODE}" = "yes" ] && echog " using $U_ID"
+			fi
+		fi
+
+		[ "${VERBOSE_MODE}" = "yes" ] && echog " * Creating user $USER"
+
+		useradd \
+			${U_ID:+-u "$U_ID"} \
+			${COMMENT:+-c "$COMMENT"} \
+			${HOME_DIR:+-d "$HOME_DIR"} \
+			${SHELL_BIN:+-s "$SHELL_BIN"} \
+			${GNAME:+-g "$GNAME"} \
+			${GROUPS:+-G "$GROUPS"} \
+			-M \
+			"$USER" || exit 1
+	fi
+fi
+
+exit 0

@@ -41,6 +41,9 @@ TEMPLATE_TMPDIR=".nhopkg.XXXXXXXXXX"
 BUILDIR=/usr/src
 NHOPKG_BUILDIR=${BUILDIR}/nhopkg
 
+# Core common functions
+NHOPKG_LIB=@prefix@/lib/nhopkg/libnhopkg
+
 # Lock file to avoid multiple nhopkg instances running at the same time
 NHOPKG_LOCKFILE=/var/lock/nhopkg
 

@@ -4,7 +4,8 @@ project('nhopkg', 'c',
   default_options: [
     'prefix=/usr',
     'sysconfdir=/etc',
-    'localstatedir=/var'
+    'localstatedir=/var',
+    'libdir=lib'
   ]
 )
 
@@ -40,11 +41,11 @@ conf.set('NHOPKG_GIT_SOURCES', git_url)
 # Variables para nhopkg.in
 conf.set('PACKAGE_NAME', meson.project_name())
 conf.set('PACKAGE_VERSION', meson.project_version())
-conf.set('RELEASEDATE', '2025')
+conf.set('RELEASEDATE', '2026')
 
 # === Verificación de dependencias del sistema ===
 required_tools = [
-  'bash', 'tar', 'zstd', 'sha256sum', 'make',
+  'bash', 'tar', 'zstd', '7z', 'bsdtar', 'sha256sum', 'make',
   'grep', 'awk', 'sed', 'find'
 ]
 
