@@ -846,7 +846,7 @@ nhouser()
 			--group) GNAME="$2"; shift ;;
 			--gid) G_ID="$2"; shift ;;
 			--groups) GROUPS="$2"; shift ;;
-			--verbose) ;;
+			--verbose) VERBOSE=1 ;;
 			*) echo "Invalid option: $1" >&2; return 1 ;;
 		esac
 		shift
@@ -858,26 +858,51 @@ nhouser()
 	[ -n "$U_ID" ] && case $U_ID in *[!0-9]*) echo "Invalid UID: $U_ID" >&2; return 1;; esac
 	[ -n "$G_ID" ] && case $G_ID in *[!0-9]*) echo "Invalid GID: $G_ID" >&2; return 1;; esac
 
-	if [ -n "$GNAME" ] && ! group_exists "$GNAME"; then
-		[ "$MODE" = "--check" ] && return 1
-		log "Creating group $GNAME"
-		groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
-		GROUP_DONE=1
+	if [ -n "$GNAME" ]; then
+		if group_exists "$GNAME"; then
+			if [ -n "$G_ID" ]; then
+				EXIST_GID=$(getent group "$GNAME" | cut -d: -f3)
+				if [ "$EXIST_GID" != "$G_ID" ]; then
+					log "GID mismatch for group $GNAME (have $EXIST_GID, expected $G_ID)"
+				fi
+			fi
+		else
+			[ "$MODE" = "--check" ] && return 1
+			if [ -n "$G_ID" ]; then
+				EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
+				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
+					log "GID $G_ID in use by $EXIST_NAME, searching free GID..."
+					G_ID=$(find_free_id gid "$G_ID")
+					log "Using GID $G_ID"
+				fi
+			fi
+			log "Creating group $GNAME"
+			groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+			GROUP_DONE=1
+		fi
 	fi
 
 	if [ -n "$USER" ]; then
-		if [ -n "$GNAME" ] && [ "$GROUP_DONE" = 0 ] && ! group_exists "$GNAME"; then
-			[ "$MODE" = "--check" ] && return 1
-			log "Creating primary group $GNAME"
-			groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
-		fi
-
 		if user_exists "$USER"; then
+			if [ -n "$U_ID" ]; then
+				EXIST_UID=$(getent passwd "$USER" | cut -d: -f3)
+				if [ "$EXIST_UID" != "$U_ID" ]; then
+					log "UID mismatch for $USER (have $EXIST_UID, expected $U_ID)"
+				fi
+			fi
 			log "User $USER already exists"
 		else
 			[ "$MODE" = "--check" ] && return 1
+			if [ -n "$U_ID" ]; then
+				EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
+				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
+					log "UID $U_ID in use by $EXIST_NAME, searching free UID..."
+					U_ID=$(find_free_id uid "$U_ID")
+					log "Using UID $U_ID"
+				fi
+			fi
 			log "Creating user $USER"
-			useradd -m \
+			useradd -M \
 				${U_ID:+-u "$U_ID"} \
 				${COMMENT:+-c "$COMMENT"} \
 				${HOME:+-d "$HOME"} \

@@ -1,2 +1,11 @@
-src/nhopkg.in.orig
+src/libnhopkg.in.*
+src/nhopkg.conf.in.*
+src/nhopkg.in.*
+src/nhopkg-overlay.in.*
+src/nhopkg-repos.in.*
+src/nhouser.in.*
+src/*.patch
+src/*.diff
 AGENTS.md
+build
+builddir

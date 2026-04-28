@@ -4354,18 +4354,18 @@ case "${NHOPKG_OPTION}" in
 	upgrade)
 # ********************************************************************
 # Upgrade: update all installed packages
-# Flow:
+# Flow: Install each package individually with its own deps resolution
 # 1. Basic checks and repo update
 # 2. Get installed packages
 # 3. Detect available upgrades
 # 4. Ask user
-# 5. Resolve deps (READ-ONLY) + prepare download list
-# 6. Download EVERYTHING (deps + upgrades)
-# 7. Install dependencies first
-# 8. Install upgraded packages
-# 9. Finalize
+# 5. Process each upgrade individually (download, deps, remove old, install new)
+# 6. Finalize
 # ********************************************************************
 	## 1. Basic checks and repo update
+	installed_ver=()
+	new_ver=()
+	
 	get_pwd_dir
 	check_if_root_uid
 
@@ -4420,65 +4420,63 @@ case "${NHOPKG_OPTION}" in
 	nhopkg_ask_follow
 	check_if_ok " * Packages will not be updated."
 
-	## 5. Resolve deps (READ-ONLY) + prepare download list
-	declare -a UPGRADE_NHOS
-	unset RCASEPACKAGES ORCASEPACKAGES
-
+	## 5. Process each upgrade individually
 	for pkg_name in "${packages_to_update[@]}"; do
+		echog " --- Processing upgrade: $pkg_name"
+
+		# Get package info
 		CASEPACKAGE="${pkg_name}"
-		getpackage || exit 1
+		getpackage || continue
 
-		# Pre-check conflicts using repo metadata
-		check_package_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		# Check if package is already installed with same or newer version
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+			installed_ver="${pkgversion}-${pkgrevision}"
+			new_ver="${pkgversion}-${pkgrevision}"
 
-		# Load nhoid from repo package (only for deps resolution)
-		dep_resolve_from_nhoid "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "required"
-	done
+			if version_compare "$new_ver" "<=" "$installed_ver"; then
+				echog " --- Skipping: $pkg_name (already installed: $installed_ver)"
+				continue
+			fi
+		fi
 
-	## 6. Download EVERYTHING (deps + upgrades)
-	echog " - Downloading upgrade packages..."
-	for pkg_name in "${packages_to_update[@]}"; do
-		CASEPACKAGE="${pkg_name}"
-		getpackage || exit 1
+		# Conflict check
+		dep_check_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+
+		# Download package
+		echog " --- Downloading: ${pkgname}-${pkgversion}-${pkgrevision}"
 		downloadpackage
-		UPGRADE_NHOS+=("${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho")
-	done
 
-	## 7. Install dependencies first
-	_dep_install_all_from_queue
-
-	## 8. Install upgraded packages
-	for nho in "${UPGRADE_NHOS[@]}"; do
+		# Install with dependency resolution (like individual install)
 		cleanup_tmp_dir
 		make_tmp_dir
 
-		tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${nho}" "${NHOPKG_TMPDIR}" || exit 1
+		tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" || exit 1
 		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
-		
+
 		# Security checks
 		check_package_hash
 		check_package_arch
 		verify_package_signature
 
-		# Save NEW version data
-		NEW_PKGNAME="$pkgname"
-		NEW_PKGVERSION="$pkgversion"
-		NEW_PKGREVISION="$pkgrevision"
+		# Resolve and install dependencies for THIS package
+		if [ "$NHOPKG_CHECKDEPS" = "yes" ]; then
+			dep_resolve_from_nhoid "${NHOPKG_TMPDIR}/nhoid" "required"
+			dep_install_queue "no" "required"
+		fi
 
-		# Remove OLD version
+		# Check for package replacement
+		dep_check_conflicts "${NHOPKG_TMPDIR}/nhoid"
+
+		# Remove OLD version if installed
 		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
 			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
-			echog " --- Removing ${pkgname}-${pkgversion}-${pkgrevision}"
+			echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
 			remove_package
 			remove_package_config_files
 		fi
 
-		# Restore NEW metadata (IMPORTANT)
-		pkgname="$NEW_PKGNAME"
-		pkgversion="$NEW_PKGVERSION"
-		pkgrevision="$NEW_PKGREVISION"
-
-		# Install
+		# Install new version
 		bin_install
 		bin_install_setting_up
 		bin_install_create_config_files
@@ -4486,9 +4484,8 @@ case "${NHOPKG_OPTION}" in
 		cleanup_tmp_dir
 	done
 
-	## 9. Finalize
+	## 6. Finalize
 	shooter_updates
-	# generate_installed_db
 	update_local_db
 	echog " - System updated successfully!"
 	exit 0
@@ -4496,23 +4493,22 @@ case "${NHOPKG_OPTION}" in
 	install-group)
 # ********************************************************************
 # Section: Install group (from repos)
-# Uses file-based package list
-# Flow:
-# 0. Basic checks and validate groups (from parser global)
+# Flow: Install each package individually with its own deps resolution
+# 0. Basic checks and validate groups
 # 1. Create temp package list file
 # 2. Collect packages from groups
 # 3. Normalize list (deduplicate + sanitize)
-# 4. Show plan
-# 5. Resolve dependencies (READ-ONLY)
-# 6. Download packages
-# 7. Download & install dependencies
-# 8. Install group packages
-# 9. Finalize
+# 4. Show plan and ask user
+# 5. Install each package individually (with deps resolved per-package)
+# 6. Finalize
 # ********************************************************************
-	# 0. Basic checks and validate groups (from parser global)
+	# 0. Basic checks and validate groups
+	installed_ver=()
+	new_ver=()
+	
 	get_pwd_dir
 	check_if_root_uid
-	
+
 	[ -z "$CASEPACKAGES" ] && {
 		echog " * Missing group name(s) for --install-group" >&2
 		exit 1
@@ -4543,44 +4539,44 @@ case "${NHOPKG_OPTION}" in
 		exit 1
 	}
 
-	# 4. Show plan
+	# 4. Show plan and ask user
 	echog " - Packages to be installed:"
 	sed 's/^/   /' "$PKG_LIST_FILE"
 
 	nhopkg_ask_follow
 	check_if_ok " * Packages will not be installed."
 
-	# 5. Resolve dependencies (READ-ONLY)
-	unset RCASEPACKAGES ORCASEPACKAGES
-
+	# 5. Install each package individually (like individual install)
 	while IFS= read -r pkg; do
+		echog " --- Processing: $pkg"
+
+		# Resolve package info (get pkgname, pkgversion, pkgrevision)
 		CASEPACKAGE="$pkg"
-		getpackage || exit 1
+		getpackage || continue
 
-		check_package_conflicts  "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		# Check if package is already installed
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+			installed_ver="${pkgversion}-${pkgrevision}"
+			new_ver="${pkgversion}-${pkgrevision}"
 
-		[ "$NHOPKG_CHECKDEPS" = "yes" ] &&  dep_resolve_from_nhoid "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "required"
-	done < "$PKG_LIST_FILE"
+			# Compare versions: if same or newer, skip
+			if version_compare "$new_ver" "<=" "$installed_ver"; then
+				echog " --- Skipping: $pkg (already installed: $installed_ver)"
+				continue
+			else
+				echog " --- Upgrading: $pkg (installed: $installed_ver)"
+			fi
+		fi
 
-	# 6. Download packages
-	echog " - Downloading packages..."
+		# Conflict check
+		dep_check_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 
-	while IFS= read -r pkg; do
-		CASEPACKAGE="$pkg"
-		getpackage || exit 1
+		# Download package
+		echog " - Downloading: ${pkgname}-${pkgversion}-${pkgrevision}"
 		downloadpackage
-	done < "$PKG_LIST_FILE"
 
-	# 7. Download & install dependencies
-	if [ "$NHOPKG_CHECKDEPS" = "yes" ]; then
-		_dep_install_all_from_queue
-	fi
-
-	# 8. Install group packages
-	while IFS= read -r pkg; do
-		CASEPACKAGE="$pkg"
-		getpackage || exit 1
-
+		# Install with dependency resolution (like individual install)
 		cleanup_tmp_dir
 		make_tmp_dir
 
@@ -4593,15 +4589,34 @@ case "${NHOPKG_OPTION}" in
 		else
 			echog " * The selected package is not valid." >&2
 			cleanup_tmp_dir
-			exit 1
+			continue
 		fi
 
+		# Security checks
 		check_package_hash
 		check_package_arch
 		verify_package_signature
 
-		[ -n "$REPLACES_PACKAGE" ] && remove_replaced_package "$REPLACES_PACKAGE"
+		# Resolve and install dependencies for THIS package
+		if [ "$NHOPKG_CHECKDEPS" = "yes" ]; then
+			dep_resolve_from_nhoid "${NHOPKG_TMPDIR}/nhoid" "required"
+			dep_install_queue "no" "required"
+		fi
 
+		# Check for package replacement
+		dep_check_conflicts "${NHOPKG_TMPDIR}/nhoid"
+
+		[ -n "$DEP_REPLACE_PACKAGE" ] && remove_replaced_package "$DEP_REPLACE_PACKAGE"
+
+		# Remove OLD version if upgrading
+		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+			echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
+			remove_package
+			remove_package_config_files
+		fi
+
+		# Install this package
 		bin_install
 		bin_install_setting_up
 		bin_install_create_config_files
@@ -4609,9 +4624,8 @@ case "${NHOPKG_OPTION}" in
 		cleanup_tmp_dir
 	done < "$PKG_LIST_FILE"
 
-	# 9. Finalize
+	# 6. Finalize
 	shooter_updates
-	# generate_installed_db
 	update_local_db
 	echog " - Group installation finished successfully!"
 	exit 0
