@@ -688,40 +688,65 @@ _dep_install_all_from_queue() {
 # _dep_install_single() - Install a single package
 #----------------------------------------------------------
 _dep_install_single() {
-	local pkg_basename="$1"
-	make_tmp_dir
-		
-	local pkgfile="${NHOPKG_LOCALSTATEDIR}/cache/${pkg_basename}"
-	[[ -f "$pkgfile" ]] || return 1
-	
-	tar xfC "$pkgfile" "$NHOPKG_TMPDIR"
-	check_if_ok " * Unable to uncompress package."
-	
-	# Get data from package. Checks that is good package and get data from it.
-	if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
-		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
-		check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
-	else
-		echog " * The selected package is not valid." >&2
-		# Clean and exits with error.
-		cleanup_tmp_dir
-		return 1
-	fi
-	
-	# Security checks.
-	check_package_hash
-	check_package_arch
-	verify_package_signature
-	
-	# Handle package replacement
-	if [[ -n "$DEP_REPLACE_PACKAGE" ]]; then
-		remove_replaced_package "$DEP_REPLACE_PACKAGE"
-	fi
-	
-	# Install & configure
-	bin_install
-	bin_install_setting_up
-	bin_install_create_config_files
+    local pkg_basename="$1"
+    make_tmp_dir
+        
+    local pkgfile="${NHOPKG_LOCALSTATEDIR}/cache/${pkg_basename}"
+    [[ -f "$pkgfile" ]] || return 1
+    
+    tar xfC "$pkgfile" "$NHOPKG_TMPDIR"
+    check_if_ok " * Unable to uncompress package."
+    
+    # Get data from package. Checks that is good package and get data from it.
+    if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+        get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
+        check_package_conflicts "${NHOPKG_TMPDIR}/nhoid"
+    else
+        echog " * The selected package is not valid." >&2
+        # Clean and exits with error.
+        cleanup_tmp_dir
+        return 1
+    fi
+    
+    # Check if package is already installed (skip if same or newer version)
+    if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+        local installed_ver="${pkgversion}-${pkgrevision}"
+        local new_ver="${pkgversion}-${pkgrevision}"
+        
+        if version_compare "$new_ver" "<=" "$installed_ver"; then
+            echog " - Skipping dependency: ${pkgname} (already installed: ${installed_ver})"
+            cleanup_tmp_dir
+            return 0
+        else
+            echog " - Upgrading dependency: ${pkgname} (${installed_ver} -> ${new_ver})"
+        fi
+    fi
+    
+    # Security checks.
+    check_package_hash
+    check_package_arch
+    verify_package_signature
+    
+    # Handle package replacement
+    if [[ -n "$DEP_REPLACE_PACKAGE" ]]; then
+        remove_replaced_package "$DEP_REPLACE_PACKAGE"
+    fi
+    
+    # Remove old version if upgrading
+    if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
+        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+        echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
+        remove_package
+        remove_package_config_files
+    fi
+    
+    # Install & configure
+    bin_install
+    bin_install_setting_up
+    bin_install_create_config_files
+    
+    cleanup_tmp_dir
 }
 #==============================================================================
 # Section: Compatibility Wrappers (LEGACY - For smooth transition)
