@@ -195,7 +195,7 @@ dep_install_queue() {
 			echogn "needs the following dependencies:"
 		fi
 		
-		local IFS=,
+		local IFS=" "
 		echo " ${queue[*]}."
 		local IFS="${OLDIFS}"
 		

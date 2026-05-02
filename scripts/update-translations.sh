@@ -97,7 +97,7 @@ for po_file in "${POT_DIR}"/*.po; do
     msgmerge --quiet --update "$po_file" "${POT_FILE}"
 
     # Count fuzzy entries
-    fuzzy=$(grep -c "^#, fuzzy" "$po_file" 2>/dev/null || echo "0")
+    fuzzy=$(grep -c '^#, fuzzy' "$po_file" 2>/dev/null | tr -d '[:space:]' || echo "0")
     if [[ "$fuzzy" -gt 0 ]]; then
         echo "    ⚠ ${fuzzy} fuzzy entries need review"
         FUZZY_COUNT=$((FUZZY_COUNT + fuzzy))

@@ -9,3 +9,4 @@ src/*.diff
 AGENTS.md
 build
 builddir
+*.po~

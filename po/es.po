@@ -1,15 +1,14 @@
 # Spanish translation for nhopkg
 # Copyright (c) 2009 Rosetta Contributors and Canonical Ltd 2009
 # This file is distributed under the same license as the nhopkg package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2009.
-# Carlos Sanchez <cargabsj175@gmail.com>, 2025.
+# Carlos Sanchez <cargabsj175@gmail.com>, 2025-2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: nhopkg\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-02 09:50-0300\n"
-"PO-Revision-Date: 2025-10-02 01:12-0300\n"
+"POT-Creation-Date: 2026-05-02 09:49-0300\n"
+"PO-Revision-Date: 2026-05-02 12:15-0300\n"
 "Last-Translator: Carlos Sanchez <cargabsj175@gmail.com>\n"
 "Language-Team: Spanish\n"
 "Language: es\n"
@@ -36,15 +35,14 @@ msgstr " * ¡Imposible localizar archivo de configuración de Nhopkg!"
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:50
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:35
 msgid " - Loading default Nhopkg configuration file..."
-msgstr " - Cargando archivo de configuración de Nhopkg por defecto..."
+msgstr " - Cargando archivo de configuración de Nhopkg predeterminado..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:50
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:46
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:61
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:45
-#, fuzzy
 msgid " * Unable to locate Nhopkg core common functions file!"
-msgstr " * ¡Imposible localizar archivo de configuración de Nhopkg!"
+msgstr " * ¡No se puede localizar el archivo de funciones comunes de Nhopkg!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:121
 msgid " --- Processing Dependency:"
@@ -59,14 +57,12 @@ msgid "needs the following dependencies:"
 msgstr "necesita las siguientes dependencias:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:257
-#, fuzzy
 msgid " - Checking for conflicts..."
-msgstr " :: Comprobando:"
+msgstr " - Comprobando conflictos..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:666
-#, fuzzy
 msgid " --- Downloading from "
-msgstr " --- Descargando"
+msgstr " --- Descargando desde "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:705
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1698
@@ -78,68 +74,66 @@ msgid " * The selected package is not valid."
 msgstr " * El paquete seleccionado no es válido."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:942
-#, fuzzy
 msgid " --- Installing service: "
-msgstr " --- Instalando"
+msgstr " --- Instalando servicio: "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:988
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1007
-#, fuzzy
 msgid " --- Updating: "
-msgstr " --- Actualizando la base de datos:"
+msgstr " --- Actualizando: "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:994
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1015
 msgid "\\t** OK: Update completed successfully"
-msgstr ""
+msgstr "\t** OK: La actualización se completó correctamente"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:997
 msgid "\\t** Fail: Update failed"
-msgstr ""
+msgstr "\t** Error: La actualización falló"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1002
 msgid "schemas"
-msgstr ""
+msgstr "esquemas"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1008
 msgid "icons"
-msgstr ""
+msgstr "iconos"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1019
 msgid "desktop entries"
-msgstr ""
+msgstr "entradas de escritorio"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1022
 msgid "MIME database"
-msgstr ""
+msgstr "Base de datos MIME"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1028
 msgid "manual pages"
-msgstr ""
+msgstr "páginas del manual"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1037
 msgid "font cache"
-msgstr ""
+msgstr "caché de fuentes"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1046
 msgid "shared libraries"
-msgstr ""
+msgstr "bibliotecas compartidas"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1052
 msgid "gdk-pixbuf loaders"
-msgstr ""
+msgstr "cargadores gdk-pixbuf"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1057
 msgid " - System updates completed"
-msgstr ""
+msgstr " - Actualizaciones del sistema completadas"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1058
 msgid "   Some updates failed"
-msgstr ""
+msgstr "   Algunas actualizaciones fallaron."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1060
 msgid " - No updates were necessary"
-msgstr ""
+msgstr "- No fue necesario realizar ninguna actualización."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1108
 msgid "Great Work your LFS! ;-)"
@@ -171,7 +165,7 @@ msgid ""
 "This is free software, and you are welcome to redistribute it under certain "
 "conditions; for details type nhopkg --license-all."
 msgstr ""
-"Ésto es software libre, y usted es bienvenido para distribuirlo bajo ciertas "
+"Esto es software libre, y usted es bienvenido para distribuirlo bajo ciertas "
 "condiciones; para más detalles escriba nhopkg --license-all"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1168
@@ -191,129 +185,113 @@ msgid "Commands:"
 msgstr "Comandos:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1175
-#, fuzzy
 msgid " -B, --backup\\tCreates binary package from installed package."
-msgstr " -B, --backup\tCrea un paquete binario desde otro instalado."
+msgstr " -B, --backup\tCrea un paquete binario a partir del paquete instalado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1176
-#, fuzzy
 msgid ""
 " -C, --super-build\\tCompiles and installs source package from Git repo."
-msgstr " -b, --build\tCompila e instala un paquete fuente."
+msgstr ""
+" -C, --super-build\tCompila e instala el paquete fuente desde el repositorio "
+"Git."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1177
-#, fuzzy
 msgid ""
 " -G, --install-group\\tInstalls binaries packages from a specified group "
 "from the repository."
-msgstr " -S, --super-install\tInstala paquete binario desde repositorios."
+msgstr ""
+"-G, --install-group\tInstala paquetes binarios de un grupo especificado "
+"desde el repositorio."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1178
-#, fuzzy
 msgid " -S, --super-install\\tInstalls binary package form repository."
-msgstr " -S, --super-install\tInstala paquete binario desde repositorios."
+msgstr "-S, --super-install\tInstala el paquete binario desde el repositorio."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1179
-#, fuzzy
 msgid " -U, --update\\tUpdate repository database."
-msgstr " -U, --update\tActualiza la base de datos del repositorio."
+msgstr "-U, --update\tActualiza la base de datos del repositorio."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1180
 msgid ""
 " -X, --strip-binaries\\tRemove debug symbols from installed binaries and "
 "libraries during installation (experimental)."
 msgstr ""
+"-X, --strip-binaries\tElimina los símbolos de depuración de los binarios y "
+"bibliotecas instalados durante la instalación (experimental)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1182
-#, fuzzy
 msgid " -b, --build\\tCompiles and installs source package."
-msgstr " -b, --build\tCompila e instala un paquete fuente."
+msgstr "-b, --build\tCompila e instala el paquete fuente."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1183
-#, fuzzy
 msgid " -d, --dios\\tSame as -S, --super-install."
 msgstr " -d, --dios\tIgual que -S, --super-install."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1184
-#, fuzzy
 msgid " -e, --clean\\tRemove cached data."
-msgstr " -e, --clean\tLimpia la cache."
+msgstr " -e, --clean\tEliminar datos en caché."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1185
-#, fuzzy
 msgid " -i, --install\\tInstalls binary package."
-msgstr " -i, --install\tInstala paquete binario."
+msgstr " -i, --install\tInstala el paquete binario."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1186
-#, fuzzy
 msgid " -k, --check\\tChecks if installed package is correct."
-msgstr " -k, --check\tComprueba si un paquete instalado es correcto."
+msgstr " -k, --check\tComprueba si el paquete instalado es correcto."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1187
-#, fuzzy
 msgid " -l, --list\\tLists installed packages."
-msgstr " -l, --list\tLista los paquetes instalados."
+msgstr " -l, --list\tEnumera los paquetes instalados."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1188
-#, fuzzy
 msgid " -n, --info\\tShows package details."
-msgstr " -n, --info\tMuestra los detalles de un paquete."
+msgstr " -n, --info\tMuestra los detalles del paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1189
-#, fuzzy
 msgid " -r, --remove\\tRemoves package installed by Nhopkg."
-msgstr " -r, --remove\tElimina paquetes instalados por Nhopkg."
+msgstr "-r, --remove\tElimina el paquete instalado por Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1190
-#, fuzzy
 msgid " -s, --search\\tSearch for package and its details."
-msgstr " -s, --search\tBusca un paquete y sus detalles."
+msgstr "-s, --search\tBusca el paquete y sus detalles."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1191
-#, fuzzy
 msgid " -t, --list-repo\\tLists packages on repository and their details."
-msgstr " -t, --list-repo\tLista los paquetes en el repositorio y sus detalles."
+msgstr ""
+" -t, --list-repo\tEnumera los paquetes en el repositorio y sus detalles."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1192
-#, fuzzy
 msgid " -u, --update-db\\tUpdate Nhopkg database."
-msgstr " -u, --update-db\tActualiza la base de datos de Nhopkg."
+msgstr " -u, --update-db\tActualizar base de datos de Opkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1193
-#, fuzzy
 msgid " -w, --show\\tShows package files."
-msgstr " -w, --show\tMuestra los archivos de un paquete."
+msgstr "-w, --show\tMuestra los archivos del paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1194
-#, fuzzy
 msgid " -x, --update-shooters\\tUpdates all system data and schemas."
 msgstr ""
 " -x, --update-shooters\tActualiza todos los datos y esquemas del sistema."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1195
-#, fuzzy
 msgid " -y, --upgrade\\tUpdates all installed packages."
-msgstr " -l, --list\tLista los paquetes instalados."
+msgstr "-y, --upgrade\tActualiza todos los paquetes instalados."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1196
-#, fuzzy
 msgid " --license-all\\tShows complete Nhopkg license."
-msgstr " --license-all\tMuestra la licencia completa de Nhopkg."
+msgstr "--license-all\tMuestra la licencia completa de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1197
-#, fuzzy
 msgid " --license\\tShows Nhopkg license."
-msgstr " --license\tMuestra la licencia de Nhopkg."
+msgstr "--license\tMuestra la licencia de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1198
-#, fuzzy
 msgid " --version\\tShows Nhopkg version."
-msgstr " --version\tMuestra la versión de Nhopkg."
+msgstr "--version\tMuestra la versión de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1199
-#, fuzzy
 msgid " -h, --help\\tShows this help page."
-msgstr " -h, --help\tMuestra la ayuda de nhopkg."
+msgstr "-h, --help\tMuestra esta página de ayuda."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1201
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:59
@@ -321,82 +299,72 @@ msgid "Options:"
 msgstr "Opciones:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1202
-#, fuzzy
 msgid " --force-check-arch\\tForce check architecture."
-msgstr " --force-check-arch\tFuerza la comprobación de la arquitectura."
+msgstr "--force-check-arch\tForzar la comprobación de la arquitectura."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1203
-#, fuzzy
 msgid " --force-check-deps\\tForce check dependencies."
-msgstr " --force-check-deps\tFuerza la comprobación de dependencias."
+msgstr "--force-check-deps\tForzar la comprobación de dependencias."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1204
-#, fuzzy
 msgid " --force-check-sums\\tForce check Sums."
-msgstr " --force-check-sha256\tFuerza la comprobación de la suma SHA256."
+msgstr "--force-check-sums\tForzar comprobaciones de sumas."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1205
-#, fuzzy
 msgid " --no-check-arch\\tDon't check architecture."
-msgstr " --no-check-arch\tNo comprueba la arquitectura."
+msgstr "--no-check-arch\tNo comprobar la arquitectura."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1206
-#, fuzzy
 msgid " --no-check-deps\\tDon't check dependencies."
-msgstr " --no-check-deps\tNo comprueba dependencias."
+msgstr "--no-check-deps\tNo comprobar las dependencias."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1207
-#, fuzzy
 msgid " --no-check-sums\\tDon't check Sums."
-msgstr " --no-check-sha256\tNo comprueba la suma SHA256."
+msgstr " --no-check-sums\tNo realizar comprueba sumas."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1208
 msgid " --sign-package\\tSign the binary package when building it."
-msgstr ""
+msgstr "--sign-package\tFirma el paquete binario al compilarlo."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1209
 msgid " --no-sign-package\\tSkip the package signature."
-msgstr ""
+msgstr "--no-sign-package\tOmitir la firma del paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1210
 msgid ""
 " --verify-package-signature\\tVerify the GPG signature of the package before "
 "installing it."
 msgstr ""
+"--verify-package-signature\tVerifica la firma GPG del paquete antes de "
+"instalarlo."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1211
 msgid " --no-verify-package-signature\\tSkip signature verification."
-msgstr ""
+msgstr "--no-verify-package-signature\tOmitir la verificación de la firma."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1212
-#, fuzzy
 msgid " --purge\\tRemove inverse dependencies of package."
-msgstr " --purge\tElimina las dependencias inversas del paquete."
+msgstr "--purge\tElimina las dependencias inversas del paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1213
-#, fuzzy
 msgid " --root\\tSets install root."
-msgstr " --root\tSelecciona el directorio de instalación."
+msgstr "--root\\tEstablece la ruta de instalación."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1214
-#, fuzzy
 msgid " -R, --recursive\\tNhopkg works recursively."
-msgstr " -R, --recursive\tNhopkg trabaja de forma recursiva."
+msgstr "-R, --recursive\\tNhopkg funciona recursivamente."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1215
-#, fuzzy
 msgid " -o, --output\\tWrite an output log."
-msgstr " -o, --output\tEscribe un log de la salida."
+msgstr "-o, --output\tEscribir un registro de salida."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1216
-#, fuzzy
 msgid " -v, --verbose\\tVerbose operations."
-msgstr " -v, --verbose\tOperaciones verbosas."
+msgstr " -v, --verbose\\tOperaciones detalladas."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1217
-#, fuzzy
 msgid " --\\tStop parssing arguments."
-msgstr " --\tNo obtiene más argumentos."
+msgstr "--\tDeja de procesar argumentos."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1233
 msgid "Nhopkg is already in use..."
@@ -408,7 +376,7 @@ msgstr "Existe un archivo lock antiguo, pero parece que no está en uso..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1244
 msgid " * You can't rewrite lock file."
-msgstr " * No puedes reescribir el archivo lock."
+msgstr " * No puede reescribir el archivo lock."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1286
 msgid " --- Updating database:"
@@ -461,40 +429,41 @@ msgstr "está instalado ya en su sistema. El paquete será REINSTALADO."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1632
 msgid " --- Initializing trusted keyring..."
-msgstr ""
+msgstr "--- Inicializando llavero de confianza..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1634
 msgid " --- Trusted keyring initialized."
-msgstr ""
+msgstr "--- Llavero de confianza inicializado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1636
 msgid " *** WARNING: Failed to initialize trusted keyring."
-msgstr ""
+msgstr "*** ADVERTENCIA: No se pudo inicializar el llavero de confianza."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1642
-#, fuzzy
 msgid " *** WARNING: Package is not signed."
-msgstr " * El paquete no será instalado."
+msgstr " *** ADVERTENCIA: El paquete no está firmado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1644
 msgid " *** Signature required. Aborting."
-msgstr ""
+msgstr " *** Se requiere firma. Abortando."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1652
 msgid " *** ERROR: No trusted keyring found and no default key to import."
 msgstr ""
+"*** ERROR: No se encontró ningún llavero de confianza ni ninguna clave "
+"predeterminada para importar."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1657
 msgid " --- Verifying GPG signature..."
-msgstr ""
+msgstr "--- Verificando la firma GPG..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1659
 msgid " --- Signature OK."
-msgstr ""
+msgstr "--- Firma correcta."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1661
 msgid " *** BAD SIGNATURE! Package may be tampered."
-msgstr ""
+msgstr "*** ¡FIRMA INCORRECTA! El paquete podría haber sido manipulado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1670
 msgid " --- Installing"
@@ -531,7 +500,7 @@ msgstr "imposible eliminar el directorio."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2082
 msgid " * Replacement cancelled."
-msgstr ""
+msgstr " * Reemplazo cancelado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2111
 msgid " - Additional files in package (patches):"
@@ -543,7 +512,7 @@ msgstr "   El repositorio ya existe. Actualizado..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2145
 msgid " * Failed to clone Git repository."
-msgstr " *** Incapaz de crear el repositorio Git."
+msgstr " *** Incapaz de clonar el repositorio Git."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2164
 msgid " - Source code ready for build."
@@ -555,7 +524,7 @@ msgstr "- Archivo nhoid preparado para el proceso de compilación."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2259
 msgid " * Hash verification failed, aborting build."
-msgstr ""
+msgstr "* Falló la verificación del hash, se aborta la compilación."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2282
 msgid " * No source package found and no valid pkgsrcurl defined."
@@ -595,9 +564,8 @@ msgid " --- You can see instalation log on"
 msgstr " --- Puede ver el log de instalación en"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2417
-#, fuzzy
 msgid " --- Veryfing logs path"
-msgstr " --- Guardando logs en"
+msgstr " --- Verificando ruta de registros"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2423
 msgid " --- Saving logs on"
@@ -605,19 +573,19 @@ msgstr " --- Guardando logs en"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2606
 msgid "\\t** Using for post-install: "
-msgstr ""
+msgstr "\t**Usando para post-install:**"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2609
 msgid "\\t** Using as fallback for post-install: "
-msgstr ""
+msgstr "\t** Utilizar como alternativa para la post-install:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2620
 msgid "\\t** Using for post-remove: "
-msgstr ""
+msgstr "\t**Usando para post-remove:**"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2623
 msgid "\\t** Using as fallback for post-remove: "
-msgstr ""
+msgstr "\t** Utilizar como alternativa para post-remove:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2641
 msgid " - Building binary package."
@@ -629,20 +597,19 @@ msgstr " --- Buscando archivos en el sistema."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2648
 msgid " --- Stripping binaries and/or libraries..."
-msgstr ""
+msgstr "--- Stripping binarios y/o bibliotecas..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2677
 msgid " --- Compressing package."
 msgstr " --- Comprimiendo el paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2681
-#, fuzzy
 msgid " --- Signing package with GPG..."
-msgstr " --- Comprobando arquitectura del paquete para"
+msgstr " --- Firmando paquete con GPG..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2683
 msgid " *** WARNING: Failed to sign package. Continuing without signature."
-msgstr ""
+msgstr "*** ADVERTENCIA: No se pudo firmar el paquete. Se continúa sin firma."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2702
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3773
@@ -677,46 +644,39 @@ msgstr "Última versión instalada: No instalada."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2840
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2881
-#, fuzzy
 msgid "Lasted version available:"
 msgstr "Última versión disponible:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2847
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2888
-#, fuzzy
 msgid "Lasted version available: Not available."
 msgstr "Última versión disponible: No disponible."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3048
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4341
-#, fuzzy
 msgid " * No repositories configured for update."
-msgstr " * El repositorio ya está actualizado."
+msgstr " * No hay repositorios configurados para actualizar."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3062
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4355
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:519
-#, fuzzy
 msgid " :: Updating repository:"
-msgstr " :: Actualizando desde el repositorio:"
+msgstr " :: Actualizando repositorio:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3078
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4372
-#, fuzzy
 msgid "   - Already up to date."
-msgstr " - Limpiando datos de caché."
+msgstr "   - Ya está actualizado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3085
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4379
-#, fuzzy
 msgid "   - Downloading database..."
-msgstr " --- Descargando la base de datos de los archivos."
+msgstr "   - Descargando base de datos..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3107
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4403
-#, fuzzy
 msgid " - All repositories updated successfully."
-msgstr " - La base de datos del repositorio se actualizó correctamente."
+msgstr " - Todos los repositorios actualizados correctamente."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3146
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3316
@@ -832,35 +792,29 @@ msgid " :: Preparing split package:"
 msgstr " :: Prepando paquete split:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3967
-#, fuzzy
 msgid " - Source installation finished successfully!"
-msgstr " - La instalación terminó satisfactoriamente!"
+msgstr " - ¡Instalización desde fuente finalizada correctamente!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3988
-#, fuzzy
 msgid " * Must select a package name."
-msgstr " * Debe seleccionar un paquete."
+msgstr " * Debe seleccionar un nombre de paquete."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:3997
-#, fuzzy
 msgid " :: Preparing to super-build:"
-msgstr " :: Preparando para compilar:"
+msgstr " :: Preparando para super-compilación:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4019
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4138
-#, fuzzy
 msgid " * nhoid not found in repository!"
-msgstr "no está en el repositorio."
+msgstr " * ¡nhoid no encontrado en el repositorio!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4044
-#, fuzzy
 msgid " * Invalid source package."
-msgstr " - Construyendo el paquete fuente"
+msgstr " * Paquete fuente inválido."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4201
-#, fuzzy
 msgid " - Git Source instalation finished successfully!"
-msgstr " - La instalación terminó satisfactoriamente!"
+msgstr " - ¡Instalación desde fuente Git finalizada correctamente!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4230
 msgid " :: Checking for:"
@@ -885,9 +839,8 @@ msgid " --- Package check ok!"
 msgstr " --- La comprobación del paquete fue un éxito."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4276
-#, fuzzy
 msgid " :: Updating from single repository:"
-msgstr " :: Actualizando desde el repositorio:"
+msgstr " :: Actualizando desde un solo repositorio:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4296
 msgid " * Repository already is updated."
@@ -906,57 +859,48 @@ msgid " --- Downloading packages database."
 msgstr " --- Descargando la base de datos de los paquetes."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4322
-#, fuzzy
 msgid " - Repository database updated successfully."
-msgstr " - La base de datos del repositorio se actualizó correctamente."
+msgstr " - Base de datos del repositorio actualizada correctamente."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4424
-#, fuzzy
 msgid " - Updating repository databases..."
-msgstr " --- Actualizando la base de datos del escritorio."
+msgstr " - Actualizando bases de datos de repositorios..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4431
-#, fuzzy
 msgid " * No packages are installed."
-msgstr " * El paquete no será instalado."
+msgstr " * No hay paquetes instalados."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4440
 msgid " - Checking for available updates..."
-msgstr ""
+msgstr "- Buscando actualizaciones disponibles..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4463
-#, fuzzy
 msgid " - No updates are available."
-msgstr " --- No se añadieron parches."
+msgstr " - No hay actualizaciones disponibles."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4467
-#, fuzzy
 msgid " - Updates are available:"
-msgstr "Última versión disponible:"
+msgstr " - Hay actualizaciones disponibles:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4542
-#, fuzzy
 msgid " - System updated successfully!"
-msgstr " - La instalación terminó satisfactoriamente!"
+msgstr " - ¡Sistema actualizado correctamente!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4565
 msgid " * Missing group name(s) for --install-group"
-msgstr ""
+msgstr "* Faltan nombres de grupo para --install-group"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4590
-#, fuzzy
 msgid " * No packages to install."
-msgstr " * El paquete no será instalado."
+msgstr " * No hay paquetes para instalar."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4595
-#, fuzzy
 msgid " - Packages to be installed:"
-msgstr " * El paquete no será instalado."
+msgstr " - Paquetes a instalar:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4682
-#, fuzzy
 msgid " - Group installation finished successfully!"
-msgstr " - La instalación terminó satisfactoriamente!"
+msgstr " - ¡Instalación del grupo finalizada correctamente!"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:4700
 msgid " - Cleaning up cache data."
@@ -1102,178 +1046,162 @@ msgid "The selected package is created in other version of Nhopkg:"
 msgstr "El paquete seleccionado está creado en otra versión de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:482
-#, fuzzy
 msgid " --- Skipping hash check: Git repository"
-msgstr "--- Omitiendo la comprobación SHA256: repositorio Git detectado"
+msgstr " --- Omitiendo comprobación de hash: repositorio Git"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:501
 msgid " *** Hash verification failed, file may be corrupted"
-msgstr ""
+msgstr "*** Falló la verificación del hash, el archivo podría estar dañado."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:509
-#, fuzzy
 msgid " *** WARNING: No hash defined in package"
-msgstr " *** No se encontraron dependencias en el paquete:"
+msgstr " *** ADVERTENCIA: No se definió hash en el paquete"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:511
 msgid " *** Hash required but not found. Aborting."
-msgstr ""
+msgstr " *** Se requiere un hash, pero no se encuentra. Abortar."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:577
 msgid " --- Temp file hash mismatch, will re-download"
-msgstr ""
+msgstr "--- El hash del archivo temporal no coincide, se volverá a descargar."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:586
-#, fuzzy
 msgid " --- Downloading: "
-msgstr " --- Descargando"
+msgstr " --- Descargando: "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:592
-#, fuzzy
 msgid " *** Download failed"
-msgstr " --- Descargando la base de datos de los archivos."
+msgstr " *** Descarga fallida"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/libnhopkg.in:600
 msgid " *** Downloaded file verification failed, removing"
-msgstr ""
+msgstr " *** Falló la verificación del archivo descargado, eliminando"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:50
 msgid "Usage:"
-msgstr ""
+msgstr "Uso:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:54
 msgid "Users and groups management for nhopkg."
-msgstr ""
+msgstr "Gestión de usuarios y grupos para nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:56
-#, fuzzy
 msgid "  --version\\tShows version."
-msgstr " --version\tMuestra la versión de Nhopkg."
+msgstr "--version\tMuestra la versión."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:57
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:117
-#, fuzzy
 msgid "  -h, --help\\tShows this help page."
-msgstr " -h, --help\tMuestra la ayuda de nhopkg."
+msgstr "-h, --help\\tMuestra esta página de ayuda."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:69
-#, fuzzy
 msgid "  -v, --verbose\\tVerbose operations."
-msgstr " -v, --verbose\tOperaciones verbosas."
+msgstr "-v, --verbose\\tOperaciones detalladas."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:109
 msgid "Usage: nhopkg-repos [OPTION]..."
-msgstr ""
+msgstr "Uso: nhopkg-repos [OPCIÓN]..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:111
 msgid "Repository management for nhopkg."
-msgstr ""
+msgstr "Gestión de repositorios para nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:113
-#, fuzzy
 msgid "  -A, --add-to-repo\tAdd .nho packages to repository"
-msgstr " -t, --list-repo\tLista los paquetes en el repositorio y sus detalles."
+msgstr "  -A, --add-to-repo\tAñadir paquetes .nho al repositorio"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:114
-#, fuzzy
 msgid "  -g, --create-repo <dir>\tCreate repository in directory"
-msgstr ""
-" -g, --create-repo\tCrea un repositorio de software en el directorio "
-"especificado."
+msgstr "  -g, --create-repo <dir>\tCrear repositorio en directorio"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:115
 msgid "  -o, --repo-dir <dir>\tRepository root directory"
-msgstr ""
+msgstr "  -o, --repo-dir <dir> Directorio raíz del repositorio"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:116
-#, fuzzy
 msgid "  --version\tShows version."
-msgstr " --version\tMuestra la versión de Nhopkg."
+msgstr "  --version\tMuestra la versión."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:139
 msgid " * No operation specified. Use --help."
-msgstr ""
+msgstr " * No se ha especificado ninguna operación. Utilice --help."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:174
-#, fuzzy
 msgid " :: Creating software repository from:"
-msgstr " :: Creando repositorio de software en:"
+msgstr " :: Creando repositorio de software desde:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:203
 msgid " * No active repositories configured (NHOPKG_ACTIVE_REPOS is empty)."
 msgstr ""
+" * No hay repositorios activos configurados (NHOPKG_ACTIVE_REPOS está vacío)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:206
-#, fuzzy
 msgid " :: Active Repositories:"
-msgstr " :: Actualizando desde el repositorio:"
+msgstr " :: Repositorios activos:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:287
 msgid " - Adding"
 msgstr " - Añadiendo"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:406
-#, fuzzy
 msgid ""
 " - All repository metadata has been created and .nho files copied "
 "successfully."
-msgstr " --- Tu nuevo repositorio ha sido creado correctamente."
+msgstr ""
+"- Se han creado todos los metadatos del repositorio y se han copiado "
+"correctamente los archivos .nho."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:434
-#, fuzzy
 msgid " * Must specify .nho packages."
-msgstr " * Debe seleccionar un paquete."
+msgstr " * Debe especificar paquetes .nho."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:439
 msgid " * Must specify --repo-dir."
-msgstr ""
+msgstr " * Debe especificarse --repo-dir."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:444
-#, fuzzy
 msgid " * Repository root does not exist."
-msgstr " * El repositorio ya está actualizado."
+msgstr " * El directorio raíz del repositorio no existe."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:464
-#, fuzzy
 msgid " :: Adding package:"
-msgstr " :: Prepando paquete split:"
+msgstr " :: Añadiendo paquete:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:469
-#, fuzzy
 msgid " * Invalid package."
-msgstr " * Instalar paquete binario"
+msgstr " * Paquete inválido."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:597
 msgid " - Incremental repository update completed."
-msgstr ""
+msgstr " - Actualización incremental del repositorio completada."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:62
 msgid "ERROR: "
-msgstr ""
+msgstr "ERROR:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:89
 msgid "Cleaning overlay..."
-msgstr ""
+msgstr "Limpiando overlay..."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:128
 msgid "Creating overlay structure"
-msgstr ""
+msgstr "Creando estructura del overlay"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:132
 msgid "Mounting overlay"
-msgstr ""
+msgstr "Mountando overlay"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:163
 msgid " Overlay active"
-msgstr ""
+msgstr "Overlay activo"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:164
 msgid " System: ISOLATED (overlay)"
-msgstr ""
+msgstr "Sistema: AISLADO (overlay)"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:165
 msgid " Work: /work -> "
-msgstr ""
+msgstr "Trabajo: /work ->"
 
 #~ msgid ""
 #~ " -A, --auto-package\tCreates automatically source package from tarball."
