@@ -1,253 +1,235 @@
-Nhopkg – Gestor de paquetes universal para Linux
-================================================
+# Nhopkg – Universal Package Manager for Linux
 
-<img width="512" height="512" alt="imagen" src="https://github.com/user-attachments/assets/e4da8c40-22eb-42f1-a361-3761afb3965b" />
+<img width="512" height="512" alt="logo" src="https://github.com/user-attachments/assets/e4da8c40-22eb-42f1-a361-3761afb3965b" />
 
- [![License: GPLv3+](https://img.shields.io/badge/license-GPLv3%2B-blue.svg)](COPYING)[![Language: Bash](https://img.shields.io/badge/language-Bash-green.svg) ](https://www.gnu.org/software/bash/)[![Build system: Meson](https://img.shields.io/badge/build-Meson-orange.svg)](https://mesonbuild.com/)[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/cargabsj175/neonatox-nhopkg)
+[![License: GPLv3+](https://img.shields.io/badge/license-GPLv3%2B-blue.svg)](COPYING)
+[![Language: Bash](https://img.shields.io/badge/language-Bash-green.svg)](https://www.gnu.org/software/bash/)
+[![Build system: Meson](https://img.shields.io/badge/build-Meson-orange.svg)](https://mesonbuild.com/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/cargabsj175/neonatox-nhopkg)
 
-**Nhopkg** es un gestor de paquetes universal diseñado para funcionar en cualquier distribución GNU/Linux. Utiliza paquetes binarios (`.nho`) y paquetes fuente (`.srcnho`), permitiendo crear, instalar, convertir y gestionar software de forma sencilla, consistente y portable.
+🌐 [English](README.md) | [Español](docs/es/README.md)
 
-Desarrollado originalmente en 2010, Nhopkg combina simplicidad, potencia y control total sobre el empaquetado, siendo especialmente útil en sistemas tipo Slackware o en entornos minimalistas.
+**Nhopkg** is a universal package manager designed to work on any GNU/Linux distribution. It uses binary packages (`.nho`) and source packages (`.srcnho`), allowing you to create, install, convert, and manage software in a simple, consistent, and portable way.
 
-📜 Historia y mantenimiento
----------------------------
+Originally developed in 2010, Nhopkg combines simplicity, power, and full control over packaging, making it especially useful for Slackware-like systems or minimal environments.
 
-*   **Creador original (2010):** [Jaime Gil de Sagredo Luna](https://github.com/jaimegildesagredo)
-*   **Mantenimiento y evolución (2010 – presente):** [Carlos Sánchez](https://github.com/cargabsj175) para la distribución **NeonatoX**
+## History & Maintenance
 
-Este proyecto ha sido mantenido activamente durante más de una década, adaptándose a nuevas herramientas, estándares y necesidades del empaquetado moderno.
+* **Original creator (2010):** [Jaime Gil de Sagredo Luna](https://github.com/jaimegildesagredo)
+* **Maintenance & evolution (2010 – present):** [Carlos Sánchez](https://github.com/cargabsj175) for the **NeonatoX** distribution
 
-🧰 Características principales
-------------------------------
+This project has been actively maintained for over a decade, adapting to new tools, standards, and modern packaging needs.
 
-*   ✅ Soporte para paquetes binarios (`.nho`) y fuente (`.srcnho`)
-*   ✅ Conversión automática de paquetes Slackware (`.tgz` → `.nho`)
-*   ✅ Gestión avanzada de dependencias (requeridas y opcionales)
-*   ✅ Compilación e instalación automática desde código fuente
-*   ✅ Creación y gestión de repositorios locales
-*   ✅ Internacionalización (i18n) con `gettext`
-*   ✅ Integración con el sistema: MIME, iconos, esquemas, fuentes, etc.
-*   ✅ Creación de paquetes desde software ya instalado (`--backup`)
-*   ✅ Compatible con **cualquier distribución Linux**
-*   ✅ Construcción moderna con **Meson/Ninja**
+## Features
 
-📦 Formatos de paquete
-----------------------
+* Binary (`.nho`) and source (`.srcnho`) package support
+* Automatic Slackware package conversion (`.tgz` → `.nho`)
+* Advanced dependency resolution (required & optional)
+* Automatic compilation and installation from source
+* Local repository creation and management
+* Internationalization (i18n) via `gettext` (English, Spanish, Portuguese, French, Catalan, Russian)
+* System integration: MIME types, icons, GSettings schemas, fonts, etc.
+* Create packages from already installed software (`--backup`)
+* Compatible with **any Linux distribution**
+* Modern build system with **Meson/Ninja**
 
-Extensión
+## Package Formats
 
-Tipo
+| Extension | Type | Contents |
+|-----------|------|----------|
+| `.nho` | Binary package | Ready-to-install files, metadata (`nhoid`), and post-install scripts |
+| `.srcnho` | Source package | Source code, build configuration (`nbuild`, `ninstall`), and dependencies |
 
-Contenido
+## System Requirements
 
-`.nho`
+Nhopkg requires the following tools to be installed:
 
-Paquete binario
+| Tool | Purpose |
+|------|---------|
+| `bash` | Main script interpreter |
+| `tar`, `zstd` | Packaging and compression (Zstandard) |
+| `sha256sum` | Integrity verification |
+| `make`, `autoconf` | Source package compilation |
+| `ldconfig` | Shared library cache update |
+| `grep`, `awk`, `sed`, `find` | Text and path processing |
+| `wget` or `curl` | Package and repository downloads |
+| `plocate` / `mlocate` | File search for dependency resolution |
 
-Archivos listos para instalar, metadatos (`nhoid`) y scripts de postinstalación.
+> **Tip:** Use `plocate` on modern systems (Arch, Fedora), or `mlocate` on Debian/Ubuntu.
 
-`.srcnho`
+Optional tools: `git`, `gettext` (for i18n support).
 
-Paquete fuente
+## Installation
 
-Código fuente, configuración de compilación (`nbuild`, `ninstall`) y dependencias.
+Nhopkg uses **Meson** for building (not Autotools).
 
-🔧 Dependencias del sistema
----------------------------
+### 1. Prerequisites
 
-Nhopkg requiere las siguientes herramientas instaladas:
+```bash
+# Debian / Ubuntu
+sudo apt install meson ninja-build
 
-Herramienta
+# Arch Linux / Manjaro
+sudo pacman -S meson ninja
 
-Propósito
+# Fedora / RHEL
+sudo dnf install meson ninja-build
+```
 
-`bash`
+### 2. Configure the project
 
-Intérprete del script principal
+```bash
+meson setup builddir \
+  --prefix=/usr \
+  --sysconfdir=/etc \
+  --localstatedir=/var \
+  -D binlocate=plocate
+```
 
-`tar`, `zstd`
+> Use `-D binlocate=locate` if you have `mlocate` or `slocate` instead.
 
-Empaquetado y compresión (Zstandard)
+### 3. Build
 
-`sha256sum`
+```bash
+ninja -C builddir
+```
 
-Verificación de integridad
+### 4. Install
 
-`make`, `autoconf`
+```bash
+sudo ninja -C builddir install
+```
 
-Compilación de paquetes fuente
+This installs:
 
-`gettext`
+| Path | Description |
+|------|-------------|
+| `/usr/bin/nhopkg` | Main package manager |
+| `/usr/bin/nhouser` | User/group management tool |
+| `/usr/bin/nhopkg-repos` | Repository management tool |
+| `/usr/bin/nhopkg-overlay` | Isolated build environment (overlayfs) |
+| `/usr/lib/nhopkg/libnhopkg` | Shared library with common functions |
+| `/etc/nhopkg/nhopkg.conf` | Configuration file |
+| `/usr/share/man/man8/nhopkg.8` | Man page |
+| `/var/nhopkg/` | Runtime data (cache, packages, logs, database) |
 
-Soporte de traducciones (opcional pero recomendado)
+### 5. Post-install (system integration)
 
-`ldconfig`
+```bash
+sudo update-mime-database /usr/share/mime
+sudo update-desktop-database /usr/share/applications  # if applicable
+```
 
-Actualización de caché de bibliotecas compartidas
+## Directory Structure
 
-`grep`, `awk`, `sed`, `find`
+```
+/var/nhopkg/
+├── cache/          # Downloaded and temporary packages
+├── files/          # Compressed file lists per installed package
+├── logs/           # Build and installation logs
+├── packages/       # Metadata of installed packages
+└── repo/
+    ├── files/      # Repository file database
+    └── packages/   # Available package metadata
+```
 
-Procesamiento de texto y rutas
+## Basic Usage
 
-`wget` o `curl`
+```bash
+# Install a local binary package
+sudo nhopkg -i package-1.0-1.nho
 
-Descarga de paquetes y repositorios
+# Install from repository
+sudo nhopkg -S package-name
 
-`plocate` / `mlocate`
+# Build and install from source
+sudo nhopkg -b package.srcnho
 
-Búsqueda de archivos para resolución de dependencias
+# Upgrade all installed packages
+sudo nhopkg -y
 
-> 💡 **Recomendación**: Usa `plocate` en sistemas modernos (Arch, Fedora), o `mlocate` en Debian/Ubuntu.
+# Remove a package
+sudo nhopkg -r package-name
 
-🛠️ Instalación con Meson
--------------------------
-
-Nhopkg ya no usa Autotools. Ahora se construye con **Meson**, un sistema de compilación moderno, rápido y portable.
-
-### 1\. Requisitos previos
-
-    # Debian / Ubuntu
-    sudo apt install meson ninja-build
-    
-    # Arch Linux / Manjaro
-    sudo pacman -S meson ninja
-    
-    # Fedora / RHEL
-    sudo dnf install meson ninja-build
-    
-
-### 2\. Configurar el proyecto
-
-    meson setup builddir \
-      --prefix=/usr \
-      --sysconfdir=/etc \
-      --localstatedir=/var \
-      -D binlocate=plocate
-      -D repo-url=https://sitio.web.com/repo/n2025/x86_64
-    
-
-> Cambia `-D binlocate=locate` si usas `mlocate` o `slocate`.
-
-### 3\. Compilar (opcional)
-
-    ninja -C builddir
-
-### 4\. Instalar
-
-    sudo ninja -C builddir install
-
-Esto instalará:
-
-*   `/usr/bin/nhopkg`
-*   `/etc/nhopkg/nhopkg.conf`
-*   `/usr/share/nhopkg/` (documentación, iconos, licencia)
-*   Páginas de manual: `/usr/share/man/man8/nhopkg.8`
-*   Registro MIME: `/usr/share/mime/packages/x-nho.xml`
-*   Directorios en `/var/nhopkg/` (paquetes, caché, logs, base de datos)
-
-> ⚠️ Nota: El directorio por defecto es /var/nhopkg, según `nhopkg.conf.in`.
-
-📁 Estructura de directorios en `/var/nhopkg/`
-----------------------------------------------
-
-    /var/nhopkg/
-    ├── cache/          # Paquetes descargados y temporales
-    ├── files/          # Lista comprimida de archivos por paquete instalado
-    ├── logs/           # Registros de compilación e instalación
-    ├── packages/       # Metadatos de paquetes instalados
-    └── repo/
-        ├── files/      # Base de datos de archivos del repositorio
-        └── packages/   # Metadatos de paquetes disponibles
-    
-
-🌐 Integración con el sistema
------------------------------
-
-Tras la instalación, actualiza las bases de datos del sistema:
-
-    sudo update-mime-database /usr/share/mime
-    sudo update-desktop-database /usr/share/applications  # si aplica
-    
-
-Nhopkg también ejecuta automáticamente `shooter_updates()` tras instalaciones, actualizando:
-
-*   Esquemas GSettings
-*   Caché de iconos
-*   Tipos MIME
-*   Fuentes
-*   Manuales
-*   Bibliotecas compartidas
-
-📚 Uso básico
--------------
-
-    # Instalar paquete local
-    sudo nhopkg -i paquete-1.0-1.nho
-    
-    # Instalar desde repositorio
-    sudo nhopkg -S nombre-del-paquete
-    
-    # Compilar e instalar desde fuente
-    sudo nhopkg -b paquete.srcnho
-    
-    # Crear paquete desde software instalado
-    sudo nhopkg -B nombre-del-paquete
-    
-    # Convertir paquete Slackware
-    sudo nhopkg -z paquete.tgz
-    
-    # Crear repositorio local
-    sudo nhopkg -g /ruta/al/repositorio
-    
-    # Buscar paquetes
-    nhopkg -s nombre
-    
-    # Listar paquetes instalados
-    nhopkg -l
-    
-    # Mostrar ayuda completa
-    nhopkg --help
-    
-
-🌍 Traducciones
----------------
-
-Nhopkg soporta múltiples idiomas gracias a `gettext`:
-
-*   Español (`es`, `es_ES`)
-*   Catalán (`ca`)
-*   Francés (`fr`)
-*   Ruso (`ru_RU`)
-*   Portugués brasileño (`pt_BR`)
-
-Las traducciones se gestionan con gettext. Puedes contribuir con nuevas traducciones en el directorio `po/`.
-
-📄 Licencia
------------
-
-Este software está bajo la **Licencia Pública General de GNU v3 o posterior (GPL-3.0+)**.
-
-> Nhopkg viene SIN NINGUNA GARANTÍA. Es software libre y puedes redistribuirlo bajo ciertas condiciones.  
-> Ver archivo `COPYING` para más detalles.
-
-🤝 Contribuir
--------------
-
-¡Bienvenidos contribuidores! Puedes:
-
-*   Reportar errores
-*   Añadir traducciones
-*   Mejorar el empaquetado
-*   Optimizar el script
-
-*   Proyecto original: [https://github.com/jaimegildesagredo](https://github.com/jaimegildesagredo)
-*   Mantenimiento actual: [https://github.com/cargabsj175](https://github.com/cargabsj175)
-
-📬 Contacto
------------
-
-*   [Jaime Gil de Sagredo Luna](https://github.com/jaimegildesagredo)
-*   [Carlos Sánchez](https://github.com/cargabsj175)
-*   [Web de GNU NeonatoX](https://neonatox.github.io)
-
-**Nhopkg – Porque empaquetar debería ser fácil, universal y libre.**
+# Create a package from installed software
+sudo nhopkg -B package-name
+
+# Convert a Slackware package
+sudo nhopkg -z package.tgz
+
+# Create a local repository
+sudo nhopkg -g /path/to/repository
+
+# Search for packages
+nhopkg -s name
+
+# List installed packages
+nhopkg -l
+
+# Manage users/groups for package scripts
+sudo nhouser --create --user myuser --uid 1000 --group mygroup --gid 1000
+
+# Enter isolated overlay environment
+sudo nhopkg-overlay
+```
+
+### Managing Repositories
+
+```bash
+# List configured repositories
+nhopkg-repos list
+
+# Add a repository
+sudo nhopkg-repos add extra https://example.com/repo/extra
+
+# Remove a repository
+sudo nhopkg-repos remove extra
+
+# Update repository databases
+sudo nhopkg -u
+```
+
+### Development & Translation Workflow
+
+```bash
+# Update translation files after modifying source strings
+meson compile update-translations -C builddir
+
+# Or run directly
+./scripts/update-translations.sh
+
+# Add a new language
+./scripts/update-translations.sh --new-lang XX
+```
+
+## Configuration
+
+Default config is at `/etc/nhopkg/nhopkg.conf`. Key options:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `NHOPKG_ACTIVE_REPOS` | `core extra multilib` | Active repository names |
+| `NHOPKG_LOCALSTATEDIR` | `/var/nhopkg` | Runtime data directory |
+| `NHOPKG_CHECKDEPS` | `yes` | Enable dependency resolution |
+| `NHOPKG_GETTEXT` | `yes` | Enable i18n translations |
+
+## Contributing
+
+Contributions are welcome! You can:
+
+* Report bugs
+* Add translations
+* Improve packaging logic
+* Optimize scripts
+
+* Original project: [https://github.com/jaimegildesagredo](https://github.com/jaimegildesagredo)
+* Current maintenance: [https://github.com/cargabsj175](https://github.com/cargabsj175)
+* NeonatoX website: [https://neonatox.github.io](https://neonatox.github.io)
+
+## License
+
+This software is licensed under the **GNU General Public License v3 or later (GPL-3.0+)**.
+
+See the [COPYING](COPYING) file for details.
+
+**Nhopkg – Because packaging should be easy, universal, and free.**

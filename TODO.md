@@ -68,6 +68,13 @@ parse_common_args() {
   4. Prioridad: `es.po` (idioma principal), luego `fr.po`, `ca.po`, `pt_BR.po`, `ru_RU.po`
 - **Nota**: Las traducciones son válidas pero necesitan revisión manual contra el nuevo template.
 
+### 14. Actualizar README.md a inglés como idioma principal ✅
+- **Qué se hizo**: README.md ahora está en inglés como idioma principal, con enlaces a docs en español y portugués brasileño.
+- **Cambios**:
+  - README.md principal en inglés
+  - docs/es/README.md mantiene documentación en español
+  - docs/pt_BR/README.md creado como índice en portugués (enlaces a docs en español)
+
 ## Problemas Detectados en `upgrade` e `install-group` (Reescritura)
 
 ### 13. Uso de `DCASEPACKAGES` no documentado ⏳
