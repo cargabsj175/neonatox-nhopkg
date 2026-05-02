@@ -458,6 +458,16 @@ _dep_find_installed() {
 		[[ -L "$pkgfile" ]] && continue
 		
 		local bn=$(basename "$pkgfile")
+		
+		# Validate this is really the package we want, not a similar-named one
+		local real_pkg_name=""
+		if [[ -f "$pkgfile" ]]; then
+			real_pkg_name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+		fi
+		
+		# Skip if real name doesn't match what we're looking for
+		[[ -n "$real_pkg_name" ]] && [[ "$real_pkg_name" != "$name" ]] && continue
+		
 		local ver_rev="${bn#${name}-}"
 		[[ "$bn" == "$name" ]] && ver_rev="0"
 		
@@ -536,6 +546,23 @@ _dep_find_in_repos() {
 			[[ -L "$pkgfile" ]] && continue
 			
 			local bn=$(basename "$pkgfile")
+			
+			# Validate this is really the package we want, not a similar-named one
+			# Extract the real package name from nhoid to avoid false positives
+			# e.g., searching "bluez" should NOT match "bluez-qt"
+			local real_pkg_name=""
+			if [[ -f "$pkgfile" ]]; then
+				local tmp_nho="${NHOPKG_TMPDIR}/.dep_check_$$"
+				mkdir -p "$tmp_nho" 2>/dev/null
+				if tar xfC "$pkgfile" "$tmp_nho" nhoid 2>/dev/null && [[ -f "$tmp_nho/nhoid" ]]; then
+					real_pkg_name=$(grep "^# Name:" "$tmp_nho/nhoid" 2>/dev/null | awk -F'\t' '{print $2}')
+					rm -rf "$tmp_nho"
+				fi
+			fi
+			
+			# Skip if real name doesn't match what we're looking for
+			[[ -n "$real_pkg_name" ]] && [[ "$real_pkg_name" != "$name" ]] && continue
+			
 			local ver_rev="${bn#${name}-}"
 			
 			if [[ -n "$op" ]]; then
