@@ -811,7 +811,7 @@ nhouser()
 	local VERBOSE=0
 
 	local USER="" U_ID="" COMMENT="" HOME="" SHELL=""
-	local GNAME="" G_ID="" GROUPS=""
+	local GNAME="" G_ID="" ADDITIONAL_GROUPS=""
 	local GROUP_DONE=0
 
 	[ "${1}" = "--verbose" ] && VERBOSE=1
@@ -835,7 +835,7 @@ nhouser()
 		done
 	}
 
-	local ARG_USER ARG_UID_ARG COMMENT_ARG HOME_ARG SHELL_ARG GNAME_ARG G_ID_ARG GROUPS_ARG
+	local ARG_USER ARG_UID_ARG COMMENT_ARG HOME_ARG SHELL_ARG GNAME_ARG G_ID_ARG ADDITIONAL_GROUPS_ARG
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			--user) USER="$2"; shift ;;
@@ -845,8 +845,7 @@ nhouser()
 			--shell) SHELL="$2"; shift ;;
 			--group) GNAME="$2"; shift ;;
 			--gid) G_ID="$2"; shift ;;
-			--groups) GROUPS="$2"; shift ;;
-			--verbose) VERBOSE=1 ;;
+			--groups) ADDITIONAL_GROUPS="$2"; shift ;;
 			*) echo "Invalid option: $1" >&2; return 1 ;;
 		esac
 		shift
@@ -866,8 +865,12 @@ nhouser()
 					log "GID mismatch for group $GNAME (have $EXIST_GID, expected $G_ID)"
 				fi
 			fi
+			echog " - Group $GNAME already exists (GID: $EXIST_GID)"
 		else
-			[ "$MODE" = "--check" ] && return 1
+			if [ "$MODE" = "--check" ]; then
+				echog " - Group $GNAME does not exist"
+				return 1
+			fi
 			if [ -n "$G_ID" ]; then
 				EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
 				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
@@ -876,7 +879,7 @@ nhouser()
 					log "Using GID $G_ID"
 				fi
 			fi
-			log "Creating group $GNAME"
+			echog " * Creating group $GNAME"
 			groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
 			GROUP_DONE=1
 		fi
@@ -890,9 +893,12 @@ nhouser()
 					log "UID mismatch for $USER (have $EXIST_UID, expected $U_ID)"
 				fi
 			fi
-			log "User $USER already exists"
+			echog " - User $USER already exists (UID: $EXIST_UID)"
 		else
-			[ "$MODE" = "--check" ] && return 1
+			if [ "$MODE" = "--check" ]; then
+				echog " - User $USER does not exist"
+				return 1
+			fi
 			if [ -n "$U_ID" ]; then
 				EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
 				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
@@ -901,14 +907,14 @@ nhouser()
 					log "Using UID $U_ID"
 				fi
 			fi
-			log "Creating user $USER"
+			echog " * Creating user $USER"
 			useradd -M \
 				${U_ID:+-u "$U_ID"} \
 				${COMMENT:+-c "$COMMENT"} \
 				${HOME:+-d "$HOME"} \
 				${SHELL:+-s "$SHELL"} \
 				${GNAME:+-g "$GNAME"} \
-				${GROUPS:+-G "$GROUPS"} \
+				${ADDITIONAL_GROUPS:+-G "$ADDITIONAL_GROUPS"} \
 				"$USER" || return 1
 		fi
 	fi
