@@ -43,7 +43,7 @@ export TEXTDOMAIN TEXTDOMAINDIR
 echog()
 {
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
-		gettext -es "${*}"
+		gettext -e "${*}"
 	else
 		printf "%b\n" "${*}"
 	fi
@@ -59,7 +59,7 @@ echog()
 echogn()
 {
 	if [[ "${NHOPKG_GETTEXT}" = "yes" ]]; then
-		gettext -ens "${*}"
+		gettext -en "${*}"
 	else
 		printf "%b" "${*}"
 	fi
