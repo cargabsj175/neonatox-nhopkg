@@ -82,11 +82,11 @@ msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:994
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1015
-msgid "\\t** OK: Update completed successfully"
+msgid "\t** OK: Update completed successfully"
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:997
-msgid "\\t** Fail: Update failed"
+msgid "\t** Fail: Update failed"
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1002
@@ -181,104 +181,104 @@ msgid "Commands:"
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1175
-msgid " -B, --backup\\tCreates binary package from installed package."
+msgid " -B, --backup\tCreates binary package from installed package."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1176
 msgid ""
-" -C, --super-build\\tCompiles and installs source package from Git repo."
+" -C, --super-build\tCompiles and installs source package from Git repo."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1177
 msgid ""
-" -G, --install-group\\tInstalls binaries packages from a specified group "
+" -G, --install-group\tInstalls binaries packages from a specified group "
 "from the repository."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1178
-msgid " -S, --super-install\\tInstalls binary package form repository."
+msgid " -S, --super-install\tInstalls binary package form repository."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1179
-msgid " -U, --update\\tUpdate repository database."
+msgid " -U, --update\tUpdate repository database."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1180
 msgid ""
-" -X, --strip-binaries\\tRemove debug symbols from installed binaries and "
+" -X, --strip-binaries\tRemove debug symbols from installed binaries and "
 "libraries during installation (experimental)."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1182
-msgid " -b, --build\\tCompiles and installs source package."
+msgid " -b, --build\tCompiles and installs source package."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1183
-msgid " -d, --dios\\tSame as -S, --super-install."
+msgid " -d, --dios\tSame as -S, --super-install."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1184
-msgid " -e, --clean\\tRemove cached data."
+msgid " -e, --clean\tRemove cached data."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1185
-msgid " -i, --install\\tInstalls binary package."
+msgid " -i, --install\tInstalls binary package."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1186
-msgid " -k, --check\\tChecks if installed package is correct."
+msgid " -k, --check\tChecks if installed package is correct."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1187
-msgid " -l, --list\\tLists installed packages."
+msgid " -l, --list\tLists installed packages."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1188
-msgid " -n, --info\\tShows package details."
+msgid " -n, --info\tShows package details."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1189
-msgid " -r, --remove\\tRemoves package installed by Nhopkg."
+msgid " -r, --remove\tRemoves package installed by Nhopkg."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1190
-msgid " -s, --search\\tSearch for package and its details."
+msgid " -s, --search\tSearch for package and its details."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1191
-msgid " -t, --list-repo\\tLists packages on repository and their details."
+msgid " -t, --list-repo\tLists packages on repository and their details."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1192
-msgid " -u, --update-db\\tUpdate Nhopkg database."
+msgid " -u, --update-db\tUpdate Nhopkg database."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1193
-msgid " -w, --show\\tShows package files."
+msgid " -w, --show\tShows package files."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1194
-msgid " -x, --update-shooters\\tUpdates all system data and schemas."
+msgid " -x, --update-shooters\tUpdates all system data and schemas."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1195
-msgid " -y, --upgrade\\tUpdates all installed packages."
+msgid " -y, --upgrade\tUpdates all installed packages."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1196
-msgid " --license-all\\tShows complete Nhopkg license."
+msgid " --license-all\tShows complete Nhopkg license."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1197
-msgid " --license\\tShows Nhopkg license."
+msgid " --license\tShows Nhopkg license."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1198
-msgid " --version\\tShows Nhopkg version."
+msgid " --version\tShows Nhopkg version."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1199
-msgid " -h, --help\\tShows this help page."
+msgid " -h, --help\tShows this help page."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1201
@@ -287,69 +287,69 @@ msgid "Options:"
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1202
-msgid " --force-check-arch\\tForce check architecture."
+msgid " --force-check-arch\tForce check architecture."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1203
-msgid " --force-check-deps\\tForce check dependencies."
+msgid " --force-check-deps\tForce check dependencies."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1204
-msgid " --force-check-sums\\tForce check Sums."
+msgid " --force-check-sums\tForce check Sums."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1205
-msgid " --no-check-arch\\tDon't check architecture."
+msgid " --no-check-arch\tDon't check architecture."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1206
-msgid " --no-check-deps\\tDon't check dependencies."
+msgid " --no-check-deps\tDon't check dependencies."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1207
-msgid " --no-check-sums\\tDon't check Sums."
+msgid " --no-check-sums\tDon't check Sums."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1208
-msgid " --sign-package\\tSign the binary package when building it."
+msgid " --sign-package\tSign the binary package when building it."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1209
-msgid " --no-sign-package\\tSkip the package signature."
+msgid " --no-sign-package\tSkip the package signature."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1210
 msgid ""
-" --verify-package-signature\\tVerify the GPG signature of the package before "
+" --verify-package-signature\tVerify the GPG signature of the package before "
 "installing it."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1211
-msgid " --no-verify-package-signature\\tSkip signature verification."
+msgid " --no-verify-package-signature\tSkip signature verification."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1212
-msgid " --purge\\tRemove inverse dependencies of package."
+msgid " --purge\tRemove inverse dependencies of package."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1213
-msgid " --root\\tSets install root."
+msgid " --root\tSets install root."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1214
-msgid " -R, --recursive\\tNhopkg works recursively."
+msgid " -R, --recursive\tNhopkg works recursively."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1215
-msgid " -o, --output\\tWrite an output log."
+msgid " -o, --output\tWrite an output log."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1216
-msgid " -v, --verbose\\tVerbose operations."
+msgid " -v, --verbose\tVerbose operations."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1217
-msgid " --\\tStop parssing arguments."
+msgid " --\tStop parssing arguments."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1233
@@ -550,19 +550,19 @@ msgid " --- Saving logs on"
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2606
-msgid "\\t** Using for post-install: "
+msgid "\t** Using for post-install: "
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2609
-msgid "\\t** Using as fallback for post-install: "
+msgid "\t** Using as fallback for post-install: "
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2620
-msgid "\\t** Using for post-remove: "
+msgid "\t** Using for post-remove: "
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2623
-msgid "\\t** Using as fallback for post-remove: "
+msgid "\t** Using as fallback for post-remove: "
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2641
@@ -1057,16 +1057,16 @@ msgid "Users and groups management for nhopkg."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:56
-msgid "  --version\\tShows version."
+msgid "  --version\tShows version."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:57
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:117
-msgid "  -h, --help\\tShows this help page."
+msgid "  -h, --help\tShows this help page."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:69
-msgid "  -v, --verbose\\tVerbose operations."
+msgid "  -v, --verbose\tVerbose operations."
 msgstr ""
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:109

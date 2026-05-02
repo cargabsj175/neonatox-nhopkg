@@ -84,11 +84,11 @@ msgstr " --- Actualitzant: "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:994
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1015
-msgid "\\t** OK: Update completed successfully"
+msgid "\t** OK: Update completed successfully"
 msgstr "\t** OK: L'actualització s'ha completat correctament"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:997
-msgid "\\t** Fail: Update failed"
+msgid "\t** Fail: Update failed"
 msgstr "\t** Error: L'actualització ha fallat"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1002
@@ -165,7 +165,7 @@ msgid ""
 "This is free software, and you are welcome to redistribute it under certain "
 "conditions; for details type nhopkg --license-all."
 msgstr ""
-"Això és programari lliure, i ets benvingut a distribuir-lo sota certes "
+" Això és programari lliure, i ets benvingut a distribuir-lo sota certes "
 "condicions; per a més detalls escriu: nhopkg --license-all"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1168
@@ -185,111 +185,110 @@ msgid "Commands:"
 msgstr "Ordres:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1175
-msgid " -B, --backup\\tCreates binary package from installed package."
+msgid " -B, --backup\tCreates binary package from installed package."
 msgstr " -B, --backup\tCrea un paquet binari a partir del paquet instal·lat."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1176
-msgid ""
-" -C, --super-build\\tCompiles and installs source package from Git repo."
+msgid " -C, --super-build\tCompiles and installs source package from Git repo."
 msgstr ""
-"-C, --super-build\tCompila i instal·la el paquet font des del repositori de "
+" -C, --super-build\tCompila i instal·la el paquet font des del repositori de "
 "Git."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1177
 msgid ""
-" -G, --install-group\\tInstalls binaries packages from a specified group "
-"from the repository."
+" -G, --install-group\tInstalls binaries packages from a specified group from "
+"the repository."
 msgstr ""
-"-G, --install-group\tInstal·la paquets binaris d'un grup especificat del "
+" -G, --install-group\tInstal·la paquets binaris d'un grup especificat del "
 "repositori."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1178
-msgid " -S, --super-install\\tInstalls binary package form repository."
+msgid " -S, --super-install\tInstalls binary package form repository."
 msgstr " -S, --super-install\tInstal·la el paquet binari des del dipòsit."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1179
-msgid " -U, --update\\tUpdate repository database."
+msgid " -U, --update\tUpdate repository database."
 msgstr " -U, --update\tActualitza la base de dades del dipòsit."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1180
 msgid ""
-" -X, --strip-binaries\\tRemove debug symbols from installed binaries and "
+" -X, --strip-binaries\tRemove debug symbols from installed binaries and "
 "libraries during installation (experimental)."
 msgstr ""
-" -X, --strip-binaries\\tElimina els símbols de depuració dels binaris i "
+" -X, --strip-binaries\tElimina els símbols de depuració dels binaris i "
 "biblioteques instal·lats durant la instal·lació (experimental)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1182
-msgid " -b, --build\\tCompiles and installs source package."
+msgid " -b, --build\tCompiles and installs source package."
 msgstr " -b, --build\tCompila i instal·la el paquet amb el codi font."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1183
-msgid " -d, --dios\\tSame as -S, --super-install."
+msgid " -d, --dios\tSame as -S, --super-install."
 msgstr " -d, --dios\tÉs igual que -S, --super-install."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1184
-msgid " -e, --clean\\tRemove cached data."
+msgid " -e, --clean\tRemove cached data."
 msgstr " -e, --clean\tNeteja les dades de la memòria cau."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1185
-msgid " -i, --install\\tInstalls binary package."
+msgid " -i, --install\tInstalls binary package."
 msgstr " -i, --install\tInstal·la el paquet binari."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1186
-msgid " -k, --check\\tChecks if installed package is correct."
+msgid " -k, --check\tChecks if installed package is correct."
 msgstr " -k, --check\tComprova si el paquet instal·lat és correcte."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1187
-msgid " -l, --list\\tLists installed packages."
+msgid " -l, --list\tLists installed packages."
 msgstr " -l, --list\tLlistar paquets instal·lats."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1188
-msgid " -n, --info\\tShows package details."
+msgid " -n, --info\tShows package details."
 msgstr " -n, --info\tMostrar informació del paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1189
-msgid " -r, --remove\\tRemoves package installed by Nhopkg."
+msgid " -r, --remove\tRemoves package installed by Nhopkg."
 msgstr " -r, --remove\tEsborra el paquet instal·lat per Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1190
-msgid " -s, --search\\tSearch for package and its details."
+msgid " -s, --search\tSearch for package and its details."
 msgstr " -s, --search\tBuscar un paquet i la seva informació."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1191
-msgid " -t, --list-repo\\tLists packages on repository and their details."
+msgid " -t, --list-repo\tLists packages on repository and their details."
 msgstr " -t, --list-repo\tLlistar paquets en el dipòsit i la seva informació."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1192
-msgid " -u, --update-db\\tUpdate Nhopkg database."
+msgid " -u, --update-db\tUpdate Nhopkg database."
 msgstr " -u, --update-db\tActualitzar base de dades de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1193
-msgid " -w, --show\\tShows package files."
+msgid " -w, --show\tShows package files."
 msgstr " -w, --show\tMostra fitxers del paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1194
-msgid " -x, --update-shooters\\tUpdates all system data and schemas."
+msgid " -x, --update-shooters\tUpdates all system data and schemas."
 msgstr ""
-"-x, --update-shooters\tActualitza totes les dades i esquemes del sistema."
+" -x, --update-shooters\tActualitza totes les dades i esquemes del sistema."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1195
-msgid " -y, --upgrade\\tUpdates all installed packages."
+msgid " -y, --upgrade\tUpdates all installed packages."
 msgstr " -y, --upgrade\tActualitza tots els paquets instal·lats."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1196
-msgid " --license-all\\tShows complete Nhopkg license."
+msgid " --license-all\tShows complete Nhopkg license."
 msgstr " --license-all\tMostrar llicència del Nhopkg completa."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1197
-msgid " --license\\tShows Nhopkg license."
+msgid " --license\tShows Nhopkg license."
 msgstr " --license\tMostrar llicència del Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1198
-msgid " --version\\tShows Nhopkg version."
+msgid " --version\tShows Nhopkg version."
 msgstr " --version\tMostrar versió del Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1199
-msgid " -h, --help\\tShows this help page."
+msgid " -h, --help\tShows this help page."
 msgstr " -h, --help\tMostrar pàgines d'ajuda de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1201
@@ -298,72 +297,72 @@ msgid "Options:"
 msgstr "Opcions:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1202
-msgid " --force-check-arch\\tForce check architecture."
+msgid " --force-check-arch\tForce check architecture."
 msgstr ""
 " --force-check-arch\tForçar el revisar l'arquitectura (amd64, i686,...)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1203
-msgid " --force-check-deps\\tForce check dependencies."
+msgid " --force-check-deps\tForce check dependencies."
 msgstr " --force-check-deps\tForçar el revisar les dependències."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1204
-msgid " --force-check-sums\\tForce check Sums."
-msgstr "--force-check-sums\\tForça la comprovació de sumes."
+msgid " --force-check-sums\tForce check Sums."
+msgstr " --force-check-sums\tForça la comprovació de sumes."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1205
-msgid " --no-check-arch\\tDon't check architecture."
+msgid " --no-check-arch\tDon't check architecture."
 msgstr " --no-check-arch\tNo revisis l'arquitectura (amd64, i686,...)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1206
-msgid " --no-check-deps\\tDon't check dependencies."
+msgid " --no-check-deps\tDon't check dependencies."
 msgstr " --no-check-deps\tNo verifiquis les dependències."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1207
-msgid " --no-check-sums\\tDon't check Sums."
-msgstr "--no-checksums\\No comprovis les sumes."
+msgid " --no-check-sums\tDon't check Sums."
+msgstr "--no-checksums\tNo comprovis les sumes."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1208
-msgid " --sign-package\\tSign the binary package when building it."
+msgid " --sign-package\tSign the binary package when building it."
 msgstr " --sign-package\tSignatura el paquet binari en compilar-lo."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1209
-msgid " --no-sign-package\\tSkip the package signature."
+msgid " --no-sign-package\tSkip the package signature."
 msgstr " --no-sign-package\tOmet la signatura del paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1210
 msgid ""
-" --verify-package-signature\\tVerify the GPG signature of the package before "
+" --verify-package-signature\tVerify the GPG signature of the package before "
 "installing it."
 msgstr ""
-"--verify-package-signature\\tVerifica la signatura GPG del paquet abans "
+" --verify-package-signature\tVerifica la signatura GPG del paquet abans "
 "d'instal·lar-lo."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1211
-msgid " --no-verify-package-signature\\tSkip signature verification."
-msgstr " --no-verify-package-signature\\tOmet la verificació de la signatura."
+msgid " --no-verify-package-signature\tSkip signature verification."
+msgstr " --no-verify-package-signature\tOmet la verificació de la signatura."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1212
-msgid " --purge\\tRemove inverse dependencies of package."
+msgid " --purge\tRemove inverse dependencies of package."
 msgstr " --purge\tEliminar les dependències inverses del paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1213
-msgid " --root\\tSets install root."
+msgid " --root\tSets install root."
 msgstr " --root\tSelecciona el directori d'instal·lació."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1214
-msgid " -R, --recursive\\tNhopkg works recursively."
+msgid " -R, --recursive\tNhopkg works recursively."
 msgstr " -R, --recursive\tNhopkg treballa recursivament."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1215
-msgid " -o, --output\\tWrite an output log."
+msgid " -o, --output\tWrite an output log."
 msgstr " -o, --output\tEscriure un registre del procés."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1216
-msgid " -v, --verbose\\tVerbose operations."
+msgid " -v, --verbose\tVerbose operations."
 msgstr " -v, --verbose\tOperacions verboses."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1217
-msgid " --\\tStop parssing arguments."
+msgid " --\tStop parssing arguments."
 msgstr " --\tNo obté més arguments."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1233
@@ -573,19 +572,19 @@ msgid " --- Saving logs on"
 msgstr " --- Guardant registres"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2606
-msgid "\\t** Using for post-install: "
+msgid "\t** Using for post-install: "
 msgstr "\t** S'utilitza per a la postinstal·lació:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2609
-msgid "\\t** Using as fallback for post-install: "
+msgid "\t** Using as fallback for post-install: "
 msgstr "\t** S'utilitza com a alternativa per a la postinstal·lació:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2620
-msgid "\\t** Using for post-remove: "
+msgid "\t** Using for post-remove: "
 msgstr "\t** S'utilitza per a la posteliminació:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2623
-msgid "\\t** Using as fallback for post-remove: "
+msgid "\t** Using as fallback for post-remove: "
 msgstr "\t** S'utilitza com a alternativa per a la posteliminació:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2641
@@ -1089,16 +1088,17 @@ msgid "Users and groups management for nhopkg."
 msgstr "Gestió d'usuaris i grups per a nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:56
-msgid "  --version\\tShows version."
+#: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:116
+msgid "  --version\tShows version."
 msgstr " --version\tMostrar versió del Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:57
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:117
-msgid "  -h, --help\\tShows this help page."
+msgid "  -h, --help\tShows this help page."
 msgstr " -h, --help\tMostrar pàgines d'ajuda de Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:69
-msgid "  -v, --verbose\\tVerbose operations."
+msgid "  -v, --verbose\tVerbose operations."
 msgstr " -v, --verbose\tOperacions verboses."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:109
@@ -1121,10 +1121,6 @@ msgstr ""
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:115
 msgid "  -o, --repo-dir <dir>\tRepository root directory"
 msgstr "-o, --repo-dir <dir>\tDirectori arrel del repositori"
-
-#: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:116
-msgid "  --version\tShows version."
-msgstr " --version\tMostrar versió del Nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:139
 msgid " * No operation specified. Use --help."
@@ -1204,458 +1200,3 @@ msgstr "Sistema: AÏLLAT (overlay)"
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:165
 msgid " Work: /work -> "
 msgstr "Treball: /work ->"
-
-#~ msgid ""
-#~ " -A, --auto-package\tCreates automatically source package from tarball."
-#~ msgstr ""
-#~ " -A, --auto-package\tCrea automàticament un paquet amb el codi font des "
-#~ "del tarball."
-
-#~ msgid " -c, --create-source\tCreates source package from tarball."
-#~ msgstr ""
-#~ " -c, --create-source\tCrea un paquet amb el codi font des d'un tarball."
-
-#~ msgid " -z, --tgz2nho\tConverts .tgz package to .nho package."
-#~ msgstr " -z, --tgz2nho\tConverteix un paquet .tgz a un paquet .nho."
-
-#~ msgid " --- Deferring SHA256 check: Tarball will be downloaded later"
-#~ msgstr ""
-#~ "--- Ajornant la comprovació SHA256: el fitxer Tarball es descarregarà més "
-#~ "tard"
-
-#~ msgid " *** ERROR: SHA256 checksum not defined for package"
-#~ msgstr "*** ERROR: Suma de verificació SHA256 no definida per al paquet"
-
-#~ msgid "     This is required for local source packages."
-#~ msgstr "     Això és necessari per als paquets font locals."
-
-#~ msgid "     Please define pkgsha256 in your .srcnho package."
-#~ msgstr "     Si us plau, definiu pkgsha256 al vostre paquet .srcnho."
-
-#~ msgid " --- Checking SHA256 Sum for"
-#~ msgstr " --- Revisant SHA256 Sum per a"
-
-#~ msgid "for"
-#~ msgstr "per a"
-
-#~ msgid "\t** OK: Present"
-#~ msgstr "\t** BÉ: Present"
-
-#~ msgid "\t** FAIL: Present"
-#~ msgstr "\t** ERROR: Present"
-
-#~ msgid " *** No build deps found on package:"
-#~ msgstr " *** No s'han trobar les dependències necessàries en el paquet:"
-
-#~ msgid " --- Processing Optional Dependency:"
-#~ msgstr " --- Dependències Opcionals del Processament:"
-
-#~ msgid " *** No optional build deps found on package:"
-#~ msgstr " *** No s'han trobat les dependències necessàries en el paquet:"
-
-#~ msgid " *** No optional deps found on package:"
-#~ msgstr " No s'han trobat les dependències opcionals en el paquet:"
-
-#~ msgid "needs the following optional dependencies:"
-#~ msgstr "necessita les següents dependències opcionals:"
-
-#~ msgid "needs this optional dependency:"
-#~ msgstr "necessita aquestes dependències opcionals:"
-
-#~ msgid ""
-#~ "There are more than one package with these arguments, please select one."
-#~ msgstr "Hi ha més d'un paquet amb aquests arguments, si us plau tria'n un."
-
-#~ msgid " --- Checking SHA256 Sum for downloaded"
-#~ msgstr " --- Revisant SHA256 Sum per a"
-
-#~ msgid "   This is critical for the build process."
-#~ msgstr "   Això és crític per al procés de construcció."
-
-#~ msgid "   The nhoid should come from the .srcnho package."
-#~ msgstr "   El nhoid hauria de provenir del paquet .srcnho."
-
-#~ msgid "Enter your username:"
-#~ msgstr "Escriu el teu nom d'usuari:"
-
-#~ msgid "You haven't entered your name!"
-#~ msgstr "No has escrit el teu nom d'usuari!"
-
-#~ msgid "Please, enter your username:"
-#~ msgstr "Si us plau, escriu el teu nom d'usuari:"
-
-#~ msgid "Enter your e-mail:"
-#~ msgstr "Escriu el teu correu electrònic:"
-
-#~ msgid "You haven't entered your e-mail!"
-#~ msgstr "No has escrit el teu correu electrònic!"
-
-#~ msgid "Please, enter your e-mail:"
-#~ msgstr "Si us plau, escriu el teu correu electrònic:"
-
-#~ msgid "Enter package name (Ex: gimp):"
-#~ msgstr "Escriu el nom del paquet (Ex: gimp):"
-
-#~ msgid "You haven't entered package name!"
-#~ msgstr "No has escrit el nom del paquet!"
-
-#~ msgid "Please, enter package name (Ex: gimp):"
-#~ msgstr "Si us plau, escriu el nom del paquet:"
-
-#~ msgid "Enter package version (Ex: 2.6.3):"
-#~ msgstr "Escriu la versió del paquet (Ex: 2.6.3):"
-
-#~ msgid "You haven't entered package version!"
-#~ msgstr "No has escrit la versió del paquet!"
-
-#~ msgid "Please, enter package version (Ex: 2.6.3):"
-#~ msgstr "Si us plau, escriu la versió del paquet:"
-
-#~ msgid "Enter package release (Ex: 1):"
-#~ msgstr "Escriu el llançament del paquet (Ex: 1):"
-
-#~ msgid "You haven't entered package release!"
-#~ msgstr "No has escrit el llançament del paquet!"
-
-#~ msgid "Please, enter package release (Ex: 1):"
-#~ msgstr "Si us plau, escriu el llançament del paquet."
-
-#~ msgid "Enter package license (Ex: GPLv3):"
-#~ msgstr "Escriu la llicència del paquet (Ex: GPLv3):"
-
-#~ msgid "You haven't entered package license!"
-#~ msgstr "No has escrit la llicència del paquet!"
-
-#~ msgid "Please, enter package license (Ex: GPLv3):"
-#~ msgstr "Si us plau, escriu la llicència del paquet (Ex: GPLv3):"
-
-#~ msgid "Enter package group (Ex: Graphics):"
-#~ msgstr "Escriu el grup del paquet (Ex: Graphics):"
-
-#~ msgid "You haven't entered package group!"
-#~ msgstr "No has escrit el grup del paquet!"
-
-#~ msgid "Please, enter package group (Ex: Graphics):"
-#~ msgstr "Si us plau, escriu el grup del paquet (Ex: Graphics):"
-
-#~ msgid ""
-#~ "Enter package arch (you can enter more than one arch separated by space. "
-#~ "Ex: i686):"
-#~ msgstr ""
-#~ "Escriu l'arquitectura del paquet (pots escriure més d'una arquitectura "
-#~ "separada per espais. Ex: i686 amd64):"
-
-#~ msgid "You haven't entered package arch!"
-#~ msgstr "No has escrit l'arquitectura del paquet!"
-
-#~ msgid "Please, enter package arch (Ex: i686):"
-#~ msgstr "Si us plau, escriu l'arquitectura del paquet (Ex: i686):"
-
-#~ msgid "Enter package web page (Ex: http://gimp.org/):"
-#~ msgstr "Escriu la pàgina web del paquet (Ex: http://gimp.org/):"
-
-#~ msgid "You haven't entered package web page (URL)!"
-#~ msgstr "No has escrit la pàgina web del paquet (URL)!"
-
-#~ msgid "Please, enter package web page (Ex: http://gimp.org/):"
-#~ msgstr "Si us plau, escriu la pàgina web del paquet (Ex: http://gimp.org/):"
-
-#~ msgid ""
-#~ "Enter package description (Ex: GIMP is the GNU Image Manipulation "
-#~ "Program.):"
-#~ msgstr ""
-#~ "Escriu la descripció del paquet (Ex: GIMP és GNU Image Manipulation "
-#~ "Program.):"
-
-#~ msgid "You haven't entered package description!"
-#~ msgstr "No has escrit la descripció del paquet!"
-
-#~ msgid ""
-#~ "Please, enter package description (Ex: GIMP is the GNU Image Manipulation "
-#~ "Program.):"
-#~ msgstr ""
-#~ "Si us plau, escriu la descripció del paquet (Ex: GIMP és GNU Image "
-#~ "Manipulation Program.):"
-
-#~ msgid "Do you want to split this package into sub-packages? (y/N):"
-#~ msgstr "Voleu dividir aquest paquet en subpaquets? (s/N):"
-
-#~ msgid "Enter package split names separated by spaces (Ex: dev data ...):"
-#~ msgstr ""
-#~ "Introduïu els noms de les divisions de paquets separats per espais (Ex: "
-#~ "dev data ...):"
-
-#~ msgid "You haven't entered package split names!"
-#~ msgstr "No has introduït noms de divisió de paquets!"
-
-#~ msgid "Please, enter package split names or press Enter to skip:"
-#~ msgstr ""
-#~ "Si us plau, introduïu els noms de les divisions de paquets o premeu Intro "
-#~ "per ometre:"
-
-#~ msgid "Skipping package splitting."
-#~ msgstr "Ometent la divisió de paquets."
-
-#~ msgid " * Unable to create nhoid file."
-#~ msgstr " * Impossible crear el fitxer nhoid."
-
-#~ msgid "Enter build dependency:"
-#~ msgstr "Escriu les dependències:"
-
-#~ msgid "added like package-dependency."
-#~ msgstr "afegit com a dependències del paquet."
-
-#~ msgid "Enter build dependency (if necesary):"
-#~ msgstr "Escriu les dependències del paquet (si són necessàries):"
-
-#~ msgid "added like file-dependency."
-#~ msgstr "afegit com a dependències del fitxer"
-
-#~ msgid "Found"
-#~ msgstr "S'ha trobat"
-
-#~ msgid "on this path:"
-#~ msgstr "en aquest directori:"
-
-#~ msgid "Enter correct path to"
-#~ msgstr "Escriu el directori correcte per"
-
-#~ msgid "is not present in your system."
-#~ msgstr "no existeix al teu sistema."
-
-#~ msgid "Enter optional build dependency:"
-#~ msgstr "Escriu una dependència opcional."
-
-#~ msgid "Enter optional build dependency (if necesary):"
-#~ msgstr "Escriu una dependència opcional (si és necessari):"
-
-#~ msgid "Enter post installation dependency (if necesary):"
-#~ msgstr "Escriu una dependència post-instal·lació (si és necessari):"
-
-#~ msgid "Isn't present in your system."
-#~ msgstr "No és present al vostre sistema."
-
-#~ msgid "Enter optional post installation dependency (if necesary):"
-#~ msgstr ""
-#~ "Escriu una dependència opcional per a la post-instal·lació (si és "
-#~ "necessari):"
-
-#~ msgid " :: Preparing to create source package:"
-#~ msgstr " :: Preparant per crear el paquet de codi font:"
-
-#~ msgid " - Loading the wizard..."
-#~ msgstr " - Carregant l'asistent..."
-
-#~ msgid ""
-#~ "This wizard helps you to create a (*.srcnho) package from other source "
-#~ "package like (*.tar.zst)."
-#~ msgstr ""
-#~ "Aquest assistent t'ajudarà a crear el paquet (*.srcnho) des del paquet de "
-#~ "codi font (*.tar.bz2)."
-
-#~ msgid "It is very important to complete all the fields correctly."
-#~ msgstr "És important omplir tots els apartats correctament."
-
-#~ msgid " --- Setting up package sources."
-#~ msgstr " --- Creant el codi font del paquet."
-
-#~ msgid "You can add patches from your system. Enter real path to patch."
-#~ msgstr ""
-#~ "Pots afegir pegats des del teu sistema. Escriu una ruta del directori."
-
-#~ msgid "To finish, press Enter twice."
-#~ msgstr "Per acabar, premeu Intro dues vegades."
-
-#~ msgid "Enter path to patch:"
-#~ msgstr "Escriu la direcció del directori:"
-
-#~ msgid "added to the package."
-#~ msgstr "afegit al paquet."
-
-#~ msgid "not found! Retry."
-#~ msgstr "no s'ha trobat! Tornar a intentar."
-
-#~ msgid " --- Added patches:"
-#~ msgstr " --- Pegats afegits:"
-
-#~ msgid ""
-#~ "You can add external dependencies to your package. Dependencies are other "
-#~ "libraries or softwares needed to build, install and run other software. "
-#~ "It's important that they are satisfied."
-#~ msgstr ""
-#~ "Pots afegir dependències externes al paquet. Les dependències són altres "
-#~ "llibreries o programari necessari per construir, instal·lar i fer "
-#~ "funcionar altre programari. És important que siguin satisfetes."
-
-#~ msgid ""
-#~ "To add dependency, enter its name with or without version. Dependency "
-#~ "must be installed by Nhopkg."
-#~ msgstr ""
-#~ "Per afegir dependències, escriu el seu nom amb o sense la versió. Les "
-#~ "dependències han de ser instal·lades pel Nhopkg."
-
-#~ msgid ""
-#~ "You can add too files present in your system needed for the package. Ex: "
-#~ "libc.so.6"
-#~ msgstr ""
-#~ "Pots afegir molts fitxers presents en el teu sistema si són necessàries "
-#~ "pel paquet. Ex: libc.so.6"
-
-#~ msgid "Here you can enter compilation commands. Ex: ./configure, make."
-#~ msgstr ""
-#~ "Aquí pots escriure les ordres per a la compilació. Ex: ./configure, make."
-
-#~ msgid "Enter compilation commands:"
-#~ msgstr "Escriu les ordres per a la compilació:"
-
-#~ msgid ""
-#~ "Here you can enter instalation commands. Ex: make install, install ..., "
-#~ "cp -v ... Files that will be installed in this step will be in the binary "
-#~ "package."
-#~ msgstr ""
-#~ "Aquí pots escriure ordres per a la instal·lació. Ex: make install, "
-#~ "install ..., cp -v ... Els fitxers que seran instal·lats en aquest pas "
-#~ "estaran en l'arxiu binari."
-
-#~ msgid " * You must add at least one command!"
-#~ msgstr " * Escriu alment una comanda d'instal·lació!"
-
-#~ msgid ""
-#~ "Here you can enter post instalation commands, as hard links or similar. "
-#~ "This commands will be in the binary package too, but not created files by "
-#~ "these commands. Ex: ln -sf, ldconfig ..."
-#~ msgstr ""
-#~ "Aquí pots escriure les ordres per a la post-instal·lació, com enllaços o "
-#~ "similars. Aquestes ordres estaran en el paquet binari també, però no es "
-#~ "crearan fitxers amb aquestes ordres. Ex: ln -sf, ldconfig ..."
-
-#~ msgid ""
-#~ "Here you can enter post remove commands, as remove hard links created in "
-#~ "post installation commands or similar. This commands will be ejecuted "
-#~ "after package has been deleted. Ex: rm /etc/ld.so.conf."
-#~ msgstr ""
-#~ "Aquí pots escriure ordres per a la post-eliminació, com enllaços com en "
-#~ "les ordres post-instal·lació o similar. Aquestes ordres seran executades "
-#~ "després que el paquet sigui el·liminat. Ex: rm /etc/ld.so.conf."
-
-#~ msgid "Enter post remove commands:"
-#~ msgstr "Escriu les ordres post-eliminació:"
-
-#~ msgid "Automated package creation."
-#~ msgstr "Creació del paquet automatitzada."
-
-#~ msgid ""
-#~ "This option don't get any type of dependencies for the package and could "
-#~ "fail in some packages. If you want to create a good package you sould use "
-#~ "--create-source option."
-#~ msgstr ""
-#~ "Aquesta opció no obté cap tipus de dependències per al paquet i podria "
-#~ "fallar en alguns paquets. Si vols crear un bon paquet podries utilitzar "
-#~ "la opció --create-source"
-
-#~ msgid " --- Getting user and package data."
-#~ msgstr " --- Obtenint usuari i dades del paquet."
-
-#~ msgid " *** Unable to add installation comands."
-#~ msgstr " *** Impossible d'afegir ordres d'instal·lació."
-
-#~ msgid " :: Prepating to convert .tgz package into .nho package:"
-#~ msgstr " :: Preparant per convertir un paquet .tgz a un paquet .nho:"
-
-#~ msgid ""
-#~ "This wizard helps you to convert Slackware package (*.tgz) into Nhopkg "
-#~ "binary package (*.nho)."
-#~ msgstr ""
-#~ "Aquest assistent t'ajudarà a convertir un paquet de Slackware (*.tgz) a "
-#~ "un paquet binari de Nhopkg (*.nho)."
-
-#~ msgid " *** Unable to create repository."
-#~ msgstr " ***Impossible crear el dipòsit."
-
-#~ msgid " *** Can't find any .nho package in this directory."
-#~ msgstr " *** No es pot trobar cap paquet .nho en aquest directori."
-
-#, fuzzy
-#~ msgid " --- Updating icons database."
-#~ msgstr " --- Actualitzant base de dades:"
-
-#, fuzzy
-#~ msgid " --- Updating mime database."
-#~ msgstr " --- Actualitzant base de dades:"
-
-#, fuzzy
-#~ msgid " --- Updating man database."
-#~ msgstr " --- Actualitzant base de dades:"
-
-#~ msgid " * Unable to create temporary directory."
-#~ msgstr " * Incapaç de crear el directori temporal."
-
-#~ msgid " * Unable to get data from package."
-#~ msgstr " * Impossible obtenir dades del paquet."
-
-#~ msgid " *** MD5 checksum of package did not match."
-#~ msgstr " *** El MD5 checksum del paquet no coincideix."
-
-#~ msgid " *** Failed to download package. Please, retry."
-#~ msgstr ""
-#~ " *** Error al descarregar el paquet. Si us plau, torna-ho a intentar."
-
-#~ msgid " * Unable to uncompress package."
-#~ msgstr " * Impossible descomprimir el paquet."
-
-#~ msgid " *** Failed to install package."
-#~ msgstr " *** Error al instal·lar el paquet."
-
-#~ msgid "Enter post installation dependency:"
-#~ msgstr "Escriu una dependència post-instal·lació:"
-
-#~ msgid "Enter optional post installation dependency:"
-#~ msgstr "Escriu una dependència opcional per a la post-instal·lació:"
-
-#~ msgid " * Package will not be removed from your sistem."
-#~ msgstr " * El paquet no serà eliminat del teu sistema."
-
-#~ msgid "Nhopkg Create Source Wizard"
-#~ msgstr "Nhopkg ha creat l'assistent pel codi font"
-
-#~ msgid "Add patches into package"
-#~ msgstr "Afegir pegats al paquet"
-
-#~ msgid "Add external dependencies"
-#~ msgstr "Afegir dependències externes."
-
-#~ msgid "Add compilation commands"
-#~ msgstr "Afegir ordres per a la compilació"
-
-#~ msgid "Add installation commands"
-#~ msgstr "Afegir ordres per a la instal·lació"
-
-#~ msgid "Enter instalation commands:"
-#~ msgstr "Escriu les ordres d'instal·lació:"
-
-#~ msgid "Add post installation commands"
-#~ msgstr "Afegir ordres per a la post-instal·lació"
-
-#~ msgid "Enter post instalation commands:"
-#~ msgstr "Escriu ordres per a la post-instal·lació:"
-
-#~ msgid "Add post remove commands"
-#~ msgstr "Afegir ordres post-eliminació"
-
-#~ msgid "Nhopkg tgz2nho"
-#~ msgstr "Nhopkg tgz2nho"
-
-#~ msgid " * One or more packages aren't valid."
-#~ msgstr " * Un o més paquets són invàlids."
-
-#~ msgid " * Unable to download files from repository."
-#~ msgstr " * Impossible descarregar fitxers del dipòsit."
-
-#~ msgid " *** Unable to download files from repository."
-#~ msgstr " *** Impossible descarregar fitxers del dipòsit."
-
-#~ msgid " * Unable to clean up cache."
-#~ msgstr " *  Impossible netejar les dades de la memòria cau."
-
-#~ msgid " * Unable to clean up build directory."
-#~ msgstr " * Impossible netejar les dades de la memòria cau."

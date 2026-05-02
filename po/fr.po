@@ -85,11 +85,11 @@ msgstr " --- Mise à jour : "
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:994
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1015
-msgid "\\t** OK: Update completed successfully"
+msgid "\t** OK: Update completed successfully"
 msgstr "\tOK : Mise à jour terminée avec succès"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:997
-msgid "\\t** Fail: Update failed"
+msgid "\t** Fail: Update failed"
 msgstr "\tÉchec : la mise à jour a échoué."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1002
@@ -187,113 +187,112 @@ msgid "Commands:"
 msgstr "Commandes :"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1175
-msgid " -B, --backup\\tCreates binary package from installed package."
+msgid " -B, --backup\tCreates binary package from installed package."
 msgstr ""
 " -B, --backup\tCréer un paquet binaire d'après un paquet déjà installé."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1176
-msgid ""
-" -C, --super-build\\tCompiles and installs source package from Git repo."
+msgid " -C, --super-build\tCompiles and installs source package from Git repo."
 msgstr ""
-"-C, --super-build\\tCompile et installe le paquet source à partir du dépôt "
+" -C, --super-build\tCompile et installe le paquet source à partir du dépôt "
 "Git."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1177
 msgid ""
-" -G, --install-group\\tInstalls binaries packages from a specified group "
-"from the repository."
+" -G, --install-group\tInstalls binaries packages from a specified group from "
+"the repository."
 msgstr ""
-"-G, --install-group\tnstalle les paquets binaires d'un groupe spécifié à "
+" -G, --install-group\tnstalle les paquets binaires d'un groupe spécifié à "
 "partir du dépôt."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1178
-msgid " -S, --super-install\\tInstalls binary package form repository."
+msgid " -S, --super-install\tInstalls binary package form repository."
 msgstr " -S, --super-install\tInstaller le paquet d'un depôt."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1179
-msgid " -U, --update\\tUpdate repository database."
+msgid " -U, --update\tUpdate repository database."
 msgstr " -U, --update\tMise à jour de la base de données."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1180
 msgid ""
-" -X, --strip-binaries\\tRemove debug symbols from installed binaries and "
+" -X, --strip-binaries\tRemove debug symbols from installed binaries and "
 "libraries during installation (experimental)."
 msgstr ""
-"-X, --strip-binaries\\tSupprimer les symboles de débogage des binaires et "
+" -X, --strip-binaries\tSupprimer les symboles de débogage des binaires et "
 "bibliothèques installés lors de l'installation (expérimental)."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1182
-msgid " -b, --build\\tCompiles and installs source package."
+msgid " -b, --build\tCompiles and installs source package."
 msgstr " -b, --build\tCompiler et installer un paquet source."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1183
-msgid " -d, --dios\\tSame as -S, --super-install."
+msgid " -d, --dios\tSame as -S, --super-install."
 msgstr " -d, --dios\tLa même chise que -S, --super-install."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1184
-msgid " -e, --clean\\tRemove cached data."
+msgid " -e, --clean\tRemove cached data."
 msgstr " -e, --clean\tEffacer les données en caché."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1185
-msgid " -i, --install\\tInstalls binary package."
+msgid " -i, --install\tInstalls binary package."
 msgstr " -i, --install\tInstaller le paquet binaire."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1186
-msgid " -k, --check\\tChecks if installed package is correct."
+msgid " -k, --check\tChecks if installed package is correct."
 msgstr " -k, --check\tVérificationif de l'installation."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1187
-msgid " -l, --list\\tLists installed packages."
+msgid " -l, --list\tLists installed packages."
 msgstr " -l, --list\tLister les paquets installés."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1188
-msgid " -n, --info\\tShows package details."
+msgid " -n, --info\tShows package details."
 msgstr " -n, --info\tAfficher les détails."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1189
-msgid " -r, --remove\\tRemoves package installed by Nhopkg."
+msgid " -r, --remove\tRemoves package installed by Nhopkg."
 msgstr " -r, --remove\tDésinstiler un paquet installé par Nhopkg"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1190
-msgid " -s, --search\\tSearch for package and its details."
+msgid " -s, --search\tSearch for package and its details."
 msgstr " -s, --search\tChercher paquets et détails."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1191
-msgid " -t, --list-repo\\tLists packages on repository and their details."
+msgid " -t, --list-repo\tLists packages on repository and their details."
 msgstr " -t, --list-repo\tLister les paquets du dépôt et les détails."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1192
-msgid " -u, --update-db\\tUpdate Nhopkg database."
+msgid " -u, --update-db\tUpdate Nhopkg database."
 msgstr " -u, --update-db\tMise à jour de la base de données."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1193
-msgid " -w, --show\\tShows package files."
+msgid " -w, --show\tShows package files."
 msgstr " -w, --show\tMontrer l'information du paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1194
-msgid " -x, --update-shooters\\tUpdates all system data and schemas."
+msgid " -x, --update-shooters\tUpdates all system data and schemas."
 msgstr ""
 " -x, --update-shooters\tMet à jour toutes les données et tous les schémas du "
 "système."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1195
-msgid " -y, --upgrade\\tUpdates all installed packages."
-msgstr "-y, --upgrade\tMet à jour tous les paquets installés."
+msgid " -y, --upgrade\tUpdates all installed packages."
+msgstr " -y, --upgrade\tMet à jour tous les paquets installés."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1196
-msgid " --license-all\\tShows complete Nhopkg license."
+msgid " --license-all\tShows complete Nhopkg license."
 msgstr " --license-all\tAffiche l'information de licence complète."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1197
-msgid " --license\\tShows Nhopkg license."
+msgid " --license\tShows Nhopkg license."
 msgstr " --license\tAffiche l'information de licence."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1198
-msgid " --version\\tShows Nhopkg version."
+msgid " --version\tShows Nhopkg version."
 msgstr " --version\tAffiche l'information de version."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1199
-msgid " -h, --help\\tShows this help page."
+msgid " -h, --help\tShows this help page."
 msgstr " -h, --help\tAfficher l'aide."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1201
@@ -302,72 +301,72 @@ msgid "Options:"
 msgstr "Options:"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1202
-msgid " --force-check-arch\\tForce check architecture."
+msgid " --force-check-arch\tForce check architecture."
 msgstr " --force-check-arch\tForcer la vérification de l'architecture."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1203
-msgid " --force-check-deps\\tForce check dependencies."
+msgid " --force-check-deps\tForce check dependencies."
 msgstr " --force-check-deps\tForcer la vérification de dépendances."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1204
-msgid " --force-check-sums\\tForce check Sums."
-msgstr "--force-check-sums\tForcer les sommes de contrôle."
+msgid " --force-check-sums\tForce check Sums."
+msgstr " --force-check-sums\tForcer les sommes de contrôle."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1205
-msgid " --no-check-arch\\tDon't check architecture."
+msgid " --no-check-arch\tDon't check architecture."
 msgstr " --no-check-arch\tNe pas vérifier l'architecture."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1206
-msgid " --no-check-deps\\tDon't check dependencies."
+msgid " --no-check-deps\tDon't check dependencies."
 msgstr " --no-check-deps\tNe pas vérifier les dépendances."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1207
-msgid " --no-check-sums\\tDon't check Sums."
-msgstr "--no-checksums\\Ne pas vérifier les sommes de contrôle."
+msgid " --no-check-sums\tDon't check Sums."
+msgstr " --no-checksums\tNe pas vérifier les sommes de contrôle."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1208
-msgid " --sign-package\\tSign the binary package when building it."
-msgstr "--sign-package\tSignez le paquet binaire lors de sa construction."
+msgid " --sign-package\tSign the binary package when building it."
+msgstr " --sign-package\tSignez le paquet binaire lors de sa construction."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1209
-msgid " --no-sign-package\\tSkip the package signature."
-msgstr " --no-sign-package\\tIgnorer la signature du paquet."
+msgid " --no-sign-package\tSkip the package signature."
+msgstr " --no-sign-package\tIgnorer la signature du paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1210
 msgid ""
-" --verify-package-signature\\tVerify the GPG signature of the package before "
+" --verify-package-signature\tVerify the GPG signature of the package before "
 "installing it."
 msgstr ""
-"--verify-package-signature\tVérifiez la signature GPG du paquet avant de "
+" --verify-package-signature\tVérifiez la signature GPG du paquet avant de "
 "l'installer."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1211
-msgid " --no-verify-package-signature\\tSkip signature verification."
+msgid " --no-verify-package-signature\tSkip signature verification."
 msgstr ""
-"--no-verify-package-signature\tIgnorer la vérification de la signature."
+" --no-verify-package-signature\tIgnorer la vérification de la signature."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1212
-msgid " --purge\\tRemove inverse dependencies of package."
+msgid " --purge\tRemove inverse dependencies of package."
 msgstr " --purge\tSuppression inverse des dépendances du paquet."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1213
-msgid " --root\\tSets install root."
+msgid " --root\tSets install root."
 msgstr " --root\tRacine d'installation."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1214
-msgid " -R, --recursive\\tNhopkg works recursively."
+msgid " -R, --recursive\tNhopkg works recursively."
 msgstr " -R, --recursive\tNhopkg travaille récursivement."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1215
-msgid " -o, --output\\tWrite an output log."
+msgid " -o, --output\tWrite an output log."
 msgstr " -o, --output\tÉcrire un journal."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1216
-msgid " -v, --verbose\\tVerbose operations."
+msgid " -v, --verbose\tVerbose operations."
 msgstr " -v, --verbose\tMode bavard."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1217
-msgid " --\\tStop parssing arguments."
+msgid " --\tStop parssing arguments."
 msgstr " --\tArrêter l'analyse des arguments."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:1233
@@ -572,19 +571,19 @@ msgid " --- Saving logs on"
 msgstr " --- Sauvegarder le journal"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2606
-msgid "\\t** Using for post-install: "
+msgid "\t** Using for post-install: "
 msgstr "\t**Utilisation après installation :"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2609
-msgid "\\t** Using as fallback for post-install: "
+msgid "\t** Using as fallback for post-install: "
 msgstr "\t**Utilisation comme solution de repli après l'installation :"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2620
-msgid "\\t** Using for post-remove: "
+msgid "\t** Using for post-remove: "
 msgstr "\t** Utilisation après suppression :"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2623
-msgid "\\t** Using as fallback for post-remove: "
+msgid "\t** Using as fallback for post-remove: "
 msgstr "\tUtilisation comme solution de repli après suppression :"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg.in:2641
@@ -1093,16 +1092,17 @@ msgid "Users and groups management for nhopkg."
 msgstr "Gestion des utilisateurs et des groupes pour nhopkg."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:56
-msgid "  --version\\tShows version."
+#: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:116
+msgid "  --version\tShows version."
 msgstr " --version\tAffiche l'information de version."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:57
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:117
-msgid "  -h, --help\\tShows this help page."
+msgid "  -h, --help\tShows this help page."
 msgstr " -h, --help\tAfficher l'aide."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhouser.in:69
-msgid "  -v, --verbose\\tVerbose operations."
+msgid "  -v, --verbose\tVerbose operations."
 msgstr " -v, --verbose\tMode bavard."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:109
@@ -1124,10 +1124,6 @@ msgstr " -g, --create-repo\tCréer un dépôt."
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:115
 msgid "  -o, --repo-dir <dir>\tRepository root directory"
 msgstr "-o, --repo-dir <dir>\tRépertoire racine du dépôt"
-
-#: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:116
-msgid "  --version\tShows version."
-msgstr " --version\tAffiche l'information de version."
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-repos.in:139
 msgid " * No operation specified. Use --help."
@@ -1205,459 +1201,4 @@ msgstr " Système : ISOLÉ (overlay)"
 
 #: /home/cargabsj175/sources/NeonatoX_2026/neonatox-nhopkg/src/nhopkg-overlay.in:165
 msgid " Work: /work -> "
-msgstr "Travail : /travail ->"
-
-#~ msgid ""
-#~ " -A, --auto-package\tCreates automatically source package from tarball."
-#~ msgstr ""
-#~ " -A, --auto-package\tCréer automatiquement un paquet source d'après une "
-#~ "archive TAR."
-
-#, fuzzy
-#~ msgid " -c, --create-source\tCreates source package from tarball."
-#~ msgstr ""
-#~ " -c, --create-source\tCréer un paquet source d'après une archive TAR."
-
-#, fuzzy
-#~ msgid " -z, --tgz2nho\tConverts .tgz package to .nho package."
-#~ msgstr " -z, --tgz2nho\tConvertit .tgz paquets en .nho paquets."
-
-#~ msgid " --- Deferring SHA256 check: Tarball will be downloaded later"
-#~ msgstr ""
-#~ "--- Report de la vérification SHA256 : l'archive tar sera téléchargée "
-#~ "ultérieurement"
-
-#~ msgid " *** ERROR: SHA256 checksum not defined for package"
-#~ msgstr "*** ERREUR : somme de contrôle SHA256 non définie pour le package"
-
-#~ msgid "     This is required for local source packages."
-#~ msgstr "     Ceci est requis pour les packages sources locaux."
-
-#~ msgid "     Please define pkgsha256 in your .srcnho package."
-#~ msgstr "     Veuillez définir pkgsha256 dans votre package .srcnho."
-
-#~ msgid " --- Checking SHA256 Sum for"
-#~ msgstr " --- Vérification SHA256 Sum pour"
-
-#~ msgid "for"
-#~ msgstr "pour"
-
-#, fuzzy
-#~ msgid "\t** OK: Present"
-#~ msgstr "\t** OK : Présent"
-
-#, fuzzy
-#~ msgid "\t** FAIL: Present"
-#~ msgstr "\t** FAIL: Présent"
-
-#~ msgid " *** No build deps found on package:"
-#~ msgstr " *** Impossible trouver deps dans le paquet :"
-
-#~ msgid " --- Processing Optional Dependency:"
-#~ msgstr " --- Traitement des dépendances optionnels :"
-
-#~ msgid " *** No optional build deps found on package:"
-#~ msgstr " *** Pas de dépendances optatives ont été trouvés :"
-
-#~ msgid " *** No optional deps found on package:"
-#~ msgstr " *** Impossible trouver deps optatives dans le paquet :"
-
-#~ msgid "needs the following optional dependencies:"
-#~ msgstr "nécessite d'avoir les dépendances supplémentaires suivantes :"
-
-#~ msgid "needs this optional dependency:"
-#~ msgstr "nécessite d'avoir la dépendance suivante :"
-
-#~ msgid ""
-#~ "There are more than one package with these arguments, please select one."
-#~ msgstr ""
-#~ "Il y a plus d'un paquet re more than one package with these arguments, "
-#~ "please select one."
-
-#~ msgid " --- Checking SHA256 Sum for downloaded"
-#~ msgstr " --- Vérification SHA256 Sum pour"
-
-#~ msgid "   This is critical for the build process."
-#~ msgstr "   Ceci est essentiel pour le processus de construction."
-
-#~ msgid "   The nhoid should come from the .srcnho package."
-#~ msgstr "   Le nhoid devrait provenir du package .srcnho."
-
-#~ msgid "Enter your username:"
-#~ msgstr "Saisissez vos identifiant :"
-
-#~ msgid "You haven't entered your name!"
-#~ msgstr "S'il vous plait, saisissez votre identifiant !"
-
-#~ msgid "Please, enter your username:"
-#~ msgstr "S'il vous plait, saisissez votre identifiant !"
-
-#~ msgid "Enter your e-mail:"
-#~ msgstr "Saisissez votre e-mail :"
-
-#~ msgid "You haven't entered your e-mail!"
-#~ msgstr "S'il vous plait, saisissez votre e-mail !"
-
-#~ msgid "Please, enter your e-mail:"
-#~ msgstr "S'il vous plait, saisissez votre e-mail !"
-
-#~ msgid "Enter package name (Ex: gimp):"
-#~ msgstr "Entrez le nom du paquet (Ex. Gimp):"
-
-#~ msgid "You haven't entered package name!"
-#~ msgstr "Vous n'avez pas sélectionné le nom du paquet !"
-
-#~ msgid "Please, enter package name (Ex: gimp):"
-#~ msgstr "Entrez le nom du paquet (Ex. Gimp)"
-
-#~ msgid "Enter package version (Ex: 2.6.3):"
-#~ msgstr "Entrez la version du paquet (Ex. 2.6.3):"
-
-#~ msgid "You haven't entered package version!"
-#~ msgstr "S'il vous plait, entrez la version du paquet."
-
-#~ msgid "Please, enter package version (Ex: 2.6.3):"
-#~ msgstr "S'il vous plait, entrez la version du paquet. (Ex. 2.6.3) :"
-
-#~ msgid "Enter package release (Ex: 1):"
-#~ msgstr "Entrez la version du paquet (Ex. 1) :"
-
-#~ msgid "You haven't entered package release!"
-#~ msgstr "Vous n'avez pas sélectionné la version du paquet !"
-
-#~ msgid "Please, enter package release (Ex: 1):"
-#~ msgstr "Entrez la version du paquet (Ex. 1) :"
-
-#~ msgid "Enter package license (Ex: GPLv3):"
-#~ msgstr "Entrez la licence du paquet (Ex. GPLv3) :"
-
-#~ msgid "You haven't entered package license!"
-#~ msgstr "Vous n'avez pas sélectionné la licence du paquet !"
-
-#~ msgid "Please, enter package license (Ex: GPLv3):"
-#~ msgstr "Entrez la licence du paquet (Ex. GPLv3) :"
-
-#~ msgid "Enter package group (Ex: Graphics):"
-#~ msgstr "Entrez le gruope du paquet (Ex. Graphiques) :"
-
-#~ msgid "You haven't entered package group!"
-#~ msgstr "Vous n'avez pas entré le groupe du paquet !"
-
-#~ msgid "Please, enter package group (Ex: Graphics):"
-#~ msgstr "Entrez le groupe du paquet (Ex. Graphics) :"
-
-#~ msgid ""
-#~ "Enter package arch (you can enter more than one arch separated by space. "
-#~ "Ex: i686):"
-#~ msgstr ""
-#~ "Entrez l'architecture du paquet (Vous pouvez user commas pour séparer les "
-#~ "architectures. Ex. i686) ;"
-
-#~ msgid "You haven't entered package arch!"
-#~ msgstr "Vous n'avez pas sélectionné l'architecture du paquet !"
-
-#~ msgid "Please, enter package arch (Ex: i686):"
-#~ msgstr "Entrez l'architecture du paquet (Ex. i686) :"
-
-#~ msgid "Enter package web page (Ex: http://gimp.org/):"
-#~ msgstr "Entrez la page web du paquet (Ex. http://gimp.org/) :"
-
-#~ msgid "You haven't entered package web page (URL)!"
-#~ msgstr "Vous n'avez pas sélectionné la page web (URL) !"
-
-#~ msgid "Please, enter package web page (Ex: http://gimp.org/):"
-#~ msgstr "Entrez la page web du paquet (Ex. http://gimp.org/) :"
-
-#~ msgid ""
-#~ "Enter package description (Ex: GIMP is the GNU Image Manipulation "
-#~ "Program.):"
-#~ msgstr ""
-#~ "Entrez la description du paquet (Ex. GIMP, programme GNU de manipulation "
-#~ "d'images.) :"
-
-#~ msgid "You haven't entered package description!"
-#~ msgstr "Vous n'avez pas sélectionné la description du paquet !"
-
-#~ msgid ""
-#~ "Please, enter package description (Ex: GIMP is the GNU Image Manipulation "
-#~ "Program.):"
-#~ msgstr ""
-#~ "Entrez la description du paquet (Ex. GIMP, programme GNU de manipulation "
-#~ "d'images.) :"
-
-#~ msgid "Do you want to split this package into sub-packages? (y/N):"
-#~ msgstr "Voulez-vous diviser ce package en sous-packages ? (o/N) :"
-
-#~ msgid "Enter package split names separated by spaces (Ex: dev data ...):"
-#~ msgstr ""
-#~ "Saisissez les noms des packages séparés par des espaces (ex : dev "
-#~ "data ...):"
-
-#~ msgid "You haven't entered package split names!"
-#~ msgstr "Vous n'avez pas entré de noms de fractionnement de package !"
-
-#~ msgid "Please, enter package split names or press Enter to skip:"
-#~ msgstr ""
-#~ "Veuillez saisir les noms des packages ou appuyez sur Entrée pour ignorer :"
-
-#~ msgid "Skipping package splitting."
-#~ msgstr "Ignorer le fractionnement des packages."
-
-#~ msgid " * Unable to create nhoid file."
-#~ msgstr " * La création du fichier nhoid a échoué."
-
-#~ msgid "Enter build dependency:"
-#~ msgstr "Entrez les dépendances de la construction :"
-
-#~ msgid "added like package-dependency."
-#~ msgstr "ajouté comme package-dependency."
-
-#~ msgid "Enter build dependency (if necesary):"
-#~ msgstr "Entrez les dépendances de la construction (si nécessaire)"
-
-#~ msgid "added like file-dependency."
-#~ msgstr "ajouté comme file-dependency."
-
-#~ msgid "Found"
-#~ msgstr "Trouvé"
-
-#~ msgid "on this path:"
-#~ msgstr "dans le répertoire :"
-
-#~ msgid "Enter correct path to"
-#~ msgstr "Saisissez le chemin correct pour"
-
-#~ msgid "is not present in your system."
-#~ msgstr "non présente."
-
-#~ msgid "Enter optional build dependency:"
-#~ msgstr "Entrez dépendances optatives :"
-
-#~ msgid "Enter optional build dependency (if necesary):"
-#~ msgstr "Entrez dépendances optatives si nécessaire :"
-
-#~ msgid "Enter post installation dependency (if necesary):"
-#~ msgstr "Entrez dépendances pour la post-installation si nécessaire"
-
-#~ msgid "Isn't present in your system."
-#~ msgstr "N'est pas présent dans votre système."
-
-#~ msgid "Enter optional post installation dependency (if necesary):"
-#~ msgstr ""
-#~ "Entrez optatives dépendances pour la post-installation si nécessaire :"
-
-#~ msgid " :: Preparing to create source package:"
-#~ msgstr " :: Preparation pour la création du paquet source :"
-
-#~ msgid " - Loading the wizard..."
-#~ msgstr " - Chargement de l'assistant..."
-
-#~ msgid ""
-#~ "This wizard helps you to create a (*.srcnho) package from other source "
-#~ "package like (*.tar.zst)."
-#~ msgstr ""
-#~ "Cet assistant vous aidera a créer un (*.srcnho) des autres paquets source "
-#~ "comme (*.tar.bz2)."
-
-#~ msgid "It is very important to complete all the fields correctly."
-#~ msgstr "Completez les champs."
-
-#~ msgid " --- Setting up package sources."
-#~ msgstr " --- Installation des sources du paquet."
-
-#~ msgid "You can add patches from your system. Enter real path to patch."
-#~ msgstr "Vous pouvez ajouter patchs. Entrez le chemin réel au patch."
-
-#~ msgid "To finish, press Enter twice."
-#~ msgstr "Pour terminer, appuyez deux fois sur Entrée."
-
-#~ msgid "Enter path to patch:"
-#~ msgstr "Entrez le chemin au patch :"
-
-#~ msgid "added to the package."
-#~ msgstr "ahouté au paquet."
-
-#~ msgid "not found! Retry."
-#~ msgstr "Introuvable ! Réessayer."
-
-#~ msgid " --- Added patches:"
-#~ msgstr " --- Patchs ajoutés:"
-
-#~ msgid ""
-#~ "You can add external dependencies to your package. Dependencies are other "
-#~ "libraries or softwares needed to build, install and run other software. "
-#~ "It's important that they are satisfied."
-#~ msgstr ""
-#~ "Vous pouvez ajouter dépendances externes. Les dépendances sont nécessaire "
-#~ "pour l'installation et l'exécution du logiciel."
-
-#~ msgid ""
-#~ "To add dependency, enter its name with or without version. Dependency "
-#~ "must be installed by Nhopkg."
-#~ msgstr ""
-#~ "Pour ajouter dépendances, entrez le nom avec ou sans la version. Les "
-#~ "dépendances doivent être installés par Nhopkg."
-
-#~ msgid ""
-#~ "You can add too files present in your system needed for the package. Ex: "
-#~ "libc.so.6"
-#~ msgstr ""
-#~ "Vous pouvez aussi ajouter fichiers de votre système au paquet. Ex. "
-#~ "libc.so.6"
-
-#~ msgid "Here you can enter compilation commands. Ex: ./configure, make."
-#~ msgstr ""
-#~ "Entrez ici les commandes pour la compilation. Ex. ./configure, make."
-
-#~ msgid "Enter compilation commands:"
-#~ msgstr "Entrez commandes pour la compilation :"
-
-#~ msgid ""
-#~ "Here you can enter instalation commands. Ex: make install, install ..., "
-#~ "cp -v ... Files that will be installed in this step will be in the binary "
-#~ "package."
-#~ msgstr ""
-#~ "Entrez ici les commandes pour l'installation. Ex.make install, "
-#~ "install ..., cp -v ... Les fichiers qui seront installés seront dans le "
-#~ "paquet binaire."
-
-#~ msgid " * You must add at least one command!"
-#~ msgstr " * Entrez les commands pour l'installation !"
-
-#~ msgid ""
-#~ "Here you can enter post instalation commands, as hard links or similar. "
-#~ "This commands will be in the binary package too, but not created files by "
-#~ "these commands. Ex: ln -sf, ldconfig ..."
-#~ msgstr ""
-#~ "Entrez ici les commandes post-installation. Les commandes seront aussi "
-#~ "dans le paquet binaire, par contre les fichiers crées par cette commande "
-#~ "ne seront pas dans le paquet."
-
-#~ msgid ""
-#~ "Here you can enter post remove commands, as remove hard links created in "
-#~ "post installation commands or similar. This commands will be ejecuted "
-#~ "after package has been deleted. Ex: rm /etc/ld.so.conf."
-#~ msgstr ""
-#~ "Ici vous pouvez entrer des commandes post-suppression : supprimer liens "
-#~ "crées au post-installation, commandes ou similaire. Ce commande sera "
-#~ "exécute après la suppression du paquet. Ex : rm /etc/ld.so.conf."
-
-#~ msgid "Enter post remove commands:"
-#~ msgstr "Entrez post-suppression commandes :"
-
-#~ msgid "Automated package creation."
-#~ msgstr "Création automatique du paquet."
-
-#~ msgid ""
-#~ "This option don't get any type of dependencies for the package and could "
-#~ "fail in some packages. If you want to create a good package you sould use "
-#~ "--create-source option."
-#~ msgstr ""
-#~ "Cet option ne donne pas dépendances pour le paquet et il peut échouer. Si "
-#~ "vous voulez créer un bon paquet, utilissez l'option --create-source"
-
-#~ msgid " --- Getting user and package data."
-#~ msgstr " --- Obtention des données du paquet."
-
-#~ msgid " *** Unable to add installation comands."
-#~ msgstr " *** Impossible ajouter commandes d'installation."
-
-#~ msgid " :: Prepating to convert .tgz package into .nho package:"
-#~ msgstr " :: Préparation de la conversion du paquet .tgz à .nho :"
-
-#~ msgid ""
-#~ "This wizard helps you to convert Slackware package (*.tgz) into Nhopkg "
-#~ "binary package (*.nho)."
-#~ msgstr ""
-#~ "Cet Assistan vous aidera en la conversion du paquet de Slackware (*.tgz) "
-#~ "à paquet binaire Nhopkg (*.nho)."
-
-#~ msgid " *** Unable to create repository."
-#~ msgstr " *** La création du dépôt a échoué."
-
-#~ msgid " *** Can't find any .nho package in this directory."
-#~ msgstr " *** Ne peut trouver des paquets .nho ici."
-
-#~ msgid " --- Generating Schemas."
-#~ msgstr " --- Génération de Schemas."
-
-#~ msgid " --- Updating icons database."
-#~ msgstr " --- Mise à jour base de données d'icônes."
-
-#~ msgid " --- Updating mime database."
-#~ msgstr " --- Mise à jour base de données de MIME types."
-
-#~ msgid " --- Updating man database."
-#~ msgstr " --- Mise à jour base de données de man."
-
-#~ msgid " * Unable to create temporary directory."
-#~ msgstr " * Impossible de créer un répertoire temporaire."
-
-#~ msgid " * Unable to get data from package."
-#~ msgstr " * Récupération des données impossible."
-
-#~ msgid " *** MD5 checksum of package did not match."
-#~ msgstr " *** MD5 ne corresponden pas."
-
-#~ msgid " *** Failed to download package. Please, retry."
-#~ msgstr " ***  Impossible de télécharger le paquet."
-
-#~ msgid " * Unable to uncompress package."
-#~ msgstr " * La décompression a échoué."
-
-#~ msgid " *** Failed to install package."
-#~ msgstr " *** Erreurs durant l'installation."
-
-#~ msgid "Enter post installation dependency:"
-#~ msgstr "Entrez post-installation dépendances"
-
-#~ msgid "Enter optional post installation dependency:"
-#~ msgstr "Entrez optatives dépendances pour la post-installation :"
-
-#~ msgid " * Package will not be removed from your sistem."
-#~ msgstr " * Paquet ne sera pas supprimé."
-
-#~ msgid "Nhopkg Create Source Wizard"
-#~ msgstr "Nhopkg Create Source Wizard"
-
-#~ msgid "Add patches into package"
-#~ msgstr "Ajouter patchs au paquet."
-
-#~ msgid "Add external dependencies"
-#~ msgstr "Ajouter dépendances externes"
-
-#~ msgid "Add compilation commands"
-#~ msgstr "Ajouter commandes pour la compilation"
-
-#~ msgid "Add installation commands"
-#~ msgstr "Ajouter commandes pour l'installation"
-
-#~ msgid "Enter instalation commands:"
-#~ msgstr "Entrez les commands pour l'installation :"
-
-#~ msgid "Add post installation commands"
-#~ msgstr "Ajouter commandes post-installation"
-
-#~ msgid "Enter post instalation commands:"
-#~ msgstr "Entrez les commandes post-installation :"
-
-#~ msgid "Add post remove commands"
-#~ msgstr "Ajouter post-suppression commandes"
-
-#~ msgid "Nhopkg tgz2nho"
-#~ msgstr "Nhopkg tgz2nho"
-
-#~ msgid " * One or more packages aren't valid."
-#~ msgstr " * Un ou plusieurs paquets ne sont pas valides."
-
-#~ msgid " * Unable to download files from repository."
-#~ msgstr " * Le téléchargement des fichiers a échoué."
-
-#~ msgid " *** Unable to download files from repository."
-#~ msgstr " *** Le téléchargement a échoué."
-
-#~ msgid " * Unable to clean up cache."
-#~ msgstr " * Impossible nettoyer le cache."
-
-#~ msgid " * Unable to clean up build directory."
-#~ msgstr " * Impossible nettoyer le répertoire de construction."
+msgstr "Travail : /work ->"
