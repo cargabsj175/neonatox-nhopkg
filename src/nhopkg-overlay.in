@@ -121,11 +121,6 @@ trap cleanup EXIT INT TERM
 command -v nhopkg >/dev/null 2>&1 || die "nhopkg not found"
 command -v mount >/dev/null 2>&1 || die "mount not available"
 
-# Verificar soporte de overlay en el kernel
-if ! grep -q overlay /proc/filesystems 2>/dev/null; then
-	die "Overlay filesystem not supported by kernel"
-fi
-
 # ===============================
 # Setup overlay
 # ===============================
