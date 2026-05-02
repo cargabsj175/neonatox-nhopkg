@@ -68,6 +68,11 @@ foreach tool : optional_tools
   endif
 endforeach
 
+# Herramientas para gestión de traducciones
+xgettext_prog = find_program('xgettext', required: false)
+msgmerge_prog = find_program('msgmerge', required: false)
+msginit_prog = find_program('msginit', required: false)
+
 # === Subdirectorios ===
 subdir('src')
 subdir('data')
