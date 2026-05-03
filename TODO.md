@@ -47,9 +47,25 @@ fi
 
 ---
 
-## Mejoras a Largo Plazo
+## Metas a Largo Plazo (Nhopkg 0.6+)
 
-### 7. Centralizar patrón de parseo de argumentos ⏳
+### 10. Funcionalidades del TODO original
+
+| Meta | Descripción |
+|------|-------------|
+| **Auto-package** | Buscar dependencias automáticamente desde `configure.ac` o similar |
+| **Build más rápido** | Reducir tiempo para crear paquetes binarios |
+| **Config local** | Soporte para archivo de configuración local (`~/.nhopkg/nhopkg.conf`) |
+| **Barra de progreso** | Barra de progreso para descargas (sin depender de wget) |
+| **Conflictos** | Opción para agregar paquetes en conflicto manualmente |
+| **Búsqueda avanzada** | Buscar paquetes huérfanos, obsoletos y nuevos disponibles |
+| **rpm2nho** | Convertir paquetes RPM a formato Nhopkg |
+| **deb2nho** | Convertir paquetes DEB a formato Nhopkg |
+| **PKGBUILD2nhoid** | Convertir PKGBUILD de Arch Linux a formato nhoid |
+
+---
+
+### 11. Centralizar patrón de parseo de argumentos ⏳
 - **Qué corregir**: Múltiples scripts implementan parseo manual de argumentos con `while/case`.
 - **Cómo**: Crear función auxiliar para parseo de opciones largas en `libnhopkg.in`:
 ```bash
@@ -65,7 +81,7 @@ parse_common_args() {
 }
 ```
 
-### 8. CI/CD para traducciones ⏳
+### 12. CI/CD para traducciones ⏳
 - **Qué**: Validar traducciones en CI (sintaxis, consistencia).
 - **Cómo**:
 ```yaml
@@ -74,7 +90,7 @@ parse_common_args() {
 - run: msgfmt --statistics po/*.po
 ```
 
-### 9. Documentar proceso de traducción ⏳
+### 13. Documentar proceso de traducción ⏳
 - **Archivo**: `docs/i18n.md` con flujo recomendado para contribuidores.
 
 ---
