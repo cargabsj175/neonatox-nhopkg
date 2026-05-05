@@ -522,7 +522,7 @@ case "${NHOPKG_OPTION}" in
 		mkdir -p "$repodir"
 
 		# ---------- PACKAGES ----------
-		tmpbuild="$repodir/.build.$$"
+		tmpbuild="$NHOPKG_TMPDIR/$reponame/.build.$$"
 		mkdir -p "$tmpbuild"
 
 		if [ -f "$repodir/core.packages.tar.zst" ]; then
@@ -545,15 +545,15 @@ case "${NHOPKG_OPTION}" in
 			ln -sf "$full" "$tmpbuild/$pkgname"
 		done
 
-		tar cf "$repodir/.packages.$$" -C "$tmpbuild" . 2>/dev/null
-		zstd -q -f "$repodir/.packages.$$"
-		mv -f "$repodir/.packages.$$.zst" \
+		tar cf "$NHOPKG_TMPDIR/$reponame/.packages.$$" -C "$tmpbuild" . 2>/dev/null
+		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.packages.$$"
+		mv -f "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst" \
 			  "$repodir/core.packages.tar.zst"
 
-		rm -rf "$tmpbuild" "$repodir/.packages.$$"
+		rm -rf "$tmpbuild" "$NHOPKG_TMPDIR/$reponame/.packages.$$"
 
 		# ---------- FILES ----------
-		tmpfiles="$repodir/.files.$$"
+		tmpfiles="$NHOPKG_TMPDIR/$reponame/.files.$$"
 		mkdir -p "$tmpfiles"
 
 		if [ -f "$repodir/core.files.tar.zst" ]; then
@@ -570,12 +570,12 @@ case "${NHOPKG_OPTION}" in
 			cp "$newfile" "$tmpfiles/"
 		done
 
-		tar cf "$repodir/.filesbuild.$$" -C "$tmpfiles" . 2>/dev/null
-		zstd -q -f "$repodir/.filesbuild.$$"
-		mv -f "$repodir/.filesbuild.$$.zst" \
+		tar cf "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$" -C "$tmpfiles" . 2>/dev/null
+		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
+		mv -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst" \
 			  "$repodir/core.files.tar.zst"
 
-		rm -rf "$tmpfiles" "$repodir/.filesbuild.$$"
+		rm -rf "$tmpfiles" "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
 
 		# ---------- content.db ----------
 		(

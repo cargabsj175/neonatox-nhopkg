@@ -265,7 +265,7 @@ dep_check_conflicts() {
 		local ver="$DEP_PARSED_VERSION"
 		
 		# 1. Verificar paquete instalado con nombre exacto
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${name}" ]]; then
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${name}" ]]; then
 			# Verificar si el nuevo paquete lo provee (caso de reemplazo)
 			if [[ " ${provides_list[@]} " == *" ${name} "* ]]; then
 				echog "   ⚠ ${new_pkgname} will REPLACE '${name}'"
@@ -274,7 +274,7 @@ dep_check_conflicts() {
 			fi
 			
 			# Comparar versiones
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${name}"
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${name}"
 			local inst_ver="${pkgversion}-${pkgrevision}"
 			
 			if [[ -n "$op" ]]; then
@@ -289,7 +289,7 @@ dep_check_conflicts() {
 		fi
 		
 		# 2. Verificar paquetes que proveen este nombre (LEVEL 2 - Provides)
-		for installed_pkg in "${NHOPKG_LOCALSTATEDIR}/packages/"*; do
+		for installed_pkg in "${ROOT_PKG_STATE_DIR}/packages/"*; do
 			[[ -f "$installed_pkg" ]] || continue
 			[[ -L "$installed_pkg" ]] && continue
 			
@@ -453,7 +453,7 @@ _dep_find_installed() {
 	# ==========================================================
 	# LEVEL 1: Direct search by package name (FAST)
 	# ==========================================================
-	for pkgfile in "${NHOPKG_LOCALSTATEDIR}/packages/${name}"* ; do
+	for pkgfile in "${ROOT_PKG_STATE_DIR}/packages/${name}"* ; do
 		[[ -f "$pkgfile" ]] || continue
 		[[ -L "$pkgfile" ]] && continue
 		
@@ -486,7 +486,7 @@ _dep_find_installed() {
 	# ==========================================================
 	# Esto cubre: librerías .so, virtual packages, pkgconfig, etc.
 	if [[ -z "$best_match" ]]; then
-		for pkgfile in "${NHOPKG_LOCALSTATEDIR}/packages/"* ; do
+		for pkgfile in "${ROOT_PKG_STATE_DIR}/packages/"* ; do
 			[[ -f "$pkgfile" ]] || continue
 			[[ -L "$pkgfile" ]] && continue
 			
@@ -521,7 +521,7 @@ _dep_find_in_repos() {
 	# LEVEL 1: Direct search by name in repositories (FAST)
 	# ==========================================================
 	for repo in $search_repos; do
-		local pkgdir="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
+		local pkgdir="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
 		[[ -d "$pkgdir" ]] || continue
 		
 		# Match exacto
@@ -651,8 +651,8 @@ _dep_download_all() {
 		# Search package on repos
 		local pkgfile=""
 		for repo in ${NHOPKG_ACTIVE_REPOS}; do
-			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_basename}" ]]; then
-				pkgfile="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_basename}"
+			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_basename}" ]]; then
+				pkgfile="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_basename}"
 				DEP_FOUND_REPO="$repo"
 				break
 			fi
@@ -669,7 +669,7 @@ _dep_download_all() {
 		
 		local repo_url=$(get_repo_url "$DEP_FOUND_REPO")
 		
-		wget --https-only -cqt 3 -T 20  --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache"  "${repo_url}/${nho_name}"
+		wget --https-only -cqt 3 -T 20  --directory-prefix="${ROOT_PKG_STATE_DIR}/cache"  "${repo_url}/${nho_name}"
 		check_if_ok " *** Failed to download package."
 		
 		DCASEPACKAGES+=("$nho_name")
@@ -691,7 +691,7 @@ _dep_install_single() {
     local pkg_basename="$1"
     make_tmp_dir
         
-    local pkgfile="${NHOPKG_LOCALSTATEDIR}/cache/${pkg_basename}"
+    local pkgfile="${ROOT_PKG_STATE_DIR}/cache/${pkg_basename}"
     [[ -f "$pkgfile" ]] || return 1
     
     tar xfC "$pkgfile" "$NHOPKG_TMPDIR"
@@ -708,9 +708,9 @@ _dep_install_single() {
         return 1
     fi
     
-    # Check if package is already installed (skip if same or newer version)
-    if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+    # Check if package is already installed in root (skip if same or newer version)
+    if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+        get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
         local installed_ver="${pkgversion}-${pkgrevision}"
         local new_ver="${pkgversion}-${pkgrevision}"
         
@@ -734,8 +734,8 @@ _dep_install_single() {
     fi
     
     # Remove old version if upgrading
-    if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-        get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+    if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+        get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
         echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
         remove_package
         remove_package_config_files
@@ -776,7 +776,7 @@ resolve_virtual_package()
 	RESOLVED_REPO=""
 
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
-		pkgdir="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
+		pkgdir="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
 		[[ -d "$pkgdir" ]] || continue
 
 		while IFS= read -r pkgfile; do
@@ -879,7 +879,7 @@ EOF
 # ---------------------------------------------------------
 get_packages_by_group() {
 	group="$1"
-	repo_dir="$NHOPKG_LOCALSTATEDIR/repo"
+	repo_dir="${ROOT_PKG_STATE_DIR}/repo"
 
 	[ -z "$NHOPKG_ACTIVE_REPOS" ] && NHOPKG_ACTIVE_REPOS="extra"
 
@@ -964,6 +964,42 @@ get_package_display_name()
 # Parameters: updates (optional: "silent")
 # ---------------------------------------------------------
 shooter_updates() {
+	# --- ROOT MODE: defer system updates, generate script ---
+	if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+		local POST_SHOOTER="${INSTALL_ROOT}/usr/local/bin/post-shooters.sh"
+		mkdir -p "${INSTALL_ROOT}/usr/local/bin"
+		cat >> "${POST_SHOOTER}" << 'SHOOTER_EOF'
+#!/bin/bash
+# Auto-generated by nhopkg --root
+# Run this script inside the chroot to update system caches
+set -e
+
+update_silent() {
+	local cmd="$1"; shift
+	command -v "$cmd" &>/dev/null && "$cmd" "$@" &>/dev/null || true
+}
+
+update_silent glib-compile-schemas /usr/share/glib-2.0/schemas
+
+if command -v gtk-update-icon-cache &>/dev/null && [ -d /usr/share/icons ]; then
+	for dir in /usr/share/icons/*/; do
+		[ -d "$dir" ] && gtk-update-icon-cache -q -t -f "$dir" &>/dev/null
+	done
+fi
+
+update_silent update-desktop-database /usr/share/applications
+update_silent update-mime-database /usr/share/mime
+[ -x "$(command -v mandb)" ] && [ -d /usr/share/man ] && mandb -q &>/dev/null || true
+[ -x "$(command -v fc-cache)" ] && [ -d /usr/share/fonts ] && fc-cache -f &>/dev/null || true
+[ -x "$(command -v ldconfig)" ] && ldconfig &>/dev/null || true
+[ -x "$(command -v gdk-pixbuf-query-loaders)" ] && gdk-pixbuf-query-loaders --update-cache &>/dev/null || true
+
+echo " - Post-shooters completed."
+SHOOTER_EOF
+		chmod +x "${POST_SHOOTER}"
+		return 0
+	fi
+
 	local verbose=true update_count=0 update_errors=0
 	local GLIB_SCHEMAS ICON_CACHE DESKTOP_DB MIME_DB MANDB FC_CACHE LDCONFIG GDK_PIXBUF
 
@@ -1283,6 +1319,10 @@ get_pwd_dir()
 # ---------------------------------------------------------
 update_local_db()
 {
+	# Skip in root mode: don't update host's locate database
+	if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+		return 0
+	fi
 	echogn " --- Updating database:"
 	echo " ${NHOPKG_DB}"
 	updatedb --output="${NHOPKG_DB}" --prunepaths="${NO_DIRS_IN_DB}"
@@ -1800,19 +1840,19 @@ getpackage()
 
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
 		# Try exact match
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" ]]; then
-			pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
-			pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
-			pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" ]]; then
+			pkgname=$(grep "^# Name:" "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgversion=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgrevision=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
 			pkgrepo="${repo}"
-			pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
-			pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgos=$(grep "^# OS:" "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
+			pkgarch=$(grep "^# Arch:" "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${CASEPACKAGE}" 2>/dev/null | awk -F'\t' '{print $2}')
 			found=1
 			break
 		fi
 
 		# Try by versioned name (e.g., zsnes → zsnes-2.0.12-n@RELEASEDATE@)
-		candidate=$(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${CASEPACKAGE}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1)
+		candidate=$(find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${CASEPACKAGE}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1)
 		if [[ -n "${candidate}" ]]; then
 			pkgname=$(grep "^# Name:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
 			pkgversion=$(grep "^# Version:" "${candidate}" 2>/dev/null | awk -F'\t' '{print $2}')
@@ -1828,17 +1868,17 @@ getpackage()
 	if [[ $found -eq 0 ]]; then
 		# Fallback: search via file list (old method)
 		get_good_file_name "${CASEPACKAGE}"
-		local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/repo/"*/files/*.zst 2>/dev/null | head -n1)
+		local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${ROOT_PKG_STATE_DIR}/repo/"*/files/*.zst 2>/dev/null | head -n1)
 		if [[ -n "${MATCHPACKAGE}" ]]; then
 			local repo_dir=$(echo "${MATCHPACKAGE}" | sed -E 's@.*/repo/([^/]*)/files/.*@\1@')
 			local pkgfile=$(basename "${MATCHPACKAGE}" .zst)
-			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" ]]; then
-				pkgname=$(grep "^# Name:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
-				pkgversion=$(grep "^# Version:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
-				pkgrevision=$(grep "^# Release:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" ]]; then
+				pkgname=$(grep "^# Name:" "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+				pkgversion=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+				pkgrevision=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
 				pkgrepo="${repo_dir}"
-				pkgos=$(grep "^# OS:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
-				pkgarch=$(grep "^# Arch:" "${NHOPKG_LOCALSTATEDIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+				pkgos=$(grep "^# OS:" "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
+				pkgarch=$(grep "^# Arch:" "${ROOT_PKG_STATE_DIR}/repo/${repo_dir}/packages/${pkgfile}" 2>/dev/null | awk -F'\t' '{print $2}')
 				found=1
 			fi
 		fi
@@ -1898,7 +1938,7 @@ downloadpackage()
 	local REPO_URL
 	REPO_URL=$(get_repo_url "${pkgrepo}")
 	# Download from that repository
-	wget --https-only -cqt 3 -T 20 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${REPO_URL}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	wget --https-only -cqt 3 -T 20 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${REPO_URL}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	check_if_ok " *** Failed to download package. Please, retry."
 }
 #======================================6
@@ -1985,8 +2025,9 @@ check_inverse_dependencies()
 # Usage: remove_package() (without arguments)
 remove_package()
 {
+	local state_dir="${ROOT_PKG_STATE_DIR}"
 	# Progress Bar variables.
-	TOTAL_FILES=$(zstdgrep -vc "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
+	TOTAL_FILES=$(zstdgrep -vc "^#" "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
 	DELETED_FILES="0"
 	SHELL_COLUMS=$(tput cols)
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-22))
@@ -1996,7 +2037,7 @@ remove_package()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	for removefiles in $(zstdgrep -v "^#" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
+	for removefiles in $(zstdgrep -v "^#" "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
 	do
 		# Check that file begin with /.
 		if  [[ $(echo "${removefiles}" | grep "^/") ]]; then
@@ -2058,11 +2099,12 @@ remove_package_all()
 # Usage: remove_package_config_files (without arguments)
 remove_package_config_files()
 {
+	local state_dir="${ROOT_PKG_STATE_DIR}"
 	# Remove configuration files.
-	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
-	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}"
-	rm -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
-	rm -f "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
+	rm -f "${state_dir}/packages/${pkgname}"
+	rm -f "${state_dir}/packages/${pkgname}-${pkgversion}"
+	rm -f "${state_dir}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+	rm -f "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 }
 # ---------------------------------------------------------
 # remove_replaced_package()
@@ -2072,7 +2114,8 @@ remove_package_config_files()
 remove_replaced_package()
 {
 	local old_pkg="$1"
-	if [[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkg}" ]]; then
+	local state_dir="${ROOT_PKG_STATE_DIR}"
+	if [[ ! -f "${state_dir}/packages/${old_pkg}" ]]; then
 		return 0
 	fi
 
@@ -2090,7 +2133,7 @@ remove_replaced_package()
 	local save_pkgrevision="$pkgrevision"
 
 	# Load data from the old package
-	get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${old_pkg}"
+	get_basic_data "${state_dir}/packages/${old_pkg}"
 
 	# Delete it
 	remove_package
@@ -2135,6 +2178,8 @@ fetch_git_source() {
 	if [[ -d "${build_dir}/.git" ]]; then
 		echog "   Repository already exists. Updating..."
 		cd "${build_dir}" || return 1
+		git reset --hard >/dev/null 2>&1
+		git clean -fd >/dev/null 2>&1
 		git fetch origin || return 1
 		if [[ -n "${git_ref}" ]]; then
 			git checkout "${git_ref}" || return 1
@@ -2246,7 +2291,11 @@ build_prepare() {
 			# fetch_tarball_source already verifies hash via download_with_hash_check()
 			fetch_tarball_source "${pkgsrcurl}"
 		fi
-		return $(( srcfile_found == false ))
+		if [[ $? -ne 0 ]]; then
+			echog " * Failed to fetch source from ${pkgsrcurl}" >&2
+			return 1
+		fi
+		srcfile_found=true
 	fi
 
 	# 2. Find local source files and VERIFY HASH before extracting
@@ -2757,14 +2806,14 @@ get_package_info()
 	fi
 
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_query}" ]]; then
+		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_query}" ]]; then
 			found=1
 			source_type="repo"
 			break
 		fi
 
 		# Soportar búsqueda por nombre base (ej: "zsnes" → "zsnes-1.51-1")
-		local candidates=($(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_query}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1))
+		local candidates=($(find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_query}-[0-9]*" -type f 2>/dev/null | sort -V | tail -1))
 		if [[ ${#candidates[@]} -gt 0 ]]; then
 			pkg_query=$(basename "${candidates[0]}")
 			found=1
@@ -2794,7 +2843,7 @@ get_package_info()
 	case "${source_type}" in
 		repo)
 			# Leer desde repo (ya tenemos pkg_query resuelto)
-			local pkg_meta="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_query}"
+			local pkg_meta="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_query}"
 			get_basic_data "${pkg_meta}"
 
 			grep "^# Package Maintainer:" "${pkg_meta}" | sed 's/^# //'
@@ -2836,7 +2885,7 @@ get_package_info()
 			# Exists on any repo?
 			local in_repo=0
 			for r in ${NHOPKG_ACTIVE_REPOS}; do
-				if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+				if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
 					echogn "Lasted version available:"
 					echo " ${pkgversion}-${pkgrevision}"
 					in_repo=1
@@ -2877,7 +2926,7 @@ get_package_info()
 			# Verificar disponibilidad en repos
 			local in_repo=0
 			for r in ${NHOPKG_ACTIVE_REPOS}; do
-				if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+				if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${r}/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
 					echogn "Lasted version available:"
 					echo " ${pkgversion}-${pkgrevision}"
 					in_repo=1
@@ -2965,12 +3014,12 @@ package_exists_in_repos()
 	
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
 		# Check if the exact package exists
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}" ]]; then
+		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}" ]]; then
 			return 0
 		fi
 		
 		# Search for package versions (name-version-revision)
-		if find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f &>/dev/null; then
+		if find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f &>/dev/null; then
 			return 0
 		fi
 	done
@@ -2992,8 +3041,8 @@ get_latest_version_in_repos()
 	
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
 		# Find the exact version first
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}" ]]; then
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/${pkg_name}"
+		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}" ]]; then
+			get_basic_data "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}"
 			pkgrepo="${repo}"
 			return 0
 		fi
@@ -3009,7 +3058,7 @@ get_latest_version_in_repos()
 				best_repo="${repo}"
 				best_pkgfile="${pkgfile}"
 			fi
-		done < <(find "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f -print0 2>/dev/null)
+		done < <(find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f -print0 2>/dev/null)
 	done
 	
 	if [[ -n "${best_version}" ]]; then
@@ -3062,35 +3111,35 @@ update_repositories()
 		echogn " :: Updating repository:"
 		echo " ${repo} (${repo_url})"
 		
-		REPO_PKG_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
-		REPO_FILE_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/files"
+		REPO_PKG_DIR="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
+		REPO_FILE_DIR="${ROOT_PKG_STATE_DIR}/repo/${repo}/files"
 		mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
 		
 		# Download lastsync
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/lastsync"
+		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/lastsync"
 		check_if_ok " * Unable to download lastsync for ${repo}."
 		
 		# Check if it's already updated
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync" ]]; then
-			ISYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync")
-			FSYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/cache/lastsync")
+		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync" ]]; then
+			ISYNC=$(cat "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync")
+			FSYNC=$(cat "${ROOT_PKG_STATE_DIR}/cache/lastsync")
 			if (( ${ISYNC} >= ${FSYNC} )); then
 				echog "   - Already up to date."
-				rm -f "${NHOPKG_LOCALSTATEDIR}/cache/lastsync"
+				rm -f "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 				continue
 			fi
 		fi
 		
 		# Download databases
 		echog "   - Downloading database..."
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.packages.tar.zst"
+		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.packages.tar.zst"
 		check_if_ok " *** Failed to download packages DB for ${repo}."
-		wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.files.tar.zst"
+		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.files.tar.zst"
 		check_if_ok " *** Failed to download files DB for ${repo}."
 		
 		# Extract files
-		zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
-		zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+		zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+		zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
 		
 		# Compress .zst files in /files
 		for filedb in "${REPO_FILE_DIR}"/*; do
@@ -3100,8 +3149,8 @@ update_repositories()
 		done
 		
 		# Update lastsync
-		mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync"
-		rm -f "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+		mv "${ROOT_PKG_STATE_DIR}/cache/lastsync" "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync"
+		rm -f "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 	done
 	
 	echog " - All repositories updated successfully."
@@ -3465,6 +3514,27 @@ done
 # Get selected packages.
 shift
 CASEPACKAGES="${@}"
+
+# ==============================================================================
+# Section: Root mode (bootstrap/isolated installation)
+# When --root is active, dependency resolution and conflict checking operate
+# against the target root, NOT the host system.
+# ==============================================================================
+if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+	# Resolve absolute path for INSTALL_ROOT
+	INSTALL_ROOT="$(cd "${INSTALL_ROOT}" && pwd)"
+	export NHOPKG_ROOT="${INSTALL_ROOT}"
+	# State directory inside the root (packages/, files/, repo/, cache/)
+	ROOT_PKG_STATE_DIR="${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}"
+	export ROOT_PKG_STATE_DIR
+	# Repo directory inside the root (repo/core/packages, repo/extra/packages, etc.)
+	ROOT_REPO_BASE="${INSTALL_ROOT}${NHOPKG_LOCALSTATEDIR}/repo"
+	export ROOT_REPO_BASE
+else
+	ROOT_PKG_STATE_DIR="${NHOPKG_LOCALSTATEDIR}"
+	ROOT_REPO_BASE="${NHOPKG_LOCALSTATEDIR}/repo"
+fi
+
 #==============================================================================
 # Section: Nhopkg Works!
 #==============================================================================
@@ -3603,8 +3673,8 @@ case "${NHOPKG_OPTION}" in
 			## 4. Checks dependencies.
 			if [[ "${NHOPKG_CHECKDEPS}" = "yes" ]]; then
 				echog " - Resolving Dependencies."
-				dep_resolve_from_nhoid "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "required"
-				dep_resolve_from_nhoid "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "optional"
+				dep_resolve_from_nhoid "${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "required"
+				dep_resolve_from_nhoid "${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}" "optional"
 			fi
 			## 5. Download and install dependencies.
 			echog " - Installing package and dependencies."
@@ -4278,50 +4348,50 @@ case "${NHOPKG_OPTION}" in
 			NHOPKG_REPO=$(echo "${NHOPKG_REPO}" | sed -e 's@/$@@')
 			# --- Original behavior here (code unchanged) ---
 			if [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo" ]]; then
-				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
-				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
-			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/packages" ]]; then
-				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/packages"
-			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/repo/files" ]]; then
-				mkdir -p "${NHOPKG_LOCALSTATEDIR}/repo/files"
-			elif [[ ! -d "${NHOPKG_LOCALSTATEDIR}/cache" ]]; then
-				mkdir -p "${NHOPKG_LOCALSTATEDIR}/cache"
+				mkdir -p "${ROOT_PKG_STATE_DIR}/repo/packages"
+				mkdir -p "${ROOT_PKG_STATE_DIR}/repo/files"
+			elif [[ ! -d "${ROOT_PKG_STATE_DIR}/repo/packages" ]]; then
+				mkdir -p "${ROOT_PKG_STATE_DIR}/repo/packages"
+			elif [[ ! -d "${ROOT_PKG_STATE_DIR}/repo/files" ]]; then
+				mkdir -p "${ROOT_PKG_STATE_DIR}/repo/files"
+			elif [[ ! -d "${ROOT_PKG_STATE_DIR}/cache" ]]; then
+				mkdir -p "${ROOT_PKG_STATE_DIR}/cache"
 			fi
-			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync" ]]; then
-				wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/lastsync" ]]; then
+				wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/lastsync"
 				check_if_ok " * Unable to download files from repository."
-				ISYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/repo/lastsync)
-				FSYNC=$(cat ${NHOPKG_LOCALSTATEDIR}/cache/lastsync)
+				ISYNC=$(cat ${ROOT_PKG_STATE_DIR}/repo/lastsync)
+				FSYNC=$(cat ${ROOT_PKG_STATE_DIR}/cache/lastsync)
 				if (( ${ISYNC} == ${FSYNC} )) || (( ${ISYNC} > ${FSYNC} )); then
 					echog " * Repository already is updated." >&2
 					exit 1
 				fi
-				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+				rm -f "${ROOT_PKG_STATE_DIR}/repo/lastsync"
 			else
-				wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/lastsync"
+				wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/lastsync"
 				check_if_ok " * Unable to download files from repository."
-				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/files/"*
-				rm -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/"*
+				rm -f "${ROOT_PKG_STATE_DIR}/repo/files/"*
+				rm -f "${ROOT_PKG_STATE_DIR}/repo/packages/"*
 			fi
 			echog " - Downloading configuration files from server."
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/content.db.zst"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/content.db.zst"
 			check_if_ok " * Unable to download files from repository."
 			echog " --- Downloading files database."
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
 			echog " --- Downloading packages database."
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
-			mv "${NHOPKG_LOCALSTATEDIR}/cache/content.db.zst" "${NHOPKG_LOCALSTATEDIR}/repo/content.db.zst"
-			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/packages" 2> /dev/null
-			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${NHOPKG_LOCALSTATEDIR}/repo/files" 2> /dev/null
-			for i in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/files" 2>/dev/null); do
-				zstd --rm "${NHOPKG_LOCALSTATEDIR}/repo/files/${i}" 2> /dev/null
+			mv "${ROOT_PKG_STATE_DIR}/cache/content.db.zst" "${ROOT_PKG_STATE_DIR}/repo/content.db.zst"
+			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/packages" 2> /dev/null
+			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/files" 2> /dev/null
+			for i in $(ls "${ROOT_PKG_STATE_DIR}/repo/files" 2>/dev/null); do
+				zstd --rm "${ROOT_PKG_STATE_DIR}/repo/files/${i}" 2> /dev/null
 			done
-			mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/lastsync"
+			mv "${ROOT_PKG_STATE_DIR}/cache/lastsync" "${ROOT_PKG_STATE_DIR}/repo/lastsync"
 			echog " - Repository database updated successfully."
-			rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst"
-			rm -rf "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+			rm -rf "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
+			rm -rf "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 			exit 0
 		fi
 
@@ -4356,35 +4426,35 @@ case "${NHOPKG_OPTION}" in
 			echo " ${repo} (${repo_url})"
 
 			# Specific directories
-			REPO_PKG_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/packages"
-			REPO_FILE_DIR="${NHOPKG_LOCALSTATEDIR}/repo/${repo}/files"
+			REPO_PKG_DIR="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
+			REPO_FILE_DIR="${ROOT_PKG_STATE_DIR}/repo/${repo}/files"
 			mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
 
 			# Download lastsync
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/lastsync"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/lastsync"
 			check_if_ok " * Unable to download lastsync for ${repo}."
 
 			# Check if it's already synchronized
-			if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync" ]]; then
-				ISYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync")
-				FSYNC=$(cat "${NHOPKG_LOCALSTATEDIR}/cache/lastsync")
+			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync" ]]; then
+				ISYNC=$(cat "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync")
+				FSYNC=$(cat "${ROOT_PKG_STATE_DIR}/cache/lastsync")
 				if (( ${ISYNC} >= ${FSYNC} )); then
 					echog "   - Already up to date."
-					rm -f "${NHOPKG_LOCALSTATEDIR}/cache/lastsync"
+					rm -f "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 					continue
 				fi
 			fi
 
 			# Download databases
 			echog "   - Downloading database..."
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.packages.tar.zst"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.packages.tar.zst"
 			check_if_ok " *** Failed to download packages DB for ${repo}."
-			wget --https-only -cqt 3 --directory-prefix="${NHOPKG_LOCALSTATEDIR}/cache" "${repo_url}/core.files.tar.zst"
+			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.files.tar.zst"
 			check_if_ok " *** Failed to download files DB for ${repo}."
 
 			# Extract to the repo subdirectory
-			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
-			zstdcat "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
 
 			# Compress .zst files in /files (like the original does)
 			for filedb in "${REPO_FILE_DIR}"/*; do
@@ -4394,10 +4464,10 @@ case "${NHOPKG_OPTION}" in
 			done
 
 			# Move lastsync
-			mv "${NHOPKG_LOCALSTATEDIR}/cache/lastsync" "${NHOPKG_LOCALSTATEDIR}/repo/${repo}/lastsync"
+			mv "${ROOT_PKG_STATE_DIR}/cache/lastsync" "${ROOT_PKG_STATE_DIR}/repo/${repo}/lastsync"
 
 			# Cleaning temporary repo cache
-			rm -f "${NHOPKG_LOCALSTATEDIR}/cache/core.packages.tar.zst" "${NHOPKG_LOCALSTATEDIR}/cache/core.files.tar.zst"
+			rm -f "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 		done
 
 		echog " - All repositories updated successfully."
@@ -4439,10 +4509,10 @@ case "${NHOPKG_OPTION}" in
 
 	echog " - Checking for available updates..."
 	for installed_pkg in "${installedpackages[@]}"; do
-		[[ -h "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
-		[[ ! -f "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}" ]] && continue
+		[[ -h "${ROOT_PKG_STATE_DIR}/packages/${installed_pkg}" ]] && continue
+		[[ ! -f "${ROOT_PKG_STATE_DIR}/packages/${installed_pkg}" ]] && continue
 
-		get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${installed_pkg}"
+		get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${installed_pkg}"
 		current_pkgname="${pkgname}"
 		current_full_version="${pkgversion}-${pkgrevision}"
 
@@ -4481,8 +4551,8 @@ case "${NHOPKG_OPTION}" in
 		getpackage || continue
 
 		# Check if package is already installed with same or newer version
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
 			installed_ver="${pkgversion}-${pkgrevision}"
 			new_ver="${pkgversion}-${pkgrevision}"
 
@@ -4493,7 +4563,7 @@ case "${NHOPKG_OPTION}" in
 		fi
 
 		# Conflict check
-		dep_check_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		dep_check_conflicts "${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 
 		# Download package
 		echog " --- Downloading: ${pkgname}-${pkgversion}-${pkgrevision}"
@@ -4503,7 +4573,7 @@ case "${NHOPKG_OPTION}" in
 		cleanup_tmp_dir
 		make_tmp_dir
 
-		tar xfC "${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" || exit 1
+		tar xfC "${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" || exit 1
 		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 
 		# Security checks
@@ -4521,8 +4591,8 @@ case "${NHOPKG_OPTION}" in
 		dep_check_conflicts "${NHOPKG_TMPDIR}/nhoid"
 
 		# Remove OLD version if installed
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
 			echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
 			remove_package
 			remove_package_config_files
@@ -4606,9 +4676,9 @@ case "${NHOPKG_OPTION}" in
 		CASEPACKAGE="$pkg"
 		getpackage || continue
 
-		# Check if package is already installed
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		# Check if package is already installed (in root or host)
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
 			installed_ver="${pkgversion}-${pkgrevision}"
 			new_ver="${pkgversion}-${pkgrevision}"
 
@@ -4622,7 +4692,7 @@ case "${NHOPKG_OPTION}" in
 		fi
 
 		# Conflict check
-		dep_check_conflicts "${NHOPKG_LOCALSTATEDIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+		dep_check_conflicts "${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 
 		# Download package
 		echog " - Downloading: ${pkgname}-${pkgversion}-${pkgrevision}"
@@ -4633,7 +4703,7 @@ case "${NHOPKG_OPTION}" in
 		make_tmp_dir
 
 		tar xfC \
-			"${NHOPKG_LOCALSTATEDIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2>/dev/null
+			"${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2>/dev/null
 		check_if_ok " * Unable to uncompress package."
 
 		if [ -f "${NHOPKG_TMPDIR}/nhoid" ]; then
@@ -4661,8 +4731,8 @@ case "${NHOPKG_OPTION}" in
 		[ -n "$DEP_REPLACE_PACKAGE" ] && remove_replaced_package "$DEP_REPLACE_PACKAGE"
 
 		# Remove OLD version if upgrading
-		if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${pkgname}"
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
 			echog " --- Removing old: ${pkgname}-${pkgversion}-${pkgrevision}"
 			remove_package
 			remove_package_config_files
@@ -4699,7 +4769,7 @@ case "${NHOPKG_OPTION}" in
 		check_if_root_uid
 		echog " - Cleaning up cache data."
 		## 2. Clean up cache data.
-		rm -Rf "${NHOPKG_LOCALSTATEDIR}/cache/"*
+		rm -Rf "${ROOT_PKG_STATE_DIR}/cache/"*
 		check_if_ok " * Unable to clean up cache."
 		if [[ "${NHOPKG_RECURSIVE}" = "yes" ]]; then
 			echog " - Cleaning up build directory."
@@ -4731,7 +4801,7 @@ case "${NHOPKG_OPTION}" in
 			echogn " :: Searching for:"
 			echo " ${CASEPACKAGE}"
 			declare -a RESULTS
-			RESULTS=($(find "${NHOPKG_LOCALSTATEDIR}/repo/packages/" -iname "*${CASEPACKAGE}*" -type f))
+			RESULTS=($(find "${ROOT_PKG_STATE_DIR}/repo/packages/" -iname "*${CASEPACKAGE}*" -type f))
 			if [[ "${#RESULTS[@]}" != "0" ]]; then
 				echogn " - Results found:"
 				echo " ${#RESULTS[@]}"
@@ -4776,15 +4846,15 @@ case "${NHOPKG_OPTION}" in
 		echogn " :: Listing packages on repository:"
 		echo " ${NHOPKG_REPO}"
 		## 2. Get packages on repository.
-		if [[ ! $(ls "${NHOPKG_LOCALSTATEDIR}/repo/packages/") ]]; then
+		if [[ ! $(ls "${ROOT_PKG_STATE_DIR}/repo/packages/") ]]; then
 			echog " * No results found" >&2
 			exit 1
 		fi
-		for packagerepo in $(ls "${NHOPKG_LOCALSTATEDIR}/repo/packages/");
+		for packagerepo in $(ls "${ROOT_PKG_STATE_DIR}/repo/packages/");
 		do
-			if [[ ! -h "${NHOPKG_LOCALSTATEDIR}/repo/packages/${packagerepo}" ]]; then
+			if [[ ! -h "${ROOT_PKG_STATE_DIR}/repo/packages/${packagerepo}" ]]; then
 				## 3. Shows packages.
-				get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${packagerepo}"
+				get_basic_data "${ROOT_PKG_STATE_DIR}/repo/packages/${packagerepo}"
 				echo
 				echogn "Package:"
 				echo " ${pkgname}"
@@ -4832,8 +4902,8 @@ case "${NHOPKG_OPTION}" in
 					echo " ${pkgname}" >> "${LOG_FILE}"
 					echogn "Description:" >> "${LOG_FILE}"
 					echo " ${pkgdescription}" >> "${LOG_FILE}"
-					if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
-						get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+					if [[ -f "${ROOT_PKG_STATE_DIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+						get_basic_data "${ROOT_PKG_STATE_DIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 						echogn "Lasted version avaliable:" >> "${LOG_FILE}"
 						echo " ${pkgversion}-${pkgrevision}" >> "${LOG_FILE}"
 					else
@@ -4846,8 +4916,8 @@ case "${NHOPKG_OPTION}" in
 					echo " ${pkgname}"
 					echogn "Description:"
 					echo " ${pkgdescription}"
-					if [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
-						get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
+					if [[ -f "${ROOT_PKG_STATE_DIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}" ]]; then
+						get_basic_data "${ROOT_PKG_STATE_DIR}/repo/packages/${pkgname}-${pkgversion}-${pkgrevision}"
 						echogn "Lasted version avaliable:"
 						echo " ${pkgversion}-${pkgrevision}"
 					else
@@ -4954,15 +5024,15 @@ case "${NHOPKG_OPTION}" in
 				else
 					zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 				fi
-			elif [[ -f "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}" ]]; then
-				get_basic_data "${NHOPKG_LOCALSTATEDIR}/repo/packages/${CASEPACKAGE}"
-				if [[ ! $(zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
+			elif [[ -f "${ROOT_PKG_STATE_DIR}/repo/packages/${CASEPACKAGE}" ]]; then
+				get_basic_data "${ROOT_PKG_STATE_DIR}/repo/packages/${CASEPACKAGE}"
+				if [[ ! $(zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
 					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
 					exit 1
 				fi
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
+					zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4971,7 +5041,7 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					zstdcat "${NHOPKG_LOCALSTATEDIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
+					zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 				fi
 			# For local .nho packages.
 			elif [[ -f "${CASEPACKAGE}" ]] && [[ $(basename "${CASEPACKAGE}" .nho) != "${CASEPACKAGE}" ]]; then
