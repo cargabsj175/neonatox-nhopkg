@@ -2562,10 +2562,12 @@ build_nhoid_to_bin()
 	grep '^# Version:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# Release:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
 	grep '^# License:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid"
-	# prefix lib32- for lib32 packages with defined groups
+	# lib32- prefix for lib32 packages with defined groups, also correct groups according to the split package in the binary nhoid
 	if [ "$part" = "lib32" ] && grep -q '^# Group:' "${NHOPKG_TMPDIR}/.nhoid"; then
 		grpval=$(grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" | sed 's/^# Group:\t//')
-		[ -n "$grpval" ] && echo "# Group:	lib32-$grpval" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+		[ -n "$grpval" ] && printf "# Group:\tlib32-%s\n" "$grpval" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+	elif [ -n "$part" ] && [ "$part" != "lib32" ]; then
+		grep "^# Group${part:+_${part}}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Group${part:+_${part}}:/# Group:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	else
 		grep '^# Group:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	fi
@@ -2577,9 +2579,11 @@ build_nhoid_to_bin()
 	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	fi
 	# Add new arch.
-	# Determine architecture correctly based on source package
+	# Determine architecture correctly based on source/type package
 	original_arch=$(grep "^# Arch:" "${NHOPKG_TMPDIR}/.nhoid" 2>/dev/null | awk -F'\t' '{print $2}' | tr -d '[:space:]')
-	if [[ -n "${original_arch}" ]] && ([[ "${original_arch}" == "noarch" ]] || [[ "${original_arch}" == "all" ]] || [[ "${original_arch}" == "any" ]]); then
+	if [[ "$part" == "doc" || "$part" == "docs" ]]; then
+		final_arch="any"
+	elif [[ -n "${original_arch}" ]] && ([[ "${original_arch}" == "noarch" ]] || [[ "${original_arch}" == "all" ]] || [[ "${original_arch}" == "any" ]]); then
 		final_arch="${original_arch}"
 	else
 		final_arch="${BUILD_ARCH}"
