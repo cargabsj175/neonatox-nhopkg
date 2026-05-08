@@ -237,10 +237,10 @@ get_basic_data()
 	pkgrevision=$(grep "# Release:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	pkgdescription=$(grep "^# Description:" "${1}" 2> /dev/null | awk -F'\t' '{print $2}')
 	# Checks that are all fields.
-	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]]\
+	if [[ -z "${pkgname}" ]] || [[ -z "${pkgversion}" ]] \
 	|| [[ -z "${pkgrevision}" ]] || [[ -z "${pkgdescription}" ]]; then
 		echog " * Failed to get package info." >&2
-		exit 1
+		return 1
 	fi
 }
 ## get_nhoid_data(). Get data from package and checks that is a correct package.
@@ -506,7 +506,8 @@ check_package_hash() {
 
 	# No hash found in nhoid
 	if [[ $hash_found -eq 0 ]]; then
-		echog " *** WARNING: No hash defined in package" >&2
+			#echog " *** WARNING: No hash defined in package" >&2
+			noemptyfuncs
 		if [[ "${NHOPKG_REQUIRE_HASH}" = "yes" ]]; then
 			echog " *** Hash required but not found. Aborting." >&2
 			return 1

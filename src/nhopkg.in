@@ -2574,6 +2574,9 @@ build_nhoid_to_bin()
 	# Force "multilib" as repo in lib32 packages
 	if [ "$part" = "lib32" ]; then
 	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"
+	# Allow set repositories on split packages
+	elif [ -n "$part" ] && [ "$part" != "lib32" ]; then
+		grep "^# Repository${part:+_${part}}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Repository${part:+_${part}}:/# Repository:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
 	else
 	# Copy the Repository field if it exists
 	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
@@ -4657,8 +4660,22 @@ case "${NHOPKG_OPTION}" in
 	done
 
 	# 3. Normalize list (deduplicate + sanitize)
+	# Use sort -u for basic dedup, then filter by pkgname only
 	sed -i '/^$/d; /^-/d' "$PKG_LIST_FILE"
 	sort -u "$PKG_LIST_FILE" -o "$PKG_LIST_FILE"
+
+	# Additional dedup: keep only first occurrence of each pkgname
+	declare -A SEEN_PKG
+	TMP_LIST_FILE="$(mktemp /tmp/nhopkg-install-group-dedup-XXXXXX.list)" || exit 1
+	while IFS= read -r pkg_entry; do
+		# Extract pkgname (remove version-revision and arch/nho suffix)
+		pkg_base=$(echo "$pkg_entry" | sed 's/-[0-9].*//')
+		if [[ -z "${SEEN_PKG[${pkg_base}]}" ]]; then
+			echo "$pkg_entry" >> "$TMP_LIST_FILE"
+			SEEN_PKG[${pkg_base}]=1
+		fi
+	done < "$PKG_LIST_FILE"
+	mv -f "$TMP_LIST_FILE" "$PKG_LIST_FILE"
 
 	[ ! -s "$PKG_LIST_FILE" ] && {
 		echog " * No packages to install." >&2
@@ -4673,27 +4690,52 @@ case "${NHOPKG_OPTION}" in
 	check_if_ok " * Packages will not be installed."
 
 	# 5. Install each package individually (like individual install)
+	declare -A PROCESSED_PKGS
 	while IFS= read -r pkg; do
-		echog " --- Processing: $pkg"
-
-		# Resolve package info (get pkgname, pkgversion, pkgrevision)
+		# Skip empty lines
+		[[ -z "$pkg" ]] && continue
+		
+		echog "--- Processing: $pkg" >&2
+		
+		# Resolve package info (get pkgname, pkgversion, pkgrevision FROM REPO)
 		CASEPACKAGE="$pkg"
-		getpackage || continue
+		if ! getpackage; then
+			echog " * Failed to get package info for: $pkg" >&2
+			continue
+		fi
+		
+		# Skip if pkgname is empty
+		[[ -z "$pkgname" ]] && continue
+
+		# Skip if already processed in this session (dedup)
+		if [[ -n "${PROCESSED_PKGS[${pkgname}]}" ]]; then
+			echog " --- Skipping: $pkg (already processed in this session)"
+			continue
+		fi
+
+		# Save repo version BEFORE get_basic_data overwrites it
+		new_ver="${pkgversion}-${pkgrevision}"
 
 		# Check if package is already installed (in root or host)
 		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
+			if ! get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"; then
+				echog " * Failed to get installed package info for: ${pkgname}" >&2
+				cleanup_tmp_dir
+				continue
+			fi
 			installed_ver="${pkgversion}-${pkgrevision}"
-			new_ver="${pkgversion}-${pkgrevision}"
 
 			# Compare versions: if same or newer, skip
 			if version_compare "$new_ver" "<=" "$installed_ver"; then
 				echog " --- Skipping: $pkg (already installed: $installed_ver)"
+				PROCESSED_PKGS[${pkgname}]=1
 				continue
 			else
 				echog " --- Upgrading: $pkg (installed: $installed_ver)"
 			fi
 		fi
+
+		PROCESSED_PKGS[${pkgname}]=1
 
 		# Conflict check
 		dep_check_conflicts "${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${pkgversion}-${pkgrevision}"
@@ -4743,6 +4785,12 @@ case "${NHOPKG_OPTION}" in
 		fi
 
 		# Install this package
+		# Safety check: skip if pkgname is empty
+		if [[ -z "${pkgname}" ]]; then
+			cleanup_tmp_dir
+			continue
+		fi
+
 		bin_install
 		bin_install_setting_up
 		bin_install_create_config_files
