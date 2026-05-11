@@ -74,6 +74,9 @@ VERBOSE_MODE=no
 # Strip binaries and libraries after installation (experimental)
 STRIP_BINARIES=no
 
+# Packages to hold (never delete their files on uninstall)
+NHOHOLD="nhopkg glibc gcc"
+
 
 #==============================================================================
 # Section: Init System

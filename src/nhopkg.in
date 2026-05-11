@@ -305,8 +305,27 @@ dep_check_conflicts() {
 						if version_compare "$prov_ver" "$op" "$ver"; then
 							echog " *** CONFLICT: ${new_pkgname} vs provider of ${name}" >&2
 							return 1
-						fi
-					else
+		fi
+
+		# --- Backup: restore preserved files after extraction ---
+		if [[ -d "$BACKUP_DIR" ]]; then
+			for backup_file in "${BACKUP_FILES[@]}"; do
+				local saved="${BACKUP_DIR}/${backup_file}"
+				if [[ -f "$saved" ]]; then
+					local target="${backup_file}"
+					[[ "$target" != /* ]] && target="/$target"
+					if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+						target="${INSTALL_ROOT}${target}"
+					fi
+					cp -f "$saved" "$target"
+					if [[ "${VERBOSE_MODE}" = "yes" ]]; then
+						echog "AVISO: ${target} preservado (Backup)"
+					fi
+				fi
+			done
+			rm -rf "$BACKUP_DIR"
+		fi
+	else
 						echog " *** CONFLICT: ${new_pkgname} vs provider of ${name}" >&2
 						return 1
 					fi
@@ -889,10 +908,13 @@ get_packages_by_group() {
 
 		find "$pkgdir" -maxdepth 1 -type f -print | while IFS= read -r pkg_file; do
 			[ -L "$pkg_file" ] && continue
-			pkg_group=$(sed -n 's/^# Group:[[:space:]]*//p' "$pkg_file")
-			if [ "$pkg_group" = "$group" ]; then
-				basename "$pkg_file"
-			fi
+			# Read ALL '# Group:' lines and match any of them
+			sed -n 's/^# Group:[[:space:]]*//p' "$pkg_file" | while IFS= read -r pkg_group; do
+				if [ "$pkg_group" = "$group" ]; then
+					basename "$pkg_file"
+					break
+				fi
+			done
 		done
 	done
 }
@@ -1709,6 +1731,30 @@ bin_install()
 {
 	echogn " --- Installing"
 	echo " ${pkgname}-${pkgversion}-${pkgrevision}"
+
+	# --- Backup: save files listed in # Backup: from nhoid before extraction ---
+	declare -a BACKUP_FILES=()
+	local BACKUP_DIR="${NHOPKG_TMPDIR}/backup"
+	if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+		while IFS= read -r backup_file; do
+			[[ -n "$backup_file" ]] && BACKUP_FILES+=("$backup_file")
+		done < <(grep "^# Backup:" "${NHOPKG_TMPDIR}/nhoid" | awk -F'\t' '{print $2}')
+	fi
+	if [[ ${#BACKUP_FILES[@]} -gt 0 ]]; then
+		mkdir -p "$BACKUP_DIR"
+		for backup_file in "${BACKUP_FILES[@]}"; do
+			local target="${backup_file}"
+			[[ "$target" != /* ]] && target="/$target"
+			if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
+				target="${INSTALL_ROOT}${target}"
+			fi
+			if [[ -f "$target" ]]; then
+				mkdir -p "$(dirname "${BACKUP_DIR}/${backup_file}")"
+				cp -f "$target" "${BACKUP_DIR}/${backup_file}"
+			fi
+		done
+	fi
+
 	if [ -f "${NHOPKG_TMPDIR}/data.tar.zst" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.xz" ] || [ -f "${NHOPKG_TMPDIR}/data.tar.bz2" ]; then
 		# Checks if --root or --root= option are selected.
 		if [[ "${USE_INSTALL_ROOT}" = "yes" ]]; then
@@ -2026,6 +2072,13 @@ check_inverse_dependencies()
 remove_package()
 {
 	local state_dir="${ROOT_PKG_STATE_DIR}"
+
+	# NHOHOLD: skip file deletion for held packages
+	if [[ -n "$NHOHOLD" ]] && [[ " ${NHOHOLD} " =~ " ${pkgname} " ]]; then
+		echog " - ${pkgname} está en NHOHOLD. Archivos conservados."
+		return 0
+	fi
+
 	# Progress Bar variables.
 	TOTAL_FILES=$(zstdgrep -vc "^#" "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
 	DELETED_FILES="0"
@@ -4650,7 +4703,7 @@ case "${NHOPKG_OPTION}" in
 	# 2. Collect packages from groups
 	for GROUP in $CASEPACKAGES; do
 		case "$GROUP" in
-			--*|-*)
+			''|--*|-*)
 				echog " * Invalid group name: $GROUP" >&2
 				exit 1
 				;;

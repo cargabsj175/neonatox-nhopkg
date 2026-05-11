@@ -62,3 +62,14 @@
 | - | Fix bash reserved variable `GROUPS` | Cambiado a `ADDITIONAL_GROUPS` en `nhouser()` |
 | - | Fix falso positivo en resolución de dependencias | Validación estricta de nombres nhoid en `_dep_find_in_repos()` |
 | - | Remover check estricto de overlay en `/proc/filesystems` | `nhopkg-overlay.in` ahora deja que `mount` falle naturalmente |
+
+---
+
+## Features: NHOHOLD, Backup, Groups multilínea (2026-05)
+
+| # | Tarea | Archivos | Detalle |
+|---|-------|----------|---------|
+| 3 | Validación grupos install-group | `src/nhopkg.in:4655` | Case captura `''` vacío además de `--*`/`-*` |
+| 4 | NHOHOLD | `src/nhopkg.conf.in:77`, `src/nhopkg.in:2034` | Variable en config, `remove_package()` salta borrado de archivos si el paquete está retenido |
+| 5 | Backup nhoid | `src/nhopkg.in:bin_install()` | `# Backup:` en nhoid, archivos preservados antes de extraer y restaurados después. Aviso verboso con `-v` |
+| - | Groups multilínea | `src/nhopkg.in:892` | `get_packages_by_group()` itera todas las líneas `# Group:`, no solo la primera |
