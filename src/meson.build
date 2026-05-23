@@ -31,6 +31,13 @@ libnhopkg = configure_file(
   configuration: conf
 )
 
+# Configurar librería de resolución de dependencias en /usr/lib/nhopkg
+libnhopkg_udepsys = configure_file(
+  input: 'libnhopkg_udepsys.in',
+  output: 'libnhopkg_udepsys',
+  configuration: conf
+)
+
 # Instalar los scripts ejecutables
 install_data(
   [nhopkg_script, nhopkg_repos, nhouser, nhopkg_overlay],
@@ -40,7 +47,7 @@ install_data(
 
 # Instalar librería en libdir/nhopkg (/usr/lib/nhopkg)
 install_data(
-  libnhopkg,
+  [libnhopkg, libnhopkg_udepsys],
   install_dir: join_paths(get_option('libdir'), 'nhopkg'),
   install_mode: 'rw-r--r--'
 )

@@ -1,0 +1,726 @@
+#!/bin/bash
+#==============================================================================
+# libnhopkg_udepsys — Unified Dependency Resolution System
+#
+# Part of nhopkg package manager.
+# Extracted from nhopkg.in for modular use.
+#
+# Dependencies:
+#   - libnhopkg (echog, echogn, get_basic_data, get_nhoid_data,
+#                check_if_ok, cleanup_tmp_dir, make_tmp_dir,
+#                check_package_hash)
+#   - nhopkg.conf (NHOPKG_ACTIVE_REPOS, NHOPKG_CHECKDEPS, ...)
+#   - ROOT_PKG_STATE_DIR (set by caller before calling any function)
+#
+# Functions provided:
+#   dep_resolve_from_nhoid()   — Resolve deps from a nhoid file
+#   dep_install_queue()        — Install all queued dependencies
+#   dep_check_conflicts()      — Check Conflicts / Provides
+#   check_package_conflicts()  — Legacy wrapper
+#   resolve_virtual_package()  — Find a package by Provides
+#   version_compare()          — Compare version strings
+#   get_repo_url()             — Get URL for a repository
+#   _dep_resolve_single()      — Resolve one dependency (internal)
+#   _dep_parse_spec()          — Parse "name>=ver" spec (internal)
+#   _dep_find_installed()      — Search installed packages (internal)
+#   _dep_find_in_repos()       — Search repository packages (internal)
+#   _dep_resolve_children()    — Recurse into child deps (internal)
+#   _dep_provides_package()    — Check Provides (internal)
+#   _dep_download_all()        — Download queue (internal)
+#==============================================================================
+
+#==============================================================================
+# Global Dependency Resolution Arrays
+#==============================================================================
+declare -a RCASEPACKAGES=()		# Required packages from repos
+declare -a ORCASEPACKAGES=()	   # Optional packages from repos
+declare -a DCASEPACKAGES=()		# Downloaded packages queue
+declare -A DEP_RESOLVED_CACHE=()   # Cache: spec -> pkgfile path
+declare -A DEP_REPO_CACHE=()	   # Cache: spec -> repo name
+declare   DEP_FOUND_REPO=""		# Last found repository
+declare   DEP_REPLACE_PACKAGE=""   # Package to be replaced
+
+# Internal side-channel outputs
+declare   DEP_PARSED_NAME=""
+declare   DEP_PARSED_OP=""
+declare   DEP_PARSED_VERSION=""
+declare   RESOLVED_PKGFILE=""
+declare   RESOLVED_REPO=""
+
+#==============================================================================
+# Section: Core Dependency Resolution Functions (PUBLIC API)
+#==============================================================================
+
+#----------------------------------------------------------
+# dep_resolve_from_nhoid() - Resuelve dependencias DESDE un archivo nhoid
+#----------------------------------------------------------
+dep_resolve_from_nhoid() {
+	local nhoid_file="$1"
+	local dep_type="${2:-required}"
+	local silent="${3:-no}"
+	local search_repos="${4:-${NHOPKG_ACTIVE_REPOS}}"
+	local dep_pattern
+	local deps_found=0
+	
+	case "$dep_type" in
+		required) dep_pattern="^# Dep(post):" ;;
+		optional) dep_pattern="^# OptionalDep(post):" ;;
+		build) dep_pattern="^# BuildDep:" ;;
+		optional_build) dep_pattern="^# OptionalBuildDep:" ;;
+		*)
+			echog " *** Unknown dependency type: ${dep_type}" >&2
+			return 1
+			;;
+	esac
+	
+	if [[ "$silent" != "yes" ]]; then
+		local type_label
+		case "$dep_type" in
+			required) type_label="required" ;;
+			optional) type_label="optional" ;;
+			build) type_label="build" ;;
+			optional_build) type_label="optional build" ;;
+		esac
+		echogn " --- Processing Dependency:"
+		echo " (${type_label})"
+	fi
+	
+	while IFS= read -r dep_line; do
+		local deps=$(echo "$dep_line" | awk -F'\t' '{print $2}')
+		[[ -z "$deps" ]] && continue
+		
+		for dep_spec in $deps; do
+			[[ -z "$dep_spec" ]] && continue
+			((deps_found++))
+			
+			if ! _dep_resolve_single "$dep_spec" "$dep_type" "yes" "$silent" "$search_repos"; then
+				if [[ "$dep_type" = "required" ]] || [[ "$dep_type" = "build" ]]; then
+					echog " *** Dependency resolution failed for: ${dep_spec}" >&2
+					exit 1
+				fi
+				echog " *** Optional dependency not found: ${dep_spec}"
+			fi
+		done
+	done < <(grep "$dep_pattern" "$nhoid_file" 2>/dev/null)
+	
+	if [[ "$silent" != "yes" ]] && [[ $deps_found -eq 0 ]]; then
+		echog "   - No ${dep_type} dependencies found"
+	fi
+	
+	return 0
+}
+
+#----------------------------------------------------------
+# dep_install_queue() - Instala toda la cola de dependencias
+#----------------------------------------------------------
+dep_install_queue() {
+	local ask_user="${1:-yes}"
+	local dep_type="${2:-required}"
+	
+	local -a queue=()
+	
+	case "$dep_type" in
+		required) queue=("${RCASEPACKAGES[@]}") ;;
+		optional) queue=("${ORCASEPACKAGES[@]}") ;;
+		all) queue=("${RCASEPACKAGES[@]}" "${ORCASEPACKAGES[@]}") ;;
+	esac
+	
+	[[ ${#queue[@]} -eq 0 ]] && return 0
+	
+	if [[ "$ask_user" = "yes" ]]; then
+		local pkg_display="${pkgname}-${pkgversion}-${pkgrevision}"
+		
+		if [[ ${#queue[@]} -eq 1 ]]; then
+			echo -en "${BOLD}"
+			echo -n "${pkg_display} "
+			echo -en "${NORMAL}"
+			echogn "needs this dependency:"
+		else
+			echo -en "${BOLD}"
+			echo -n "${pkg_display} "
+			echo -en "${NORMAL}"
+			echogn "needs the following dependencies:"
+		fi
+		
+		local IFS=" "
+		echo " ${queue[*]}."
+		local IFS="${OLDIFS}"
+		
+		nhopkg_ask_follow || return 1
+		
+		case "$dep_type" in
+			required) Q_INSTALL_REQUIRED_DEPS="0" ;;
+			optional) Q_INSTALL_OPT_DEPS="0" ;;
+		esac
+	fi
+	
+	_dep_download_all "${queue[@]}"
+	_dep_install_all_from_queue
+	
+	case "$dep_type" in
+		required) RCASEPACKAGES=() ;;
+		optional) ORCASEPACKAGES=() ;;
+		all) RCASEPACKAGES=(); ORCASEPACKAGES=();;
+	esac
+	
+	return 0
+}
+
+#----------------------------------------------------------
+# dep_check_conflicts() - Verificación unificada de conflictos
+#----------------------------------------------------------
+dep_check_conflicts() {
+	local nhoid_file="$1"
+	local new_pkgname new_pkgversion new_pkgrevision
+	
+	get_basic_data "${nhoid_file}"
+	new_pkgname="$pkgname"
+	new_pkgversion="$pkgversion"
+	new_pkgrevision="$pkgrevision"
+	
+	local provides_list=()
+	local conflicts_specs=()
+	
+	while IFS= read -r line; do
+		local value=$(echo "$line" | awk -F'\t' '{print $2}')
+		[[ -n "$value" ]] && read -ra items <<< "$value" && provides_list+=("${items[@]}")
+	done < <(grep "^# Provides:" "${nhoid_file}" 2>/dev/null)
+	
+	while IFS= read -r line; do
+		local value=$(echo "$line" | awk -F'\t' '{print $2}')
+		[[ -n "$value" ]] && read -ra items <<< "$value" && conflicts_specs+=("${items[@]}")
+	done < <(grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null)
+	
+	[[ ${#conflicts_specs[@]} -eq 0 ]] && return 0
+	
+	echog " - Checking for conflicts..."
+	DEP_REPLACE_PACKAGE=""
+	
+	for conflict_spec in "${conflicts_specs[@]}"; do
+		_dep_parse_spec "$conflict_spec"
+		local name="$DEP_PARSED_NAME"
+		local op="$DEP_PARSED_OP"
+		local ver="$DEP_PARSED_VERSION"
+		
+		# 1. Check installed package with exact name
+		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${name}" ]]; then
+			if [[ " ${provides_list[@]} " == *" ${name} "* ]]; then
+				echog "   ${new_pkgname} will REPLACE '${name}'"
+				DEP_REPLACE_PACKAGE="$name"
+				continue
+			fi
+			
+			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${name}"
+			local inst_ver="${pkgversion}-${pkgrevision}"
+			
+			if [[ -n "$op" ]]; then
+				if version_compare "$inst_ver" "$op" "$ver"; then
+					echog " *** CONFLICT: ${new_pkgname} vs ${name} (${op}${ver})" >&2
+					return 1
+				fi
+			else
+				echog " *** CONFLICT: ${new_pkgname} vs ${name}" >&2
+				return 1
+			fi
+		fi
+		
+		# 2. Check packages that provide this name (LEVEL 2 - Provides)
+		for installed_pkg in "${ROOT_PKG_STATE_DIR}/packages/"*; do
+			[[ -f "$installed_pkg" ]] || continue
+			[[ -L "$installed_pkg" ]] && continue
+			
+			local prov_line=$(grep "^# Provides:" "$installed_pkg" 2>/dev/null)
+			[[ -z "$prov_line" ]] && continue
+			
+			for prov in $(echo "$prov_line" | sed 's/^# Provides:[[:space:]]*//'); do
+				if [[ "$prov" == "$name" ]] || [[ "$prov" == "$name="* ]]; then
+					get_basic_data "$installed_pkg"
+					local prov_ver="${pkgversion}-${pkgrevision}"
+					
+					if [[ -n "$op" ]]; then
+						if version_compare "$prov_ver" "$op" "$ver"; then
+							echog " *** CONFLICT: ${new_pkgname} vs provider of ${name}" >&2
+							return 1
+						fi
+					else
+						echog " *** CONFLICT: ${new_pkgname} vs provider of ${name}" >&2
+						return 1
+					fi
+				fi
+			done
+		done
+	done
+	
+	return 0
+}
+
+#==============================================================================
+# Section: Internal Helper Functions (PRIVATE - prefix _)
+#==============================================================================
+
+#----------------------------------------------------------
+# _dep_resolve_single() - Resuelve UNA dependencia específica
+#----------------------------------------------------------
+_dep_resolve_single() {
+	local spec="$1"
+	local dep_type="$2"
+	local recursive="${3:-yes}"
+	local silent="${4:-no}"
+	local search_repos="${5:-${NHOPKG_ACTIVE_REPOS}}"
+	
+	local name op version pkgfile repo
+	
+	[[ -z "$search_repos" ]] && search_repos="extra"
+	
+	_dep_parse_spec "$spec"
+	name="$DEP_PARSED_NAME"
+	op="$DEP_PARSED_OP"
+	version="$DEP_PARSED_VERSION"
+	
+	if [[ -n "${DEP_RESOLVED_CACHE[$spec]}" ]]; then
+		[[ "$silent" != "yes" ]] && echog "   - ${spec}: (cached from ${DEP_REPO_CACHE[$spec]})"
+		return 0
+	fi
+	
+	pkgfile=$(_dep_find_installed "$name" "$op" "$version")
+	if [[ -n "$pkgfile" ]]; then
+		DEP_RESOLVED_CACHE[$spec]="$pkgfile"
+		DEP_REPO_CACHE[$spec]="local"
+		[[ "$silent" != "yes" ]] && echog "   - ${spec}: (installed)"
+		return 0
+	fi
+	
+	pkgfile=$(_dep_find_in_repos "$name" "$op" "$version" "$search_repos")
+	if [[ -n "$pkgfile" ]]; then
+		DEP_RESOLVED_CACHE[$spec]="$pkgfile"
+		DEP_REPO_CACHE[$spec]="$DEP_FOUND_REPO"
+		
+		case "$dep_type" in
+			required|build)
+				RCASEPACKAGES+=("$(basename "$pkgfile")")
+				;;
+			optional|optional_build)
+				ORCASEPACKAGES+=("$(basename "$pkgfile")")
+				;;
+		esac
+		
+		[[ "$silent" != "yes" ]] && echog "   - ${spec}: (${DEP_FOUND_REPO:-repos})"
+		
+		if [[ "$recursive" = "yes" ]]; then
+			_dep_resolve_children "$pkgfile" "$dep_type" "$silent" "$search_repos"
+		fi
+		return 0
+	fi
+	
+	if [[ "$dep_type" = "required" ]] || [[ "$dep_type" = "build" ]]; then
+		[[ "$silent" != "yes" ]] && echog " *** ${spec} (NOT FOUND)" >&2
+		return 1
+	else
+		[[ "$silent" != "yes" ]] && echog "   ${spec} (optional, skipped)"
+		return 0
+	fi
+}
+
+#----------------------------------------------------------
+# _dep_parse_spec() - Parse package specification
+#----------------------------------------------------------
+_dep_parse_spec() {
+	local spec="$1"
+	DEP_PARSED_NAME=""
+	DEP_PARSED_OP=""
+	DEP_PARSED_VERSION=""
+	
+	if [[ "$spec" == *">="* ]]; then
+		DEP_PARSED_NAME="${spec%%>=*}"
+		DEP_PARSED_OP=">="
+		DEP_PARSED_VERSION="${spec#*>=}"
+	elif [[ "$spec" == *"<="* ]]; then
+		DEP_PARSED_NAME="${spec%%<=*}"
+		DEP_PARSED_OP="<="
+		DEP_PARSED_VERSION="${spec#*<=}"
+	elif [[ "$spec" == *"!="* ]]; then
+		DEP_PARSED_NAME="${spec%%!=*}"
+		DEP_PARSED_OP="!="
+		DEP_PARSED_VERSION="${spec#*!=}"
+	elif [[ "$spec" == *">"* ]]; then
+		DEP_PARSED_NAME="${spec%%>*}"
+		DEP_PARSED_OP=">"
+		DEP_PARSED_VERSION="${spec#*>}"
+	elif [[ "$spec" == *"<"* ]]; then
+		DEP_PARSED_NAME="${spec%%<*}"
+		DEP_PARSED_OP="<"
+		DEP_PARSED_VERSION="${spec#*<}"
+	elif [[ "$spec" == *"=="* ]]; then
+		DEP_PARSED_NAME="${spec%%==*}"
+		DEP_PARSED_OP="="
+		DEP_PARSED_VERSION="${spec#*==}"
+	elif [[ "$spec" == *"="* ]]; then
+		DEP_PARSED_NAME="${spec%%=*}"
+		DEP_PARSED_OP="="
+		DEP_PARSED_VERSION="${spec#*=}"
+	else
+		DEP_PARSED_NAME="$spec"
+		DEP_PARSED_OP=""
+		DEP_PARSED_VERSION=""
+	fi
+	
+	DEP_PARSED_NAME="${DEP_PARSED_NAME// /}"
+	DEP_PARSED_VERSION="${DEP_PARSED_VERSION// /}"
+}
+
+#----------------------------------------------------------
+# _dep_find_installed() - Search installed package (LEVEL 1 + LEVEL 2)
+#----------------------------------------------------------
+_dep_find_installed() {
+	local name="$1"
+	local op="$2"
+	local version="$3"
+	local pkgfile best_match best_ver
+	
+	for pkgfile in "${ROOT_PKG_STATE_DIR}/packages/${name}"* ; do
+		[[ -f "$pkgfile" ]] || continue
+		[[ -L "$pkgfile" ]] && continue
+		
+		local bn=$(basename "$pkgfile")
+		local real_pkg_name=""
+		real_pkg_name=$(grep "^# Name:" "$pkgfile" 2>/dev/null | awk -F'\t' '{print $2}')
+		
+		if [[ -z "$real_pkg_name" ]] || [[ "$real_pkg_name" != "$name" ]]; then
+			continue
+		fi
+		
+		local ver_rev="${bn#${name}-}"
+		[[ "$bn" == "$name" ]] && ver_rev="0"
+		
+		if [[ -n "$op" ]]; then
+			version_compare "$ver_rev" "$op" "$version" || continue
+		fi
+		
+		if [[ -z "$best_ver" ]] || version_compare "$ver_rev" ">" "$best_ver"; then
+			best_ver="$ver_rev"
+			best_match="$pkgfile"
+		fi
+	done
+	
+	if [[ -z "$best_match" ]]; then
+		for pkgfile in "${ROOT_PKG_STATE_DIR}/packages/"* ; do
+			[[ -f "$pkgfile" ]] || continue
+			[[ -L "$pkgfile" ]] && continue
+			
+			if _dep_provides_package "$pkgfile" "$name" "$op" "$version"; then
+				best_match="$pkgfile"
+				break
+			fi
+		done
+	fi
+	
+	echo "$best_match"
+}
+
+#----------------------------------------------------------
+# _dep_find_in_repos() - Search on repos (LEVEL 1 + LEVEL 2 + MULTIREPO)
+#----------------------------------------------------------
+_dep_find_in_repos() {
+	local name="$1"
+	local op="$2"
+	local version="$3"
+	local search_repos="${4:-${NHOPKG_ACTIVE_REPOS}}"
+	
+	local repo pkgfile best_match best_ver
+	
+	[[ -z "$search_repos" ]] && search_repos="extra"
+	DEP_FOUND_REPO=""
+	
+	for repo in $search_repos; do
+		local pkgdir="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
+		[[ -d "$pkgdir" ]] || continue
+		
+		if [[ -f "$pkgdir/$name" ]]; then
+			local ver_rev=$(basename "$pkgdir/$name" | sed "s/^${name}-//")
+			[[ "$ver_rev" == "$name" ]] && ver_rev="0"
+			
+			if [[ -n "$op" ]]; then
+				version_compare "$ver_rev" "$op" "$version" || continue
+			fi
+			
+			if [[ -z "$best_ver" ]] || version_compare "$ver_rev" ">" "$best_ver"; then
+				best_ver="$ver_rev"
+				best_match="$pkgdir/$name"
+				DEP_FOUND_REPO="$repo"
+			fi
+		fi
+		
+		for pkgfile in "$pkgdir/${name}"-* ; do
+			[[ -f "$pkgfile" ]] || continue
+			[[ -L "$pkgfile" ]] && continue
+			
+			local bn=$(basename "$pkgfile")
+			local real_pkg_name=""
+			local tmp_nho="${NHOPKG_TMPDIR}/.dep_check_$$"
+			mkdir -p "$tmp_nho" 2>/dev/null
+			if tar xfC "$pkgfile" "$tmp_nho" nhoid 2>/dev/null && [[ -f "$tmp_nho/nhoid" ]]; then
+				real_pkg_name=$(grep "^# Name:" "$tmp_nho/nhoid" 2>/dev/null | awk -F'\t' '{print $2}')
+			fi
+			rm -rf "$tmp_nho"
+			
+			if [[ -z "$real_pkg_name" ]] || [[ "$real_pkg_name" != "$name" ]]; then
+				continue
+			fi
+			
+			local ver_rev="${bn#${name}-}"
+			
+			if [[ -n "$op" ]]; then
+				version_compare "$ver_rev" "$op" "$version" || continue
+			fi
+			
+			if [[ -z "$best_ver" ]] || version_compare "$ver_rev" ">" "$best_ver"; then
+				best_ver="$ver_rev"
+				best_match="$pkgfile"
+				DEP_FOUND_REPO="$repo"
+			fi
+		done
+	done
+	
+	if [[ -z "$best_match" ]]; then
+		resolve_virtual_package "$name"
+		if [[ -n "$RESOLVED_PKGFILE" ]]; then
+			best_match="$RESOLVED_PKGFILE"
+			DEP_FOUND_REPO="$RESOLVED_REPO"
+		fi
+	fi
+	
+	echo "$best_match"
+}
+
+#----------------------------------------------------------
+# _dep_resolve_children() - Resolves one package dependencies
+#----------------------------------------------------------
+_dep_resolve_children() {
+	local pkgfile="$1"
+	local dep_type="$2"
+	local silent="$3"
+	local search_repos="$4"
+	
+	local dep_pattern
+	
+	case "$dep_type" in
+		build) dep_pattern="^# BuildDep:" ;;
+		required) dep_pattern="^# Dep(post):" ;;
+		optional) dep_pattern="^# OptionalDep(post):" ;;
+		optional_build) dep_pattern="^# OptionalBuildDep:" ;;
+	esac
+	
+	while IFS= read -r dep_line; do
+		local deps=$(echo "$dep_line" | awk -F'\t' '{print $2}')
+		for dep in $deps; do
+			[[ -n "$dep" ]] && _dep_resolve_single "$dep" "$dep_type" "yes" "$silent" "$search_repos"
+		done
+	done < <(grep "$dep_pattern" "$pkgfile" 2>/dev/null)
+}
+
+#----------------------------------------------------------
+# _dep_provides_package() - Check if the package provides a name
+#----------------------------------------------------------
+_dep_provides_package() {
+	local pkgfile="$1"
+	local name="$2"
+	local op="$3"
+	local ver="$4"
+	
+	local provides_line=$(grep "^# Provides:" "$pkgfile" 2>/dev/null)
+	[[ -z "$provides_line" ]] && return 1
+	
+	for prov in $(echo "$provides_line" | sed 's/^# Provides:[[:space:]]*//'); do
+		if [[ "$prov" == "$name" ]] || [[ "$prov" == "$name="* ]]; then
+			if [[ -n "$op" ]]; then
+				get_basic_data "$pkgfile"
+				local pkg_ver="${pkgversion}-${pkgrevision}"
+				version_compare "$pkg_ver" "$op" "$ver" && return 0
+				return 1
+			fi
+			return 0
+		fi
+	done
+	return 1
+}
+
+#----------------------------------------------------------
+# _dep_download_all() - Download multiple packages
+#----------------------------------------------------------
+_dep_download_all() {
+	local specs=("$@")
+	
+	for pkg_basename in "${specs[@]}"; do
+		local pkgfile=""
+		
+		for repo in ${NHOPKG_ACTIVE_REPOS}; do
+			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_basename}" ]]; then
+				pkgfile="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_basename}"
+				DEP_FOUND_REPO="$repo"
+				break
+			fi
+		done
+		
+		[[ -z "$pkgfile" ]] && continue
+		
+		get_nhoid_data "$pkgfile"
+		local nho_name="${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+		
+		echogn " --- Downloading from "
+		echo -n "${DEP_FOUND_REPO}: "
+		echo "$nho_name"
+		
+		local repo_url=$(get_repo_url "$DEP_FOUND_REPO")
+		
+		wget --https-only -cqt 3 -T 20  --directory-prefix="${ROOT_PKG_STATE_DIR}/cache"  "${repo_url}/${nho_name}"
+		check_if_ok " *** Failed to download package."
+		
+		DCASEPACKAGES+=("$nho_name")
+	done
+}
+
+#==============================================================================
+# Section: Compatibility Wrappers
+#==============================================================================
+
+#----------------------------------------------------------
+# check_package_conflicts() - Legacy wrapper
+#----------------------------------------------------------
+check_package_conflicts() {
+	local nhoid_file="$1"
+	dep_check_conflicts "$nhoid_file"
+}
+
+#==============================================================================
+# Section: Virtual Package Resolution
+#==============================================================================
+
+#----------------------------------------------------------
+# resolve_virtual_package() - Find package by Provides
+#----------------------------------------------------------
+resolve_virtual_package()
+{
+	local search_name="$1"
+	local repo pkgdir pkgfile provides_line provs p
+
+	RESOLVED_PKGFILE=""
+	RESOLVED_REPO=""
+
+	for repo in ${NHOPKG_ACTIVE_REPOS}; do
+		pkgdir="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
+		[[ -d "$pkgdir" ]] || continue
+
+		while IFS= read -r pkgfile; do
+			[[ -L "$pkgfile" ]] && continue
+
+			provides_line=$(grep "^# Provides:" "$pkgfile" 2>/dev/null)
+			[[ -n "$provides_line" ]] || continue
+
+			provs=$(echo "$provides_line" | sed 's/^# Provides:[[:space:]]*//')
+
+			for p in $provs; do
+				case "$p" in
+					"$search_name"|"$search_name"=*)
+						RESOLVED_PKGFILE="$pkgfile"
+						RESOLVED_REPO="$repo"
+						break 3
+						;;
+				esac
+			done
+		done < <(find "$pkgdir" -maxdepth 1 -type f 2>/dev/null | sort -V)
+	done
+}
+
+#==============================================================================
+# Section: Version Comparison
+#==============================================================================
+
+#----------------------------------------------------------
+# version_compare() - Compare two versions using sort -V
+#----------------------------------------------------------
+version_compare() {
+	local ver1="$1" op="$2" ver2="$3"
+	case "$op" in
+		"")
+			return 0
+			;;
+		"="|==)
+			if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]] &&
+			   [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]]; then
+				return 0
+			else
+				return 1
+			fi
+			;;
+		"!=")
+			if version_compare "$ver1" "=" "$ver2"; then
+				return 1
+			else
+				return 0
+			fi
+			;;
+		"<")
+			if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]] &&
+			   ! version_compare "$ver1" "=" "$ver2"; then
+				return 0
+			else
+				return 1
+			fi
+			;;
+		"<=")
+			if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | head -n1)" == "$ver1" ]]; then
+				return 0
+			else
+				return 1
+			fi
+			;;
+		">")
+			if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]] &&
+			   ! version_compare "$ver1" "=" "$ver2"; then
+				return 0
+			else
+				return 1
+			fi
+			;;
+		">=")
+			if [[ "$(printf '%s\n%s' "$ver1" "$ver2" | sort -V | tail -n1)" == "$ver1" ]]; then
+				return 0
+			else
+				return 1
+			fi
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+#==============================================================================
+# Section: Repository URL Resolution
+#==============================================================================
+
+#----------------------------------------------------------
+# get_repo_url() - Get download URL for a repository
+#----------------------------------------------------------
+get_repo_url()
+{
+	local repo="${1:-extra}"
+	local repo_var="NHOPKG_REPO_${repo^^}"
+	local mirrors="${!repo_var}"
+
+	if [[ -z "${mirrors}" ]]; then
+		echog " *** ERROR: No mirrors defined for repository '${repo}'." >&2
+		echog "	 Please define \$NHOPKG_REPO_${repo^^} in your config." >&2
+		exit 1
+	fi
+
+	read -ra MIRROR_LIST <<< "${mirrors}"
+
+	for mirror in "${MIRROR_LIST[@]}"; do
+		echo "${mirror}"
+		return 0
+	done
+
+	echog " *** ERROR: All mirrors failed for repository '${repo}'." >&2
+	exit 1
+}

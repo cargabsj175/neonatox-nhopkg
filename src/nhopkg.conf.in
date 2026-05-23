@@ -183,6 +183,31 @@ TEXTDOMAINDIR=@localedir@
 
 
 #==============================================================================
+# Section: Build Configuration (Compilation Optimizations)
+#------------------------------------------------------------------------------
+# These variables are read by nhopkg and exported before nbuild() execution.
+# User can override any of these in this file.
+#==============================================================================
+
+# CPU tuning target (sandybridge, native, generic, x86-64, etc.)
+# If commented or empty, nhopkg will use 'generic' as fallback
+NHOPKG_MACHINE="sandybridge"
+
+# Base compiler flags (MACHINE will be appended)
+NHOPKG_CFLAGS="-O2 -pipe -march=x86-64"
+NHOPKG_CXXFLAGS=""
+NHOPKG_CPPFLAGS=""
+NHOPKG_LDFLAGS="-Wl,-O1"
+
+# Parallel build jobs (empty = auto-detect in nhopkg)
+NHOPKG_BUILD_JOBS=""
+
+# Make/Ninja/CMake flags (empty = auto-generate in nhopkg)
+NHOPKG_MAKEFLAGS=""
+NHOPKG_CMAKE_BUILD_PARALLEL_LEVEL=""
+
+
+#==============================================================================
 # Section: Source Package Creation
 #------------------------------------------------------------------------------
 # Settings used when generating binary packages from source.
