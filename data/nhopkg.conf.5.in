@@ -1,6 +1,6 @@
 .TH NHOPKG.CONF 5 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
 .SH NAME
-nhopkg.conf \- configuration file for the nhopkg package manager
+nhopkg.conf \- configuration file for the nhopkg universal package manager
 .SH SYNOPSIS
 .I /etc/nhopkg/nhopkg.conf
 .br
@@ -10,203 +10,398 @@ The
 .B nhopkg.conf
 file defines the default behavior of the
 .B nhopkg
-universal package manager. It is read at startup unless overridden by command-line options.
-.PP
+package manager. It is read at startup unless overridden by command-line options.
+.P
 If
 .I /etc/nhopkg/nhopkg.conf
 does not exist, nhopkg falls back to the system-provided default at
 .I /usr/share/nhopkg/nhopkg.conf
 .
-.SH FILE FORMAT
-The file uses standard Bash syntax. Each line sets a shell variable. Comments start with
-.B #
-.
+.P
+The file uses standard bash syntax. Each line sets a shell variable.
+Comments start with
+.BR # .
 .SH CONFIGURATION VARIABLES
-.SS [Main paths]
-These variables define the core directories used by nhopkg.
-
+.SS "1. Main paths"
+.TP
+.B prefix
+Installation prefix (set by Meson at build time).
+Default:
+.I @prefix@
+.TP
+.B SYSCONFDIR
+System configuration directory.
+Default:
+.I @sysconfdir@
+.TP
+.B NHOPKG_SYSCONFDIR
+nhopkg-specific configuration directory.
+Default:
+.I ${SYSCONFDIR}/nhopkg
+.TP
+.B DATAROOTDIR
+Base data directory.
+Default:
+.I @datarootdir@
+.TP
+.B NHOPKG_DATADIR
+nhopkg data directory.
+Default:
+.I ${datarootdir}/@PACKAGE@
+.TP
+.B LOCALSTATEDIR
+Local state directory.
+Default:
+.I @localstatedir@
 .TP
 .B NHOPKG_LOCALSTATEDIR
-Directory for nhopkg runtime data (packages, files, logs, cache).  
+nhopkg state directory.
 Default:
-.I /var/lib/nhopkg
-
-.TP
-.B NHOPKG_BUILDIR
-Base directory for building source packages.  
-Default:
-.I /usr/src/nhopkg
-
-.TP
-.B NHOPKG_LOCKFILE
-Path to the lock file that prevents concurrent nhopkg instances.  
-Default:
-.I /var/lock/nhopkg
-
+.I ${LOCALSTATEDIR}/nhopkg
 .TP
 .B TMPDIR
-Temporary directory for general use.  
+Temporary directory for extraction.
 Default:
 .I /tmp
-
 .TP
 .B TEMPLATE_TMPDIR
-Template for temporary directories created by nhopkg.  
+Template pattern for temporary subdirectories.
 Default:
 .I .nhopkg.XXXXXXXXXX
-
-.SS [Repository]
 .TP
-.B NHOPKG_REPO
-URL of the default remote repository used by
-.BR -S ", " --super-install .
-.br
-Default value is set at build time (e.g.,
-.I https://repo.example.com
-).
-
-.SS [Behavior options]
+.B BUILDIR
+Base source build directory.
+Default:
+.I /usr/src
+.TP
+.B NHOPKG_BUILDIR
+nhopkg build directory.
+Default:
+.I ${BUILDIR}/nhopkg
+.TP
+.B NHOPKG_LIB
+Path to the libnhopkg library.
+Default:
+.I @prefix@/lib/nhopkg/libnhopkg
+.TP
+.B NHOPKG_LOCKFILE
+Lock file preventing concurrent nhopkg instances.
+Default:
+.I /var/lock/nhopkg
+.SS "2. Behavior options"
 .TP
 .B NHOPKG_CHECKDEPS
-Enable dependency resolution and installation.  
+Enable dependency checking (required and optional).
 Values:
 .I yes
 (default) or
 .I no
-
 .TP
 .B NHOPKG_PURGE
-When removing a package, also remove packages that depend on it.  
+When removing a package, also remove inverse dependencies.
 Values:
 .I no
 (default) or
 .I yes
-
 .TP
 .B NHOPKG_CHECKSHA256
-Verify SHA256 checksums of packages.  
+Verify SHA256 checksums of packages.
 Values:
 .I yes
 (default) or
 .I no
-
 .TP
 .B NHOPKG_CHECKARCH
-Reject packages with incompatible architecture.  
+Verify package architecture compatibility.
 Values:
 .I yes
 (default) or
 .I no
-
 .TP
 .B VERBOSE_MODE
-Enable verbose output during operations.  
+Enable verbose output for all operations.
 Values:
 .I no
 (default) or
 .I yes
-
+.TP
+.B STRIP_BINARIES
+Strip ELF binaries after installation (experimental).
+Values:
+.I no
+(default) or
+.I yes
+.TP
+.B NHOHOLD
+Space-separated list of packages whose files are never deleted on uninstall.
+Default:
+.I "nhopkg glibc gcc"
+.SS "3. Init system"
+.TP
+.B INITSYSTEM
+Init system used by the target system. Affects service file installation.
+Values:
+.I systemd
+(default) or
+.I sysvinit
+.SS "4. BLFS systemd units"
+.TP
+.B SYSTEMD_BLFS_VER
+Version of the BLFS systemd units bundle.
+Default:
+.I 20251204
+.TP
+.B SYSTEMD_BLFS_DIR
+Local directory for extracted systemd units.
+Default:
+.I /usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}
+.TP
+.B SYSTEMD_BLFS_URL
+Download URL for BLFS systemd units.
+Default:
+.I https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz
+.SS "5. BLFS sysvinit scripts"
+.TP
+.B SYSV_BLFS_VER
+Version of the BLFS bootscripts bundle.
+Default:
+.I 20251220
+.TP
+.B SYSV_BLFS_DIR
+Local directory for extracted bootscripts.
+Default:
+.I /usr/src/blfs-bootscripts-${SYSV_BLFS_VER}
+.TP
+.B SYSV_BLFS_URL
+Download URL for BLFS bootscripts.
+Default:
+.I https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz
+.SS "6. Package signing and verification"
+.TP
+.B NHOPKG_TRUSTED_KEYS_DIR
+Directory containing trusted GPG public keys.
+Default:
+.I ${NHOPKG_SYSCONFDIR}/trusted-keys/
+.TP
+.B NHOPKG_SIGN_PACKAGES
+Sign binary packages with GPG during build.
+Values:
+.I yes
+(default) or
+.I no
+.TP
+.B NHOPKG_SIGN_KEY
+GPG key ID or email used for signing.
+Default:
+.I repo@neonatox.vegnux.com
+.TP
+.B NHOPKG_VERIFY_SIGNATURE
+Verify package GPG signatures during installation.
+Values:
+.I yes
+(default) or
+.I no
+.TP
+.B NHOPKG_REQUIRE_SIGNATURE
+Abort installation if signature is missing or invalid.
+Values:
+.I no
+(default) or
+.I yes
+.SS "7. Repositories"
+.TP
+.B NHOPKG_ACTIVE_REPOS
+Space-separated list of active repository names.
+Default:
+.I "core extra multilib"
+.TP
+.B NHOPKG_REPO_CORE
+URL for the core repository (set at configure time).
+Default:
+.I @NHOPKG_REPO_CORE@
+.TP
+.B NHOPKG_REPO_EXTRA
+URL for the extra repository (set at configure time).
+Default:
+.I @NHOPKG_REPO_EXTRA@
+.TP
+.B NHOPKG_REPO_MULTILIB
+URL for the multilib repository (set at configure time).
+Default:
+.I @NHOPKG_REPO_MULTILIB@
+.SS "8. Git sources"
+.TP
+.B NHOPKG_GIT_SOURCES
+Default Git repository URL for source packages.
+Default:
+.I @NHOPKG_GIT_SOURCES@
+.SS "9. Language support (i18n)"
 .TP
 .B NHOPKG_GETTEXT
-Enable internationalization (i18n) via gettext.  
+Enable gettext internationalization.
 Values:
 .I yes
 (default) or
 .I no
-
-.SS [File tracking (for .srcnho builds)]
-.TP
-.B FIND_DIRS
-Space-separated list of directories scanned to detect files installed by a source package.  
-Default:
-.I "/bin /boot /etc /lib /opt /sbin /srv /usr"
-
-.TP
-.B NOUPGRADE_FILES
-Files that should never be overwritten during package upgrades (e.g., auto-generated caches).  
-Default includes:
-.RS
-.nf
-mimeinfo.cache
-info/dir
-info/dir.old
-/etc/ld.so.cache
-${NHOPKG_BUILDIR}
-/etc/mtab
-/etc/fstab
-.fi
-.RE
-
-.SS [Database]
-.TP
-.B NHOPKG_DB
-Path to the locate-style database used for dependency resolution.  
-Default:
-.I /var/lib/nhopkg/nhopkg.db
-
-.TP
-.B NO_DIRS_IN_DB
-Directories excluded from the nhopkg database (for performance and security).  
-Default:
-.RS
-.nf
-/dev /home /media /mnt /opt /proc /run /sys /tmp \\
-/usr/src /usr/share/zoneinfo /var
-.fi
-.RE
-
-.SS [Localization]
 .TP
 .B TEXTDOMAIN
-Gettext domain name (should not be modified).  
+Gettext text domain (do not modify).
 Default:
-.I nhopkg
-
+.I @PACKAGE_NAME@
 .TP
 .B TEXTDOMAINDIR
-Directory containing translation files (.mo).  
+Gettext locale directory (do not modify).
 Default:
-.I /usr/share/locale
-
+.I @localedir@
+.SS "10. Build configuration (compiler flags)"
+.TP
+.B NHOPKG_MACHINE
+CPU tuning target (e.g. sandybridge, native, generic, x86-64).
+Default:
+.I sandybridge
+.TP
+.B NHOPKG_CFLAGS
+Base C compiler flags. Machine target is appended automatically.
+Default:
+.I "-O2 -pipe -march=x86-64"
+.TP
+.B NHOPKG_CXXFLAGS
+C++ compiler flags. If empty, defaults to NHOPKG_CFLAGS.
+Default:
+.I "" (empty)
+.TP
+.B NHOPKG_CPPFLAGS
+C preprocessor flags.
+Default:
+.I "" (empty)
+.TP
+.B NHOPKG_LDFLAGS
+Linker flags.
+Default:
+.I "-Wl,-O1"
+.TP
+.B NHOPKG_BUILD_JOBS
+Parallel build jobs. If empty, auto-detected as nproc \(en 2 (minimum 1).
+Default:
+.I "" (empty)
+.TP
+.B NHOPKG_MAKEFLAGS
+Make flags. If empty, auto-generated from NHOPKG_BUILD_JOBS.
+Default:
+.I "" (empty)
+.TP
+.B NHOPKG_CMAKE_BUILD_PARALLEL_LEVEL
+CMake parallel build level. If empty, set from NHOPKG_BUILD_JOBS.
+Default:
+.I "" (empty)
+.SS "11. Source package creation"
+.TP
+.B FIND_DIRS
+Space/newline-separated list of directories scanned to detect files installed
+by a source package.
+Default:
+.I "/bin /boot /etc /lib /opt /sbin /srv /usr"
+.TP
+.B NOUPGRADE_FILES
+Space/newline-separated list of files and directories never overwritten on
+upgrade.
+Default includes:
+.RS
+.I mimeinfo.cache info/dir info/dir.old /etc/ld.so.cache ${NHOPKG_BUILDIR} /etc/mtab /etc/fstab
+.RE
+.SS "12. Database"
+.TP
+.B NHOPKG_DB
+Path to the locate-style package database.
+Default:
+.I ${NHOPKG_LOCALSTATEDIR}/nhopkg.db
+.TP
+.B NO_DIRS_IN_DB
+Space/newline-separated list of directories excluded from database indexing.
+Default:
+.I "/dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src /usr/share/zoneinfo /var"
 .SH EXAMPLE
 .nf
-# Main paths
-NHOPKG_LOCALSTATEDIR="/var/lib/nhopkg"
-NHOPKG_BUILDIR="/usr/src/nhopkg"
-NHOPKG_LOCKFILE="/var/lock/nhopkg"
+# --- Main paths ---
+NHOPKG_SYSCONFDIR=/etc/nhopkg
+NHOPKG_LOCALSTATEDIR=/var/nhopkg
+TMPDIR=/tmp
+NHOPKG_BUILDIR=/usr/src/nhopkg
 
-# Repository
-NHOPKG_REPO="https://packages.nhopkg.org/repo"
+# --- Behavior ---
+NHOPKG_CHECKDEPS=yes
+NHOPKG_PURGE=no
+NHOPKG_CHECKSHA256=yes
+NHOPKG_CHECKARCH=yes
+VERBOSE_MODE=no
+STRIP_BINARIES=no
+NHOHOLD="nhopkg glibc gcc"
 
-# Behavior
-NHOPKG_CHECKDEPS="yes"
-NHOPKG_CHECKSHA256="yes"
-NHOPKG_CHECKARCH="yes"
-VERBOSE_MODE="no"
-NHOPKG_GETTEXT="yes"
+# --- Init system ---
+INITSYSTEM=systemd
 
-# File tracking
-FIND_DIRS="/bin /sbin /usr /etc /opt"
-NOUPGRADE_FILES="/etc/ld.so.cache /var/cache/fontconfig"
+# --- BLFS systemd units ---
+SYSTEMD_BLFS_VER=20251204
+SYSTEMD_BLFS_DIR=/usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}
+SYSTEMD_BLFS_URL=https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz
 
-# Database
-NHOPKG_DB="/var/lib/nhopkg/nhopkg.db"
-NO_DIRS_IN_DB="/tmp /proc /sys /dev /home"
+# --- BLFS sysvinit scripts ---
+SYSV_BLFS_VER=20251220
+SYSV_BLFS_DIR=/usr/src/blfs-bootscripts-${SYSV_BLFS_VER}
+SYSV_BLFS_URL=https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz
+
+# --- Package signing ---
+NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
+NHOPKG_SIGN_PACKAGES=yes
+NHOPKG_SIGN_KEY="repo@neonatox.vegnux.com"
+NHOPKG_VERIFY_SIGNATURE=yes
+NHOPKG_REQUIRE_SIGNATURE=no
+
+# --- Repositories ---
+NHOPKG_ACTIVE_REPOS="core extra multilib"
+NHOPKG_REPO_CORE=https://repo.neonatox.vegnux.com/core
+NHOPKG_REPO_EXTRA=https://repo.neonatox.vegnux.com/extra
+NHOPKG_REPO_MULTILIB=https://repo.neonatox.vegnux.com/multilib
+
+# --- Git sources ---
+NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources
+
+# --- Language ---
+NHOPKG_GETTEXT=yes
+
+# --- Build configuration ---
+NHOPKG_MACHINE="sandybridge"
+NHOPKG_CFLAGS="-O2 -pipe -march=x86-64"
+NHOPKG_CXXFLAGS=""
+NHOPKG_CPPFLAGS=""
+NHOPKG_LDFLAGS="-Wl,-O1"
+NHOPKG_BUILD_JOBS=""
+NHOPKG_MAKEFLAGS=""
+NHOPKG_CMAKE_BUILD_PARALLEL_LEVEL=""
+
+# --- Source package creation ---
+FIND_DIRS="/bin /boot /etc /lib /opt /sbin /srv /usr"
+NOUPGRADE_FILES="mimeinfo.cache info/dir info/dir.old /etc/ld.so.cache /usr/src/nhopkg /etc/mtab /etc/fstab"
+
+# --- Database ---
+NHOPKG_DB=/var/nhopkg/nhopkg.db
+NO_DIRS_IN_DB="/dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src /usr/share/zoneinfo /var"
 .fi
-
 .SH FILES
 .TP
 .I /etc/nhopkg/nhopkg.conf
 User-editable configuration file (takes precedence).
 .TP
 .I /usr/share/nhopkg/nhopkg.conf
-Fallback default configuration (installed by nhopkg itself).
-
+Fallback default configuration (shipped with nhopkg).
 .SH SEE ALSO
 .BR nhopkg (8),
+.BR nhopkg-src (8),
+.BR nhopkg-repos (8),
+.BR nhouser (8),
+.BR nhopkg-overlay (8),
 .BR updatedb (1),
 .BR gettext (1)
-
 .SH AUTHOR
-Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>  
-Carlos Sánchez <cargabsj175@gmail.com>
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

@@ -105,12 +105,18 @@ This installs:
 | Path | Description |
 |------|-------------|
 | `/usr/bin/nhopkg` | Main package manager |
+| `/usr/bin/nhopkg-src` | Source package project tool |
 | `/usr/bin/nhouser` | User/group management tool |
 | `/usr/bin/nhopkg-repos` | Repository management tool |
 | `/usr/bin/nhopkg-overlay` | Isolated build environment (overlayfs) |
 | `/usr/lib/nhopkg/libnhopkg` | Shared library with common functions |
 | `/etc/nhopkg/nhopkg.conf` | Configuration file |
-| `/usr/share/man/man8/nhopkg.8` | Man page |
+| `/usr/share/man/man8/nhopkg.8` | Man page (nhopkg) |
+| `/usr/share/man/man8/nhopkg-src.8` | Man page (nhopkg-src) |
+| `/usr/share/man/man8/nhopkg-repos.8` | Man page (nhopkg-repos) |
+| `/usr/share/man/man8/nhouser.8` | Man page (nhouser) |
+| `/usr/share/man/man8/nhopkg-overlay.8` | Man page (nhopkg-overlay) |
+| `/usr/share/man/man5/nhopkg.conf.5` | Man page (configuration) |
 | `/var/nhopkg/` | Runtime data (cache, packages, logs, database) |
 
 ### 5. Post-install (system integration)
@@ -154,11 +160,14 @@ sudo nhopkg -r package-name
 # Create a package from installed software
 sudo nhopkg -B package-name
 
-# Convert a Slackware package
-sudo nhopkg -z package.tgz
+# Create a source package project
+nhopkg-src --init myapp
+
+# Build a source package
+cd myapp && nhopkg-src --createpackage
 
 # Create a local repository
-sudo nhopkg -g /path/to/repository
+sudo nhopkg-repos -g /path/to/repository
 
 # Search for packages
 nhopkg -s name
@@ -176,17 +185,14 @@ sudo nhopkg-overlay
 ### Managing Repositories
 
 ```bash
-# List configured repositories
-nhopkg-repos list
+# Create a repository from .nho packages
+sudo nhopkg-repos -g /path/to/packages
 
-# Add a repository
-sudo nhopkg-repos add extra https://example.com/repo/extra
+# Add packages to an existing repository
+sudo nhopkg-repos -A --repo-dir /var/www/repo *.nho
 
-# Remove a repository
-sudo nhopkg-repos remove extra
-
-# Update repository databases
-sudo nhopkg -u
+# Synchronise repository databases
+sudo nhopkg -U
 ```
 
 ### Development & Translation Workflow

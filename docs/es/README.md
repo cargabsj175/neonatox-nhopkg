@@ -17,9 +17,11 @@ Esta documentación está dividida en secciones independientes para facilitar su
   * [9\. Construcción de paquetes](construccion.md)
   * [10\. Mantenimiento del sistema](mantenimiento.md)
   * [11\. Repositorios múltiples](repositorios.md)
-  * [12\. ¿Listo para producción?](produccion.md)
-  * [13\. Próximos pasos](proximos-pasos.md)
-
+  * [12\. Resolución de dependencias](dependencias.md)
+  * [13\. nhopkg-src (paquetes fuente)](nhopkg-src.md)
+  * [14\. ¿Listo para producción?](produccion.md)
+  * [15\. Próximos pasos](proximos-pasos.md)
+  * [16\. Internacionalización (i18n)](i18n.md)
 
 
 Documentación de **nhopkg v0.5.1** — Enero 2026

@@ -1,0 +1,262 @@
+[← Índice](README.md)
+
+# nhopkg-src — Herramienta de proyectos de paquetes fuente
+
+## Descripción general
+
+`nhopkg-src` crea, valida y compila proyectos de paquetes fuente para nhopkg. Trabaja con archivos `.srcnho` — tarballs planos que contienen el archivo de metadatos `nhoid` junto con parches y archivos adicionales, que `nhopkg -bv` utiliza para descargar, compilar e instalar paquetes binarios.
+
+## Comandos
+
+### `--init [<nombre>]`
+
+Crea un nuevo directorio de proyecto de paquete fuente. Guías interactivas le guían a través de los campos requeridos y opcionales. Si se proporciona `<nombre>` como argumento, se utiliza como nombre del paquete y del directorio sin preguntar.
+
+**Campos solicitados:**
+
+| Campo | Requerido | Valor por defecto | Notas |
+|---|---|---|---|
+| Nombre | Sí | — | Desde argumento o entrada interactiva |
+| Versión | No | `1.0` | |
+| Release | No | `n2026` | |
+| Mantenedor | No | `$USER <$USER@$HOSTNAME>` | |
+| Licencia | No | `GPL-3.0-only` | |
+| Arquitectura | No | `x86_64` | |
+| URL | No | (vacío) | Sitio web del proyecto upstream |
+| Descripción | No | (vacío) | |
+| Packageurl | **Sí** | — | URL del tarball o `git+<url>` para fuentes git |
+| Packageref | **Sí** si es git | — | Referencia a tag, commit o rama |
+| SHA256 | Solo tarballs | S/n | Descarga el tarball y calcula SHA256 automáticamente. Si se omite, escribe `## SHA256:` como recordatorio |
+| Splitpackage | No | (separado por espacios) | ej. `dev lib docs` |
+| Provides | No | (separado por espacios) | |
+| Conflicts | No | (separado por espacios) | |
+
+**Estructura del proyecto creado:**
+
+```
+<nombre>/
+├── nhoid              # Metadatos del paquete y funciones de compilación
+├── sources/           # Tarballs descargados (no incluidos en .srcnho)
+├── patches/           # Archivos *.patch y *.diff (incluidos en .srcnho)
+├── others/            # Archivos adicionales (incluidos en .srcnho)
+└── build/             # Directorio de compilación (no incluido en .srcnho)
+```
+
+**Plantilla nhoid generada:**
+
+El archivo `nhoid` incluye:
+- Cabecera `#%NHO-0.5` con todos los campos de metadatos
+- Funciones placeholder: `nbuild()`, `ninstall()`, `npostinstall()`, `npostremove()` (todas establecidas a `noemptyfuncs`)
+- Para paquetes divididos: funciones generadas `ninstall_<parte>()`, `npostinstall_<parte>()`, `npostremove_<parte>()` para cada parte
+- Campos de dependencia comentados (`## BuildDep:`, `## Dep(post):`, etc.) para edición manual
+
+Vea [`formato-nhoid.md`](formato-nhoid.md) para descripciones detalladas de los campos.
+
+**Ejemplos:**
+
+```bash
+# Crear un proyecto interactivamente
+nhopkg-src --init
+
+# Crear un proyecto con nombre dado (omite el prompt del nombre)
+nhopkg-src --init miapp
+```
+
+Ejemplo de nhoid para tarball (después de descargar para SHA256):
+
+```nhoid
+#%NHO-0.5
+# Package Maintainer:	usuario <usuario@host>
+
+# Name:	miapp
+# Version:	1.0
+# Release:	n2026
+# License:	GPL-3.0-only
+# Repository:	extra
+# Arch:	x86_64
+# Url:	https://example.com/miapp
+# Description:	Mi aplicación
+# Packageurl:	https://example.com/miapp-1.0.tar.gz
+# SHA256:	abc123def456...  miapp-1.0.tar.gz
+## BuildDep:	(añada aquí sus dependencias de compilación)
+## OptionalBuildDep:	(añada aquí sus dependencias opcionales de compilación)
+## Dep(post):	(añada aquí sus dependencias de ejecución)
+## OptionalDep(post):	(añada aquí sus dependencias opcionales de ejecución)
+
+nbuild() {
+    noemptyfuncs
+}
+
+ninstall() {
+    noemptyfuncs
+}
+
+npostinstall() {
+    noemptyfuncs
+}
+
+npostremove() {
+    noemptyfuncs
+}
+```
+
+Tarball sin SHA256 (recordatorio dejado):
+
+```nhoid
+# Packageurl:	https://example.com/miapp-1.0.tar.gz
+## SHA256:	<pendiente>  miapp-1.0.tar.gz
+```
+
+Ejemplo de nhoid para fuente git:
+
+```nhoid
+# Packageurl:	git+https://github.com/usuario/miapp
+# Packageref:	v1.0
+```
+
+Con paquetes divididos:
+
+```nhoid
+# Splitpackage:	dev lib
+
+nbuild() {
+    noemptyfuncs
+}
+
+ninstall() {
+    noemptyfuncs
+}
+
+npostinstall() {
+    noemptyfuncs
+}
+
+npostremove() {
+    noemptyfuncs
+}
+
+ninstall_dev() {
+    noemptyfuncs
+}
+
+npostinstall_dev() {
+    noemptyfuncs
+}
+
+npostremove_dev() {
+    noemptyfuncs
+}
+
+ninstall_lib() {
+    noemptyfuncs
+}
+
+npostinstall_lib() {
+    noemptyfuncs
+}
+
+npostremove_lib() {
+    noemptyfuncs
+}
+```
+
+---
+
+### `--createpackage [--force]`
+
+Empaqueta el directorio del proyecto actual en un tarball `.srcnho` plano.
+
+**Lo que se incluye:**
+- `nhoid` (requerido, primero se valida mediante `--validate`)
+- Archivos `patches/*.patch` y `patches/*.diff`
+- Archivos `others/*` (cualquier tipo)
+
+**Lo que NO se incluye:**
+- Directorio `sources/`
+- Directorio `build/`
+
+**Comportamiento:**
+- Rechaza sobrescribir un archivo `.srcnho` existente a menos que se use `--force`
+- El archivo de salida se nombra `<nombre>-<versión>-<release>.srcnho`
+
+**Ejemplo:**
+
+```bash
+cd miapp/
+nhopkg-src --createpackage
+# Crea: miapp-1.0-n2026.srcnho
+
+# Sobrescribir existente:
+nhopkg-src --createpackage --force
+```
+
+---
+
+### `--buildpackage`
+
+Compila el paquete `.srcnho` usando `nhopkg -bv` con `sudo -k` (siempre solicita contraseña).
+
+**Flujo:**
+1. Lee `nhoid` en el directorio actual para obtener `<nombre>-<versión>-<release>`
+2. Busca `<nombre>-<versión>-<release>.srcnho`
+3. Aborta si el archivo `.srcnho` no se encuentra
+4. Ejecuta `sudo -k nhopkg -bv <archivo>.srcnho`
+
+**Ejemplo:**
+
+```bash
+cd miapp/
+nhopkg-src --createpackage
+nhopkg-src --buildpackage
+# Ejecuta: sudo -k nhopkg -bv miapp-1.0-n2026.srcnho
+```
+
+---
+
+### `--validate [<archivo_nhoid>]`
+
+Valida un archivo nhoid (por defecto `./nhoid`). Devuelve código de salida 0 si es válido, 1 si hay errores.
+
+**Verificaciones realizadas:**
+
+| Verificación | Tipo | Descripción |
+|---|---|---|
+| Cabecera `#%NHO-0.5` | Error | Debe estar presente |
+| `# Name:` | Error | Debe estar presente y no vacío |
+| `# Version:` | Error | Debe estar presente y no vacío |
+| `# Release:` | Error | Debe estar presente y no vacío |
+| `# Packageurl:` | Error | Debe estar presente y no vacío |
+| `# Packageref:` | Error | Requerido si Packageurl comienza con `git+` |
+| `# SHA256:` | Advertencia | Recomendado para fuentes tarball, no requerido |
+| Contenido de `nbuild()` | Error | Debe tener comandos reales (no solo `noemptyfuncs`) |
+| Contenido de `ninstall()` | Error | Debe tener comandos reales de instalación (no solo `noemptyfuncs`) |
+| Existencia de `npostinstall()` | Error | La función debe estar definida |
+| Existencia de `npostremove()` | Error | La función debe estar definida |
+| Existencia de funciones divididas | Error | `ninstall_<parte>()` debe existir para cada parte dividida |
+| Superposición Provides/Conflicts | Error | El mismo nombre no debe aparecer en ambos |
+
+**Ejemplos:**
+
+```bash
+nhopkg-src --validate
+nhopkg-src --validate ./nhoid
+nhopkg-src --validate /ruta/al/nhoid
+```
+
+## Formato de archivo .srcnho
+
+El archivo `.srcnho` es un archivo tar plano (sin compresión, sin subdirectorios). Su contenido es extraído por `nhopkg -bv` en un directorio temporal, donde `nhopkg` lee el `nhoid`, descarga la fuente mediante `Packageurl`, verifica `SHA256`, ejecuta `nbuild()` y `ninstall()`, y produce el paquete binario `.nho` final.
+
+**Contenido:**
+
+```
+nhoid
+some.patch
+another.diff
+archivo_extra
+```
+
+## Véase también
+
+- [`formato-nhoid.md`](formato-nhoid.md) — referencia completa de campos nhoid
+- `nhopkg -bv` — compila un paquete binario desde un paquete fuente `.srcnho`

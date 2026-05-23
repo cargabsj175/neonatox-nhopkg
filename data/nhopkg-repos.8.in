@@ -1,0 +1,65 @@
+.TH NHOPKG-REPOS 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
+.SH NAME
+nhopkg-repos \- create and maintain nhopkg binary package repositories
+.SH SYNOPSIS
+.B nhopkg-repos
+\fB\-g\fR, \fB\-\-create-repo\fR \fI<dir>\fR
+.br
+.B nhopkg-repos
+\fB\-A\fR, \fB\-\-add-to-repo\fR [\fB\-\-repo\-dir\fR \fI<dir>\fR] \fI<package.nho>...\fR
+.br
+.B nhopkg-repos
+\fB\-h\fR, \fB\-\-help\fR
+.br
+.B nhopkg-repos
+\fB\-\-version\fR
+.SH DESCRIPTION
+\fBnhopkg-repos\fR creates and maintains binary package repositories for nhopkg.
+It organizes \fI.nho\fR packages into subdirectories by repository type
+(core, extra, multilib) based on the \fB# Repository:\fR field in each package's
+nhoid metadata.
+.SH COMMANDS
+.TP
+.B \-g, \-\-create-repo \fI<dir>\fR
+Create a new repository structure from \fI.nho\fR packages found in \fI<dir>\fR.
+.br
+Scans the directory for .nho files, reads their nhoid metadata, and organizes
+them into subdirectories by repository type. Generates:
+.RS
+.IP \(bu 4
+\fIcore.packages.tar.zst\fR, \fIcore.files.tar.zst\fR
+.IP \(bu 4
+\fIcontent.db.zst\fR
+.IP \(bu 4
+\fIlastsync\fR (timestamp file)
+.RE
+.P
+Requires root privileges.
+
+.TP
+.B \-A, \-\-add-to-repo [\fB\-\-repo\-dir\fR \fI<dir>\fR] \fI<package.nho>...\fR
+Incrementally add one or more \fI.nho\fR packages to an existing repository.
+.br
+Keeps only the latest version per package. Rebuilds affected metadata.
+.br
+\fB\-\-repo\-dir\fR specifies the repository root directory (required).
+.P
+Requires root privileges.
+.SH OPTIONS
+.TP
+.B \-o, \-\-repo\-dir \fI<dir>\fR
+Repository root directory for \fB\-\-add-to-repo\fR.
+.SH EXAMPLES
+.TP
+Create a repository from a directory of .nho files
+.B nhopkg-repos \-g /path/to/packages
+.TP
+Add packages to an existing repository
+.B nhopkg-repos \-A \-\-repo\-dir /var/www/repo *.nho
+.SH SEE ALSO
+.BR nhopkg (8),
+.BR nhopkg.conf (5),
+.BR nhopkg-src (8)
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

@@ -1,29 +1,258 @@
-[← Index](README.md)
+# Nhopkg Configuration
 
-# 2\. Configuration
+## Configuration Precedence
 
-The main configuration file for **nhopkg** is:
-    
-    
-    /etc/nhopkg/nhopkg.conf
+Settings are resolved in the following order (later sources override earlier ones):
 
-If it does not exist, a default configuration is loaded from:
-    
-    
-    /usr/share/nhopkg/nhopkg.conf
+1. **Command-line options** — highest priority, always win
+2. **System config** — `/etc/nhopkg/nhopkg.conf`
+3. **Default config** — `/usr/share/nhopkg/nhopkg.conf` — shipped with the package, lowest priority
 
-All variables can be temporarily overridden using command-line options.
+The file uses standard **bash syntax**:
 
-## Configuration priority
+- `#` for comments
+- `VAR="value"` for assignments
+- Variable substitution (e.g. `${SYSCONFDIR}/nhopkg`) is supported
 
-  1. Configuration file
-  2. Command-line options (highest priority)
+---
 
+## 1. Main — Paths
 
+Core directories and base paths used internally by nhopkg.
 
-## Minimal example
-    
-    
-    NHOPKG_ACTIVE_REPOS="extra"
-    NHOPKG_REPO_EXTRA="https://example.com/repo/extra"
-    NHOPKG_VERIFY_SIGNATURE=no
+| Variable | Default | Description |
+|---|---|---|
+| `prefix` | `@prefix@` | Installation prefix (set by Meson) |
+| `datarootdir` | `@datarootdir@` | Base data directory (Meson) |
+| `SYSCONFDIR` | `@sysconfdir@` | System configuration directory (usually `/etc`) |
+| `NHOPKG_SYSCONFDIR` | `${SYSCONFDIR}/nhopkg` | nhopkg-specific config directory |
+| `NHOPKG_DATADIR` | `${datarootdir}/@PACKAGE@` | nhopkg data directory |
+| `LOCALSTATEDIR` | `@localstatedir@` | Local state data directory (usually `/var`) |
+| `NHOPKG_LOCALSTATEDIR` | `${LOCALSTATEDIR}/nhopkg` | nhopkg state directory (e.g. `/var/nhopkg`) |
+| `TMPDIR` | `/tmp` | Temporary directory for extraction |
+| `TEMPLATE_TMPDIR` | `.nhopkg.XXXXXXXXXX` | Template pattern for temporary subdirectories |
+| `BUILDIR` | `/usr/src` | Base source build directory |
+| `NHOPKG_BUILDIR` | `${BUILDIR}/nhopkg` | nhopkg build directory |
+| `NHOPKG_LIB` | `@prefix@/lib/nhopkg/libnhopkg` | Path to the `libnhopkg` library |
+| `NHOPKG_LOCKFILE` | `/var/lock/nhopkg` | Lock file preventing concurrent nhopkg instances |
+
+**Accepted values:** Any valid absolute path.
+
+---
+
+## 2. Options — Behavior
+
+General behavior options for dependency handling, verification, verbosity, and experimental features.
+
+| Variable | Default | Accepted Values | Description |
+|---|---|---|---|
+| `NHOPKG_CHECKDEPS` | `yes` | `yes`, `no` | Enable dependency checking (required and optional) |
+| `NHOPKG_PURGE` | `no` | `yes`, `no` | Enable inverse dependency removal when uninstalling packages |
+| `NHOPKG_CHECKSHA256` | `yes` | `yes`, `no` | Verify SHA256 checksums of packages |
+| `NHOPKG_CHECKARCH` | `yes` | `yes`, `no` | Verify package architecture compatibility |
+| `VERBOSE_MODE` | `no` | `yes`, `no` | Enable verbose output |
+| `STRIP_BINARIES` | `no` | `yes`, `no` | Strip binaries and libraries after installation (experimental) |
+| `NHOHOLD` | `"nhopkg glibc gcc"` | Space-separated package names | Packages to hold — never delete their files on uninstall |
+
+---
+
+## 3. Init System
+
+Selects the init system used by the target system. Affects which service files or scripts are installed.
+
+| Variable | Default | Accepted Values | Description |
+|---|---|---|---|
+| `INITSYSTEM` | `systemd` | `systemd`, `sysvinit` | Init system to use |
+
+---
+
+## 4. BLFS Systemd Units
+
+Configuration for BLFS-provided systemd unit files. Used only when `INITSYSTEM=systemd`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SYSTEMD_BLFS_VER` | `20251204` | Version of the BLFS systemd units bundle |
+| `SYSTEMD_BLFS_DIR` | `/usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}` | Local directory for the extracted units |
+| `SYSTEMD_BLFS_URL` | `https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz` | Download URL |
+
+---
+
+## 5. BLFS SysVinit Scripts
+
+Configuration for BLFS SysVinit boot scripts. Used only when `INITSYSTEM=sysvinit`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SYSV_BLFS_VER` | `20251220` | Version of the BLFS bootscripts bundle |
+| `SYSV_BLFS_DIR` | `/usr/src/blfs-bootscripts-${SYSV_BLFS_VER}` | Local directory for the extracted scripts |
+| `SYSV_BLFS_URL` | `https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz` | Download URL |
+
+---
+
+## 6. Package Signing & Verification
+
+GPG configuration for signing and verifying binary packages.
+
+| Variable | Default | Accepted Values | Description |
+|---|---|---|---|
+| `NHOPKG_TRUSTED_KEYS_DIR` | `"${NHOPKG_SYSCONFDIR}/trusted-keys/"` | Valid directory path | Directory containing trusted public keys |
+| `NHOPKG_SIGN_PACKAGES` | `yes` | `yes`, `no` | Sign packages during build (typically for maintainers) |
+| `NHOPKG_SIGN_KEY` | `"repo@neonatox.vegnux.com"` | GPG key ID or email | Key used for signing |
+| `NHOPKG_VERIFY_SIGNATURE` | `yes` | `yes`, `no` | Verify package signatures during installation |
+| `NHOPKG_REQUIRE_SIGNATURE` | `no` | `yes`, `no` | Abort installation if signature is missing or invalid |
+
+---
+
+## 7. Repositories
+
+Repository configuration: which repos are active and where they are located.
+
+| Variable | Default | Description |
+|---|---|---|
+| `NHOPKG_ACTIVE_REPOS` | `"core extra multilib"` | Space-separated list of active repository names |
+| `NHOPKG_REPO_CORE` | `@NHOPKG_REPO_CORE@` | URL for the **core** repository (set at configure time) |
+| `NHOPKG_REPO_EXTRA` | `@NHOPKG_REPO_EXTRA@` | URL for the **extra** repository |
+| `NHOPKG_REPO_MULTILIB` | `@NHOPKG_REPO_MULTILIB@` | URL for the **multilib** repository |
+
+**Accepted values for `NHOPKG_ACTIVE_REPOS`:** Any space-separated list of lowercase repository names (must match a corresponding `NHOPKG_REPO_*` variable).
+
+Repository URLs can include multiple mirrors per repo (check nhopkg source for mirror syntax).
+
+---
+
+## 8. Git Sources
+
+Default Git repository used to fetch sources for `.srcnho` packages.
+
+| Variable | Default | Description |
+|---|---|---|
+| `NHOPKG_GIT_SOURCES` | `https://gitlab.com/neonatox-sources` | Git repository URL for source packages |
+
+---
+
+## 9. Language Support
+
+gettext-based internationalization support.
+
+| Variable | Default | Accepted Values | Description |
+|---|---|---|---|
+| `NHOPKG_GETTEXT` | `yes` | `yes`, `no` | Enable gettext translations |
+| `TEXTDOMAIN` | `@PACKAGE_NAME@` | Text domain name | gettext text domain (do not edit) |
+| `TEXTDOMAINDIR` | `@localedir@` | Directory path | gettext locale directory (do not edit) |
+
+---
+
+## 10. Build Configuration — Compilation Optimizations
+
+Variables read by nhopkg and exported before `nbuild()` execution. Used when building packages from source.
+
+| Variable | Default | Description |
+|---|---|---|
+| `NHOPKG_MACHINE` | `sandybridge` | CPU tuning target (e.g. `sandybridge`, `native`, `generic`, `x86-64`). If empty or commented, nhopkg falls back to `generic` |
+| `NHOPKG_CFLAGS` | `"-O2 -pipe -march=x86-64"` | Base C compiler flags (machine target is appended) |
+| `NHOPKG_CXXFLAGS` | `""` (empty) | C++ compiler flags. If empty, defaults to `NHOPKG_CFLAGS` |
+| `NHOPKG_CPPFLAGS` | `""` (empty) | C preprocessor flags |
+| `NHOPKG_LDFLAGS` | `"-Wl,-O1"` | Linker flags |
+| `NHOPKG_BUILD_JOBS` | `""` (empty) | Parallel build jobs. If empty, auto-detected as `nproc - 2` (minimum 1) |
+| `NHOPKG_MAKEFLAGS` | `""` (empty) | Make flags. If empty, auto-generated from `NHOPKG_BUILD_JOBS` |
+| `NHOPKG_CMAKE_BUILD_PARALLEL_LEVEL` | `""` (empty) | CMake parallel level. If empty, set from `NHOPKG_BUILD_JOBS` |
+
+---
+
+## 11. Source Package Creation
+
+Settings used when generating binary packages from source.
+
+| Variable | Default | Description |
+|---|---|---|
+| `FIND_DIRS` | `/bin /boot /etc /lib /opt /sbin /srv /usr` | Space/newline-separated list of directories scanned to detect installed files |
+| `NOUPGRADE_FILES` | `mimeinfo.cache info/dir info/dir.old /etc/ld.so.cache ${NHOPKG_BUILDIR} /etc/mtab /etc/fstab` | Space/newline-separated list of files/directories never overwritten on upgrade |
+
+---
+
+## 12. Database
+
+nhopkg internal file database configuration.
+
+| Variable | Default | Description |
+|---|---|---|
+| `NHOPKG_DB` | `${NHOPKG_LOCALSTATEDIR}/nhopkg.db` | Path to the package database file |
+| `NO_DIRS_IN_DB` | `/dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src /usr/share/zoneinfo /var` | Space/newline-separated list of directories excluded from database indexing |
+
+`NO_DIRS_IN_DB` directories are never tracked in the package database, even if a package installs files there.
+
+---
+
+## Example Configuration
+
+```bash
+#====================================================================
+# /etc/nhopkg/nhopkg.conf
+#====================================================================
+
+# --- Main ---
+NHOPKG_SYSCONFDIR=/etc/nhopkg
+NHOPKG_LOCALSTATEDIR=/var/nhopkg
+TMPDIR=/tmp
+NHOPKG_BUILDIR=/usr/src/nhopkg
+
+# --- Options ---
+NHOPKG_CHECKDEPS=yes
+NHOPKG_PURGE=no
+NHOPKG_CHECKSHA256=yes
+NHOPKG_CHECKARCH=yes
+VERBOSE_MODE=no
+STRIP_BINARIES=no
+NHOHOLD="nhopkg glibc gcc"
+
+# --- Init System ---
+INITSYSTEM=systemd
+
+# --- BLFS Systemd Units ---
+SYSTEMD_BLFS_VER=20251204
+SYSTEMD_BLFS_DIR=/usr/src/blfs-systemd-units-${SYSTEMD_BLFS_VER}
+SYSTEMD_BLFS_URL=https://www.linuxfromscratch.org/blfs/downloads/systemd/blfs-systemd-units-${SYSTEMD_BLFS_VER}.tar.xz
+
+# --- BLFS SysVinit Scripts ---
+SYSV_BLFS_VER=20251220
+SYSV_BLFS_DIR=/usr/src/blfs-bootscripts-${SYSV_BLFS_VER}
+SYSV_BLFS_URL=https://anduin.linuxfromscratch.org/BLFS/blfs-bootscripts/blfs-bootscripts-${SYSV_BLFS_VER}.tar.xz
+
+# --- Package Signing ---
+NHOPKG_TRUSTED_KEYS_DIR="${NHOPKG_SYSCONFDIR}/trusted-keys/"
+NHOPKG_SIGN_PACKAGES=yes
+NHOPKG_SIGN_KEY="repo@neonatox.vegnux.com"
+NHOPKG_VERIFY_SIGNATURE=yes
+NHOPKG_REQUIRE_SIGNATURE=no
+
+# --- Repositories ---
+NHOPKG_ACTIVE_REPOS="core extra multilib"
+NHOPKG_REPO_CORE="https://repo.neonatox.vegnux.com/core"
+NHOPKG_REPO_EXTRA="https://repo.neonatox.vegnux.com/extra"
+NHOPKG_REPO_MULTILIB="https://repo.neonatox.vegnux.com/multilib"
+
+# --- Git Sources ---
+NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources
+
+# --- Language ---
+NHOPKG_GETTEXT=yes
+
+# --- Build Configuration ---
+NHOPKG_MACHINE="sandybridge"
+NHOPKG_CFLAGS="-O2 -pipe -march=x86-64"
+NHOPKG_CXXFLAGS=""
+NHOPKG_CPPFLAGS=""
+NHOPKG_LDFLAGS="-Wl,-O1"
+NHOPKG_BUILD_JOBS=""
+NHOPKG_MAKEFLAGS=""
+NHOPKG_CMAKE_BUILD_PARALLEL_LEVEL=""
+
+# --- Source Package Creation ---
+FIND_DIRS="/bin /boot /etc /lib /opt /sbin /srv /usr"
+NOUPGRADE_FILES="mimeinfo.cache info/dir info/dir.old /etc/ld.so.cache /usr/src/nhopkg /etc/mtab /etc/fstab"
+
+# --- Database ---
+NHOPKG_DB=/var/nhopkg/nhopkg.db
+NO_DIRS_IN_DB="/dev /home /media /mnt /opt /proc /run /sys /tmp /usr/src /usr/share/zoneinfo /var"
+```

@@ -24,6 +24,12 @@ nhopkg_overlay = configure_file(
   configuration: conf
 )
 
+nhopkg_src = configure_file(
+  input: 'nhopkg-src.in',
+  output: 'nhopkg-src',
+  configuration: conf
+)
+
 # Configurar librería en /usr/lib/nhopkg
 libnhopkg = configure_file(
   input: 'libnhopkg.in',
@@ -40,7 +46,7 @@ libnhopkg_udepsys = configure_file(
 
 # Instalar los scripts ejecutables
 install_data(
-  [nhopkg_script, nhopkg_repos, nhouser, nhopkg_overlay],
+  [nhopkg_script, nhopkg_repos, nhouser, nhopkg_overlay, nhopkg_src],
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x'
 )

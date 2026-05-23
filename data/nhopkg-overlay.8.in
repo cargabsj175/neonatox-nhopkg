@@ -1,0 +1,50 @@
+.TH NHOPKG-OVERLAY 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
+.SH NAME
+nhopkg-overlay \- set up an isolated overlay filesystem for building packages
+.SH SYNOPSIS
+.B nhopkg-overlay
+.SH DESCRIPTION
+\fBnhopkg-overlay\fR creates an isolated overlay filesystem environment for
+building nhopkg packages. It takes no command-line arguments.
+.P
+It sets up an overlay filesystem at \fI/var/lib/nhopkg-overlay/\fR with:
+.RS
+.IP \(bu 4
+\fIlowerdir=\fR (host root filesystem)
+.IP \(bu 4
+\fIupperdir=/var/lib/nhopkg-overlay/upper\fR
+.IP \(bu 4
+\fIworkdir=/var/lib/nhopkg-overlay/work\fR
+.IP \(bu 4
+Mount point: \fI/var/lib/nhopkg-overlay/root\fR
+.RE
+.P
+The following directories are bind-mounted into the overlay:
+.RS
+.IP \(bu 4
+\fI/dev\fR, \fI/proc\fR, \fI/sys\fR, \fI/run\fR
+.IP \(bu 4
+The current working directory at \fI/work\fR
+.RE
+.P
+After setup, it drops into a \fBchroot\fR at the overlay root, providing an
+isolated build environment. All changes are written to the upper layer and
+do not affect the host system.
+.P
+On exit (EXIT, INT, TERM signals), it recursively unmounts everything and
+removes \fI/var/lib/nhopkg-overlay/\fR.
+.P
+Must be run as root.
+.SH EXAMPLES
+.TP
+Start an overlay build environment
+.B sudo nhopkg-overlay
+.SH SEE ALSO
+.BR nhopkg (8),
+.BR nhopkg.conf (5),
+.BR nhopkg-src (8),
+.BR chroot (8),
+.BR mount (8)
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

@@ -1,0 +1,75 @@
+.TH NHOUSER 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
+.SH NAME
+nhouser \- idempotent system user and group creation for nhopkg
+.SH SYNOPSIS
+.B nhouser
+\fB\-\-check\fR|\fB\-\-create\fR \fB\-\-user\fR \fIname\fR [options]
+.br
+.B nhouser
+\fB\-\-check\fR|\fB\-\-create\fR \fB\-\-group\fR \fIname\fR [\fB\-\-gid\fR \fIgid\fR]
+.br
+.B nhouser
+\fB\-h\fR, \fB\-\-help\fR
+.br
+.B nhouser
+\fB\-\-version\fR
+.SH DESCRIPTION
+\fBnhouser\fR creates or checks system users and groups idempotently. It is
+designed to be called from \fBnpostinstall()\fR in nhoid recipes to ensure
+required system users and groups exist before a package's service is started.
+.P
+One of \fB\-\-check\fR or \fB\-\-create\fR is required.
+.SH COMMANDS
+.TP
+.B \-\-check
+Check if the specified user or group exists. Returns success (exit 0) if
+found, failure (exit 1) if not found.
+.TP
+.B \-\-create
+Create the specified user or group. If the user/group already exists, does
+nothing (idempotent).
+.SH OPTIONS
+.TP
+.B \-\-user \fIname\fR
+User name to check or create.
+.TP
+.B \-\-uid \fIuid\fR
+Numeric user ID.
+.TP
+.B \-\-uname \fIcomment\fR
+GECOS comment field for the user.
+.TP
+.B \-\-udir \fIpath\fR
+Home directory for the user.
+.TP
+.B \-\-shell \fIpath\fR
+Login shell for the user.
+.TP
+.B \-\-group \fIname\fR
+Group name to check or create.
+.TP
+.B \-\-gid \fIgid\fR
+Numeric group ID.
+.TP
+.B \-\-groups \fI"g1,g2"\fR
+Comma-separated list of supplementary groups.
+.TP
+.B \-v, \-\-verbose
+Verbose output.
+.SH EXAMPLES
+.TP
+Create a system user for cups
+.B nhouser \-\-create \-\-user cups \-\-uid 216 \-\-udir /dev/null \-\-shell /bin/false
+.TP
+Check if a user exists
+.B nhouser \-\-check \-\-user cups
+.TP
+Create a system group
+.B nhouser \-\-create \-\-group lp \-\-gid 19
+.SH SEE ALSO
+.BR nhopkg (8),
+.BR nhopkg.conf (5),
+.BR nhopkg-src (8)
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

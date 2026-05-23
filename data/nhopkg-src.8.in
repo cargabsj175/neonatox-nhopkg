@@ -1,0 +1,172 @@
+.TH NHOPKG-SRC 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
+.SH NAME
+nhopkg-src \- create, validate, and build source package projects for nhopkg
+.SH SYNOPSIS
+.B nhopkg-src
+\fB\-\-init\fR [\fIname\fR]
+.br
+.B nhopkg-src
+\fB\-\-createpackage\fR [\fB\-\-force\fR]
+.br
+.B nhopkg-src
+\fB\-\-buildpackage\fR
+.br
+.B nhopkg-src
+\fB\-\-validate\fR [\fIfile\fR]
+.br
+.B nhopkg-src
+\fB\-h\fR, \fB\-\-help\fR
+.br
+.B nhopkg-src
+\fB\-\-version\fR
+.SH DESCRIPTION
+\fBnhopkg-src\fR creates, validates, and builds source package projects for nhopkg.
+It works with \fI.srcnho\fR files \(em flat tarballs containing the \fInhoid\fR metadata
+file plus patches and extra files, which \fBnhopkg \-bv\fR uses to download, compile,
+and install binary packages.
+.SH COMMANDS
+.TP
+.B \-\-init [\fIname\fR]
+Create a new source package project interactively.
+.br
+If \fIname\fR is provided on the command line, it is used as the package name
+(and project directory). Otherwise the tool prompts for it.
+.br
+Prompts are asked interactively with sensible defaults:
+.RS
+.IP \(bu 4
+Version (1.0)
+.IP \(bu 4
+Release (1)
+.IP \(bu 4
+Category (apps)
+.IP \(bu 4
+Group (base)
+.IP \(bu 4
+Repository (extra)
+.IP \(bu 4
+Description
+.IP \(bu 4
+Maintainer
+.IP \(bu 4
+Packager
+.IP \(bu 4
+URL (project home page)
+.IP \(bu 4
+Download URL (Packageurl)
+.IP \(bu 4
+Git reference (Packageref, required for git sources)
+.IP \(bu 4
+SHA256 checksum (optional; can be downloaded automatically)
+.IP \(bu 4
+License
+.IP \(bu 4
+Architecture (set to machine architecture)
+.IP \(bu 4
+Provides / Conflicts (optional)
+.RE
+.P
+The project directory contains:
+.RS
+.IP \(bu 4
+\fInhoid\fR \(em the source recipe metadata file
+.IP \(bu 4
+\fIpatches/\fR \(em directory for patch files (*.patch, *.diff)
+.IP \(bu 4
+\fIothers/\fR \(em directory for extra files
+.IP \(bu 4
+\fIsources/\fR \(em downloaded tarballs (excluded from .srcnho)
+.IP \(bu 4
+\fIbuild/\fR \(em build artifacts (excluded from .srcnho)
+.RE
+.P
+If the download URL has a known extension (.tar.gz, .tar.xz, .tar.bz2,
+.tar.zst, .tgz, .tar, .zip), the tarball is downloaded to \fIsources/\fR.
+
+.TP
+.B \-\-createpackage [\fB\-\-force\fR]
+Package the current project directory into a \fI.srcnho\fR file.
+.br
+The output file is named \fI<name>-<version>-<release>.srcnho\fR.
+.br
+\fB\-\-force\fR overwrites an existing output file without prompting.
+
+.TP
+.B \-\-buildpackage
+Build the \fI.srcnho\fR package by running \fBnhopkg \-bv\fR with \fBsudo \-k\fR.
+.br
+The tool determines the expected .srcnho filename by reading the nhoid metadata
+in the current directory. Always prompts for sudo credentials.
+
+.TP
+.B \-\-validate [\fIfile\fR]
+Validate a .srcnho package or the nhoid file in the current directory.
+.br
+If no file is given, validates \fInhoid\fR in the current directory.
+.br
+Checks performed:
+.RS
+.IP \(bu 4
+Extension is .srcnho (or current dir has nhoid)
+.IP \(bu 4
+Tarball extractable
+.IP \(bu 4
+nhoid file exists and has correct header (%NHO-0.5)
+.IP \(bu 4
+Name, Version, Release fields are present and non-empty
+.IP \(bu 4
+nbuild() function exists and is not noemptyfuncs
+.IP \(bu 4
+ninstall() (or ninstall_<part>() variants) exist and are not noemptyfuncs
+.IP \(bu 4
+npostinstall() and npostremove() may be noemptyfuncs
+.IP \(bu 4
+All split parts defined in Parts: have corresponding ninstall_<part>()
+.IP \(bu 4
+No duplicate function definitions
+.IP \(bu 4
+Warns if sha256 is missing
+.IP \(bu 4
+Warns if Packageref is missing for git sources
+.IP \(bu 4
+Warns if Description is empty
+.RE
+.SH OPTIONS
+.TP
+.B \-\-force
+With \fB\-\-createpackage\fR, overwrite existing .srcnho file without prompting.
+.SH EXAMPLES
+.TP
+Create a new project
+.B nhopkg-src \-\-init myapp
+.TP
+Package the project
+.B nhopkg-src \-\-createpackage
+.TP
+Build the package
+.B nhopkg-src \-\-buildpackage
+.TP
+Validate the result
+.B nhopkg-src \-\-validate myapp-1.0-1.srcnho
+.SH FILES
+.TP
+.I nhoid
+Source recipe metadata file in the project directory.
+.TP
+.I patches/*.patch, patches/*.diff
+Patch files applied during build.
+.TP
+.I others/*
+Extra files included in the .srcnho (e.g. desktop files, icons).
+.TP
+.I sources/
+Downloaded tarballs (excluded from .srcnho).
+.TP
+.I build/
+Build artifacts (excluded from .srcnho).
+.SH SEE ALSO
+.BR nhopkg (8),
+.BR nhopkg.conf (5)
+.SH AUTHOR
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

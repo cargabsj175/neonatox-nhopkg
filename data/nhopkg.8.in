@@ -1,116 +1,181 @@
 .TH NHOPKG 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
 .SH NAME
-nhopkg \- universal package manager for GNU/Linux
+nhopkg \- universal binary and source package manager for GNU/Linux
 .SH SYNOPSIS
 .B nhopkg
-[\fIOPTIONS\fR] [\fICOMMAND\fR] [\fIPACKAGE...\fR]
+[\fIOPTIONS\fR] \fICOMMAND\fR [\fIPACKAGE...\fR]
 .SH DESCRIPTION
-.B nhopkg
-is a universal package manager that works on any GNU/Linux distribution.
-It supports binary packages (`.nho`) and source packages (`.srcnho`).
-.PP
-Packages can be installed locally or fetched from remote repositories.
+\fBnhopkg\fR is a universal package manager that works on any GNU/Linux
+distribution. It supports binary packages (\fI.nho\fR) and source packages
+(\fI.srcnho\fR). Packages can be installed locally or fetched from remote
+repositories.
+.P
+Administrative tasks (repository management, source package creation, user
+management) are handled by companion tools: \fBnhopkg-src\fR, \fBnhopkg-repos\fR,
+\fBnhouser\fR, and \fBnhopkg-overlay\fR.
 .SH COMMANDS
+Exactly one command may be specified per invocation.
 .TP
-.B \-i, \-\-install
-Install a local binary package (`.nho`).
+.B \-i, \-\-install \fI<file.nho>\fR
+Install a local \fI.nho\fR binary package.
 .TP
-.B \-S, \-\-super-install, \-d, \-\-dios
-Install a package from configured repository.
+.B \-S, \-\-super-install, \-d, \-\-dios \fI<package>\fR
+Install a package from a remote repository with automatic dependency resolution.
 .TP
-.B \-b, \-\-build
-Build and install a source package (`.srcnho`).
+.B \-b, \-\-build \fI<file.srcnho>\fR
+Build and install a source \fI.srcnho\fR package. Downloads sources, applies
+patches, runs nbuild(), ninstall(), and creates/installs the binary \fI.nho\fR.
 .TP
-.B \-r, \-\-remove
+.B \-C, \-\-super-build \fI<name>\fR
+Clone a remote Git repository and build/install from its \fInhoid\fR recipe.
+.TP
+.B \-r, \-\-remove \fI<package>\fR
 Remove an installed package.
 .TP
-.B \-\-purge
-Also remove packages that depend on the one being removed.
+.B \-\-purge \fI<package>\fR
+Remove a package plus all packages that depend on it.
+.TP
+.B \-B, \-\-backup \fI<package>\fR
+Recreate a \fI.nho\fR binary package from an already-installed package.
 .TP
 .B \-l, \-\-list
-List all installed packages.
+List all packages installed by nhopkg.
 .TP
-.B \-n, \-\-info
-Show detailed information about a package.
+.B \-n, \-\-info \fI<package>\fR
+Show detailed information about a package (searches installed, repository,
+and local \fI.nho\fR files).
 .TP
-.B \-w, \-\-show
-List files contained in a package.
+.B \-w, \-\-show \fI<package>\fR
+List every file owned by an installed package.
 .TP
-.B \-s, \-\-search
-Search for packages in the repository.
+.B \-s, \-\-search \fI<pattern>\fR
+Search for packages in local repository metadata.
 .TP
-.B \-t, \-\-list-repo
-List all packages available in the repository.
+.B \-t, \-\-list-repo [\fI<repo>\fR]
+List all packages available in configured repositories. Optionally filter by
+repository name.
 .TP
-.B \-c, \-\-create-source
-Launch interactive wizard to create a `.srcnho` package.
+.B \-k, \-\-check \fI<package>\fR
+Verify the integrity of an installed package (checks every listed file exists).
 .TP
-.B \-A, \-\-auto-package
-Automatically create a `.srcnho` package from a tarball.
-.TP
-.B \-z, \-\-tgz2nho
-Convert a Slackware `.tgz` package to `.nho`.
-.TP
-.B \-g, \-\-create-repo
-Create a local repository from `.nho` files in a directory.
+.B \-y, \-\-upgrade
+Upgrade all installed packages to the latest version available in repositories.
 .TP
 .B \-U, \-\-update
-Update local repository metadata.
+Synchronise all configured repository databases.
 .TP
 .B \-u, \-\-update-db
-Update the internal file database used for dependency resolution.
+Rebuild the local file-location database via updatedb/plocate.
 .TP
 .B \-x, \-\-update-shooters
-Run system-wide cache updates (icons, MIME, schemas, fonts, etc.).
+Refresh system caches: GLib schemas, icon cache, desktop database, MIME
+database, man pages, font cache, shared library cache, GDK pixbuf loaders.
 .TP
 .B \-e, \-\-clean
-Clear download and build caches.
+Remove cached \fI.nho\fR packages from the download cache. With \fB\-R\fR also
+cleans the build directory.
 .TP
-.B \-\-version
-Show version information.
+.B \-G, \-\-install-group \fI<group>\fR
+Install every package belonging to a named group (e.g. base, libs, xorg)
+across all active repositories.
 .TP
-.B \-\-help
-Show this help.
+.B \-X, \-\-strip-binaries
+Strip debug symbols from ELF binaries during \fB\-\-build\fR (experimental).
 .SH OPTIONS
-.TP
-.B \-\-root=DIR
-Install package into an alternate root directory.
-.TP
-.B \-R, \-\-recursive
-Do not prompt for confirmation; answer "yes" automatically.
 .TP
 .B \-v, \-\-verbose
 Enable verbose output.
 .TP
+.B \-R, \-\-recursive
+Answer "yes" to all prompts (non-interactive mode). With \fB\-e\fR also cleans
+the build directory.
+.TP
+.B \-o, \-\-output \fIDIR\fR
+Write command output (list, info, show) to a log file in \fIDIR\fR.
+.TP
+.B \-\-root \fIDIR\fR
+Operate on an alternate root directory (for bootstrap, chroot, or containers).
+Post-install hooks are written to a generated script rather than executed.
+.TP
 .B \-\-no-check-deps
-Skip dependency checking.
+Skip dependency resolution.
 .TP
 .B \-\-force-check-deps
-Force dependency checking (default behavior).
+Force dependency resolution even if disabled in configuration.
 .TP
 .B \-\-no-check-arch
-Skip architecture verification.
+Skip architecture validation.
 .TP
-.B \-\-no-check-sha256
-Skip SHA256 checksum verification.
+.B \-\-force-check-arch
+Force architecture validation even if disabled in configuration.
 .TP
-.B \-o, \-\-output=DIR
-Write logs or output to specified directory.
+.B \-\-no-check-sha256, \-\-no-check-sums
+Skip SHA-256 checksum verification.
+.TP
+.B \-\-force-check-sha256, \-\-force-check-sums
+Force checksum verification even if disabled in configuration.
+.TP
+.B \-\-sign-package
+Sign the binary package with GPG during \fB\-\-build\fR.
+.TP
+.B \-\-no-sign-package
+Skip GPG signing during \fB\-\-build\fR.
+.TP
+.B \-\-verify-package-signature
+Verify the GPG signature of a package before installing it.
+.TP
+.B \-\-no-verify-package-signature
+Skip GPG signature verification.
+.TP
+.B \-\-license
+Display a short license notice.
+.TP
+.B \-\-license-all
+Display the full GPL-3.0 license text.
+.TP
+.B \-\-version
+Show nhopkg version, copyright, and build-time configuration.
+.TP
+.B \-\-help
+Show the built-in help page.
+.TP
+.B \-\-
+Stop argument parsing. Everything after is treated as a package name.
 .SH FILES
 .TP
 .I /etc/nhopkg/nhopkg.conf
 Main configuration file.
 .TP
+.I /usr/share/nhopkg/nhopkg.conf
+Fallback default configuration (shipped with the package).
+.TP
 .I /var/lib/nhopkg/packages/
-Database of installed packages.
+Database of installed packages (one file per package).
 .TP
 .I /var/lib/nhopkg/files/
 List of files installed by each package (compressed).
 .TP
+.I /var/lib/nhopkg/nhopkg.db
+Locate-style database for dependency resolution.
+.TP
 .I /var/cache/nhopkg/
 Downloaded packages and temporary files.
+.SH EXIT STATUS
+.TP
+0
+Success.
+.TP
+1
+General error (invalid arguments, missing package, etc.).
+.TP
+2
+Insufficient privileges (must be root for most operations).
 .SH SEE ALSO
-.BR nhopkg.conf (5)
+.BR nhopkg.conf (5),
+.BR nhopkg-src (8),
+.BR nhopkg-repos (8),
+.BR nhouser (8),
+.BR nhopkg-overlay (8)
 .SH AUTHOR
-Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>  
-Carlos Sánchez <cargabsj175@gmail.com>
+Jaime Gil de Sagredo Luna <jaimegildesagredo@gmail.com>
+Carlos Sanchez <cargabsj175@gmail.com>

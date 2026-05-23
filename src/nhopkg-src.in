@@ -1,0 +1,588 @@
+#!/bin/bash
+###############################################################################
+#	nhopkg-src v. @PACKAGE_VERSION@ @RELEASEDATE@  <https://github.com/cargabsj175/neonatox-nhopkg/>
+#
+#	Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>
+#
+#	This program is free software: you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation, either version 3 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Description: Source package project tool for nhopkg.
+#              Creates, validates and builds .srcnho packages.
+# Parameters: --init, --createpackage, --buildpackage, --validate
+###############################################################################
+#==============================================================================
+# Section: Basic configurations.
+#==============================================================================
+prefix="@prefix@"
+NHOPKG_CONF="@sysconfdir@/nhopkg/nhopkg.conf"
+NHOPKG_CONF_DEFAULT="@pkgdatadir@/nhopkg.conf"
+
+if [[ -e "${NHOPKG_CONF}" ]]; then
+	source "${NHOPKG_CONF}" 2> /dev/null
+elif [[ -e "${NHOPKG_CONF_DEFAULT}" ]]; then
+	echog " * Unable to locate Nhopkg configuration file!"
+	echog " - Loading default Nhopkg configuration file..."
+	source "${NHOPKG_CONF_DEFAULT}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg configuration file!"
+	exit 1
+fi
+
+if [[ -e "${NHOPKG_LIB}" ]]; then
+	source "${NHOPKG_LIB}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg core common functions file!"
+fi
+
+#==============================================================================
+# Section: Usage
+#==============================================================================
+nhopkg_src_usage() {
+	echog "Usage:"
+	echo "  nhopkg-src --init [<name>]"
+	echo "  nhopkg-src --createpackage [--force]"
+	echo "  nhopkg-src --buildpackage"
+	echo "  nhopkg-src --validate [<nhoid_file>]"
+	echo
+	echog "Options:"
+	echo "  --init [<name>]       Create a new source package project"
+	echo "  --createpackage       Package project into .srcnho"
+	echo "  --force               Overwrite existing .srcnho"
+	echo "  --buildpackage        Build source package with nhopkg -bv"
+	echo "  --validate [<file>]   Validate a nhoid file"
+	echo "  -h, --help            Show this help"
+	echo "  --version             Show version"
+}
+
+#==============================================================================
+# Section: Interactive prompt helpers
+#==============================================================================
+prompt_with_default() {
+	local var_name="$1"
+	local prompt_text="$2"
+	local default_val="$3"
+	local current_val
+
+	eval current_val=\"\$$var_name\"
+	if [[ -n "$current_val" ]]; then
+		echog "${prompt_text}: ${current_val}"
+		return
+	fi
+
+	echogn "${prompt_text}"
+	echo -n " [${default_val}]: "
+	read -er input_val
+	if [[ -z "$input_val" && -n "$default_val" ]]; then
+		eval $var_name=\"$default_val\"
+	else
+		eval $var_name=\"$input_val\"
+	fi
+}
+
+prompt_required() {
+	local var_name="$1"
+	local prompt_text="$2"
+
+	while true; do
+		echog "${prompt_text}:"
+		read -er input_val
+		if [[ -n "$input_val" ]]; then
+			eval $var_name=\"$input_val\"
+			break
+		fi
+		echog " * This field is required!" >&2
+	done
+}
+
+prompt_yes_no() {
+	local var_name="$1"
+	local prompt_text="$2"
+	local default_val="${3:-Y}"
+
+	echogn "${prompt_text}"
+	echo -n " [${default_val}/n]: "
+	read -er input_val
+	input_val=$(echo "${input_val:-$default_val}" | tr '[:upper:]' '[:lower:]')
+	case "$input_val" in
+		y|yes) eval $var_name=\"yes\" ;;
+		*) eval $var_name=\"no\" ;;
+	esac
+}
+
+prompt_multi() {
+	local var_name="$1"
+	local prompt_text="$2"
+
+	echog "${prompt_text} (space separated, Enter to skip):"
+	read -er input_val
+	eval $var_name=\"$input_val\"
+}
+
+#==============================================================================
+# Section: nhoid generation helpers
+#==============================================================================
+write_nhoid_header() {
+	local nhoid_file="$1"
+	cat > "$nhoid_file" <<EOF
+#%NHO-0.5
+# Package Maintainer:	${PACKAGERNAME} <${PACKAGERMAIL}>
+
+# Name:	${PKG_NAME}
+# Version:	${PKG_VERSION}
+# Release:	${PKG_RELEASE}
+EOF
+	[[ -n "$PKG_LICENSE" ]] && echo -e "# License:\t${PKG_LICENSE}" >> "$nhoid_file"
+	echo -e "# Repository:\textra" >> "$nhoid_file"
+	[[ -n "$PKG_ARCH" ]] && echo -e "# Arch:\t${PKG_ARCH}" >> "$nhoid_file"
+	[[ -n "$PKG_URL" ]] && echo -e "# Url:\t${PKG_URL}" >> "$nhoid_file"
+	[[ -n "$PKG_DESCRIPTION" ]] && echo -e "# Description:\t${PKG_DESCRIPTION}" >> "$nhoid_file"
+	echo -e "# Packageurl:\t${PKG_PACKAGEURL}" >> "$nhoid_file"
+	if [[ "$PKG_IS_GIT" = "yes" ]]; then
+		echo -e "# Packageref:\t${PKG_PACKAGEREF}" >> "$nhoid_file"
+	else
+		if [[ -n "$PKG_SHA256" ]]; then
+			echo -e "# SHA256:\t${PKG_SHA256}" >> "$nhoid_file"
+		else
+			echo -e "## SHA256:\t<pendiente>" >> "$nhoid_file"
+		fi
+	fi
+	[[ -n "$PKG_SPLIT" ]] && echo -e "# Splitpackage:\t${PKG_SPLIT}" >> "$nhoid_file"
+	[[ -n "$PKG_PROVIDES" ]] && echo -e "# Provides:\t${PKG_PROVIDES}" >> "$nhoid_file"
+	[[ -n "$PKG_CONFLICTS" ]] && echo -e "# Conflicts:\t${PKG_CONFLICTS}" >> "$nhoid_file"
+	echo -e "## BuildDep:\t(add your build dependencies here)" >> "$nhoid_file"
+	echo -e "## OptionalBuildDep:\t(add your optional build dependencies)" >> "$nhoid_file"
+	echo -e "## Dep(post):\t(add your runtime dependencies)" >> "$nhoid_file"
+	echo -e "## OptionalDep(post):\t(add your optional runtime dependencies)" >> "$nhoid_file"
+	echo >> "$nhoid_file"
+}
+
+write_nhoid_placeholders() {
+	local nhoid_file="$1"
+	local IFS_bak="$IFS"
+	local -a splits=()
+
+	echo 'nbuild() {' >> "$nhoid_file"
+	echo '    noemptyfuncs' >> "$nhoid_file"
+	echo '}' >> "$nhoid_file"
+	echo >> "$nhoid_file"
+	echo 'ninstall() {' >> "$nhoid_file"
+	echo '    noemptyfuncs' >> "$nhoid_file"
+	echo '}' >> "$nhoid_file"
+	echo >> "$nhoid_file"
+	echo 'npostinstall() {' >> "$nhoid_file"
+	echo '    noemptyfuncs' >> "$nhoid_file"
+	echo '}' >> "$nhoid_file"
+	echo >> "$nhoid_file"
+	echo 'npostremove() {' >> "$nhoid_file"
+	echo '    noemptyfuncs' >> "$nhoid_file"
+	echo '}' >> "$nhoid_file"
+
+	if [[ -n "$PKG_SPLIT" ]]; then
+		IFS=' ' read -ra splits <<< "$PKG_SPLIT"
+		for part in "${splits[@]}"; do
+			echo >> "$nhoid_file"
+			echo "ninstall_${part}() {" >> "$nhoid_file"
+			echo '    noemptyfuncs' >> "$nhoid_file"
+			echo '}' >> "$nhoid_file"
+			echo >> "$nhoid_file"
+			echo "npostinstall_${part}() {" >> "$nhoid_file"
+			echo '    noemptyfuncs' >> "$nhoid_file"
+			echo '}' >> "$nhoid_file"
+			echo >> "$nhoid_file"
+			echo "npostremove_${part}() {" >> "$nhoid_file"
+			echo '    noemptyfuncs' >> "$nhoid_file"
+			echo '}' >> "$nhoid_file"
+		done
+	fi
+	IFS="$IFS_bak"
+}
+
+#==============================================================================
+# Section: --init
+#==============================================================================
+cmd_init() {
+	local arg_name="$1"
+	echog " --- Creating new source package project"
+
+	if [[ -z "$arg_name" ]]; then
+		prompt_required PKG_NAME "Package Name"
+	else
+		PKG_NAME="$arg_name"
+		echog "Package Name: ${PKG_NAME}"
+	fi
+	prompt_with_default PKG_VERSION "Package Version" "1.0"
+	prompt_with_default PKG_RELEASE "Package Release" "n2026"
+
+	local default_maintainer="${USER:-user} <${USER:-user}@$(hostname)>"
+	prompt_with_default PKG_MAINTAINER "Package Maintainer" "$default_maintainer"
+	PACKAGERNAME="${PKG_MAINTAINER%% <*}"
+	PACKAGERMAIL="${PKG_MAINTAINER#*<}"
+	PACKAGERMAIL="${PACKAGERMAIL%>}"
+
+	prompt_with_default PKG_LICENSE "License" "GPL-3.0-only"
+	prompt_with_default PKG_ARCH "Architecture" "x86_64"
+	prompt_with_default PKG_URL "Upstream URL" ""
+	prompt_with_default PKG_DESCRIPTION "Description" ""
+
+	# Packageurl
+	prompt_required PKG_PACKAGEURL "Package URL (tarball or git+<url>)"
+
+	# Create project directory first (needed for downloads)
+	local proj_dir="${PWD}/${PKG_NAME}"
+	if [[ -d "$proj_dir" ]]; then
+		echog " * Directory '${PKG_NAME}' already exists!" >&2
+		exit 1
+	fi
+	mkdir -p "$proj_dir/patches" "$proj_dir/others" "$proj_dir/sources" "$proj_dir/build"
+
+	PKG_IS_GIT="no"
+	if [[ "$PKG_PACKAGEURL" == git+* ]]; then
+		PKG_IS_GIT="yes"
+		prompt_required PKG_PACKAGEREF "Git reference (tag, commit, branch)"
+	else
+		# SHA256
+		prompt_yes_no PKG_DOWNLOAD "Download to calculate SHA256?" "Y"
+		if [[ "$PKG_DOWNLOAD" = "yes" ]]; then
+			make_tmp_dir
+			local tarball_name="${PKG_PACKAGEURL##*/}"
+			echogn " --- Downloading: "
+			echo "$tarball_name"
+			wget --https-only -cqt 3 -T 20 -O "${NHOPKG_TMPDIR}/${tarball_name}" "$PKG_PACKAGEURL" 2>/dev/null
+			if [[ $? -eq 0 ]]; then
+				cp "${NHOPKG_TMPDIR}/${tarball_name}" "${proj_dir}/sources/"
+				PKG_SHA256=$(sha256sum "${NHOPKG_TMPDIR}/${tarball_name}")
+				echog "   SHA256 calculated."
+			else
+				echog "   Download failed. SHA256 will be left pending." >&2
+				PKG_SHA256=""
+			fi
+			cleanup_tmp_dir
+		else
+			echog "   Will leave SHA256 as pending."
+			PKG_SHA256=""
+		fi
+	fi
+
+	prompt_multi PKG_SPLIT "Split packages"
+	prompt_multi PKG_PROVIDES "Provides"
+	prompt_multi PKG_CONFLICTS "Conflicts"
+
+	write_nhoid_header "$proj_dir/nhoid"
+	write_nhoid_placeholders "$proj_dir/nhoid"
+
+	echogn " --- Project created:"
+	echo " ${proj_dir}"
+	echog " - Edit nhoid and place files in patches/ and others/"
+	echo
+	echog " - Run 'nhopkg-src --createpackage' to package"
+}
+
+#==============================================================================
+# Section: --createpackage
+#==============================================================================
+cmd_createpackage() {
+	local force="$1"
+	local pkg_name pkg_ver pkg_rel
+
+	if [[ ! -f "nhoid" ]]; then
+		echog " * nhoid not found in current directory!" >&2
+		exit 1
+	fi
+
+	# Validate first
+	cmd_validate "nhoid" || exit 1
+
+	get_basic_data "nhoid"
+	pkg_name="$pkgname"
+	pkg_ver="$pkgversion"
+	pkg_rel="$pkgrevision"
+
+	local srcnho_file="${pkg_name}-${pkg_ver}-${pkg_rel}.srcnho"
+
+	if [[ -f "$srcnho_file" && "$force" != "yes" ]]; then
+		echog " * ${srcnho_file} already exists!" >&2
+		echog "   Use --force to overwrite." >&2
+		exit 1
+	fi
+
+	make_tmp_dir
+	mkdir -p "${NHOPKG_TMPDIR}/pkg"
+
+	# nhoid
+	cp "nhoid" "${NHOPKG_TMPDIR}/pkg/"
+
+	# patches/*.patch and patches/*.diff
+	if [[ -d "patches" ]]; then
+		for f in patches/*.patch patches/*.diff; do
+			[[ -f "$f" ]] && cp "$f" "${NHOPKG_TMPDIR}/pkg/"
+		done
+	fi
+
+	# others/*
+	if [[ -d "others" ]]; then
+		for f in others/*; do
+			[[ -f "$f" ]] && cp "$f" "${NHOPKG_TMPDIR}/pkg/"
+		done
+	fi
+
+	echogn " --- Creating: "
+	echo "$srcnho_file"
+	tar cf "$srcnho_file" -C "${NHOPKG_TMPDIR}/pkg" . 2>/dev/null
+	check_if_ok " * Unable to create source package."
+	cleanup_tmp_dir
+}
+
+#==============================================================================
+# Section: --buildpackage
+#==============================================================================
+cmd_buildpackage() {
+	local pkg_name pkg_ver pkg_rel
+
+	if [[ ! -f "nhoid" ]]; then
+		echog " * nhoid not found in current directory!" >&2
+		exit 1
+	fi
+
+	get_basic_data "nhoid"
+	pkg_name="$pkgname"
+	pkg_ver="$pkgversion"
+	pkg_rel="$pkgrevision"
+
+	local srcnho_file="${pkg_name}-${pkg_ver}-${pkg_rel}.srcnho"
+
+	if [[ ! -f "$srcnho_file" ]]; then
+		echog " * ${srcnho_file} not found!" >&2
+		echog "   Run 'nhopkg-src --createpackage' first." >&2
+		exit 1
+	fi
+
+	echog " --- Building source package with nhopkg -bv"
+	exec sudo -k nhopkg -bv "$srcnho_file"
+}
+
+#==============================================================================
+# Section: --validate
+#==============================================================================
+cmd_validate() {
+	local nhoid_file="${1:-nhoid}"
+	local errors=0
+
+	if [[ ! -f "$nhoid_file" ]]; then
+		echog " * File not found: ${nhoid_file}" >&2
+		return 1
+	fi
+
+	# Header
+	if ! grep -q "^#%NHO-0.5" "$nhoid_file" 2>/dev/null; then
+		echog " *** Missing or invalid header: #%NHO-0.5" >&2
+		((errors++))
+	fi
+
+	# Name
+	local name=$(grep "^# Name:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -z "$name" ]]; then
+		echog " *** Missing or empty: # Name:" >&2
+		((errors++))
+	fi
+
+	# Version
+	local version=$(grep "^# Version:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -z "$version" ]]; then
+		echog " *** Missing or empty: # Version:" >&2
+		((errors++))
+	fi
+
+	# Release
+	local release=$(grep "^# Release:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -z "$release" ]]; then
+		echog " *** Missing or empty: # Release:" >&2
+		((errors++))
+	fi
+
+	# Packageurl
+	local packageurl=$(grep "^# Packageurl:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -z "$packageurl" ]]; then
+		echog " *** Missing: # Packageurl:" >&2
+		((errors++))
+	fi
+
+	# Git vs tarball checks
+	local is_git="no"
+	[[ "$packageurl" == git+* ]] && is_git="yes"
+
+	if [[ "$is_git" = "yes" ]]; then
+		local packageref=$(grep "^# Packageref:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+		if [[ -z "$packageref" ]]; then
+			echog " *** Missing: # Packageref: (required for git sources)" >&2
+			((errors++))
+		fi
+	else
+		local sha256=$(grep "^# SHA256:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+		if [[ -z "$sha256" ]]; then
+			echog " ** Warning: # SHA256: missing (recommended for tarball sources)" >&2
+		fi
+	fi
+
+	# Provides / Conflicts consistency
+	local provides=$(grep "^# Provides:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	local conflicts=$(grep "^# Conflicts:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -n "$provides" && -n "$conflicts" ]]; then
+		for p in $provides; do
+			for c in $conflicts; do
+				if [[ "$p" = "$c" ]]; then
+					echog " *** Conflict: '${p}' appears in both Provides: and Conflicts:" >&2
+					((errors++))
+				fi
+			done
+		done
+	fi
+	for prov_line in $(grep "^# Provides_" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}'); do
+		local prov_suffix="${prov_line%%:*}"
+		for conf_line in $(grep "^# Conflicts_" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}'); do
+			if [[ "$prov_line" = "$conf_line" ]]; then
+				echog " *** Conflict: '${prov_line}' appears in both Provides and Conflicts" >&2
+				((errors++))
+			fi
+		done
+	done
+
+	# Splitpackage checks
+	local split=$(grep "^# Splitpackage:" "$nhoid_file" 2>/dev/null | awk -F'\t' '{print $2}')
+	if [[ -n "$split" ]]; then
+		for part in $split; do
+			if ! grep -q "ninstall_${part}()" "$nhoid_file" 2>/dev/null; then
+				echog " *** Missing function: ninstall_${part}()" >&2
+				((errors++))
+			fi
+		done
+	fi
+
+	# nbuild() must exist and have real content (not just noemptyfuncs)
+	if grep -q "^nbuild() {" "$nhoid_file" 2>/dev/null; then
+		local build_body=$(sed -n '/^nbuild() {/,/^}/p' "$nhoid_file" | sed '1d;$d' | tr -d '[:space:]')
+		if [[ -z "$build_body" || "$build_body" = "noemptyfuncs" ]]; then
+			echog " *** nbuild() has no real content (must have build commands)" >&2
+			((errors++))
+		fi
+	else
+		echog " *** Missing function: nbuild()" >&2
+		((errors++))
+	fi
+
+	# ninstall() must exist and have real content
+	if grep -q "^ninstall() {" "$nhoid_file" 2>/dev/null; then
+		local install_body=$(sed -n '/^ninstall() {/,/^}/p' "$nhoid_file" | sed '1d;$d' | tr -d '[:space:]')
+		if [[ -z "$install_body" || "$install_body" = "noemptyfuncs" ]]; then
+			echog " *** ninstall() has no real content (must have install commands)" >&2
+			((errors++))
+		fi
+	else
+		echog " *** Missing function: ninstall()" >&2
+		((errors++))
+	fi
+
+	# npostinstall() and npostremove() just need to exist
+	for fn in npostinstall npostremove; do
+		if ! grep -q "^${fn}() {" "$nhoid_file" 2>/dev/null; then
+			echog " *** Missing function: ${fn}()" >&2
+			((errors++))
+		fi
+	done
+
+	if [[ $errors -eq 0 ]]; then
+		echog " --- nhoid is valid."
+		return 0
+	else
+		echog " *** nhoid has ${errors} error(s)." >&2
+		return 1
+	fi
+}
+
+#==============================================================================
+# Section: Argument parsing
+#==============================================================================
+if [[ $# -eq 0 ]]; then
+	nhopkg_src_usage
+	exit 1
+fi
+
+NHOPKG_SRC_CMD=""
+NHOPKG_SRC_FORCE="no"
+NHOPKG_SRC_ARG=""
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		--init)
+			NHOPKG_SRC_CMD="init"
+			shift
+			if [[ $# -gt 0 && "$1" != -* ]]; then
+				NHOPKG_SRC_ARG="$1"
+				shift
+			fi
+			;;
+		--createpackage)
+			NHOPKG_SRC_CMD="createpackage"
+			shift
+			;;
+		--force)
+			NHOPKG_SRC_FORCE="yes"
+			shift
+			;;
+		--buildpackage)
+			NHOPKG_SRC_CMD="buildpackage"
+			shift
+			;;
+		--validate)
+			NHOPKG_SRC_CMD="validate"
+			shift
+			if [[ $# -gt 0 && "$1" != -* ]]; then
+				NHOPKG_SRC_ARG="$1"
+				shift
+			fi
+			;;
+		-h|--help)
+			nhopkg_src_usage
+			exit 0
+			;;
+		--version)
+			echo "nhopkg-src @PACKAGE_VERSION@ @RELEASEDATE@"
+			exit 0
+			;;
+		*)
+			echog " * Unknown option: $1" >&2
+			nhopkg_src_usage
+			exit 1
+			;;
+	esac
+done
+
+case "$NHOPKG_SRC_CMD" in
+	init)
+		cmd_init "$NHOPKG_SRC_ARG"
+		;;
+	createpackage)
+		cmd_createpackage "$NHOPKG_SRC_FORCE"
+		;;
+	buildpackage)
+		cmd_buildpackage
+		;;
+	validate)
+		cmd_validate "$NHOPKG_SRC_ARG"
+		;;
+	*)
+		echog " * No command specified." >&2
+		nhopkg_src_usage
+		exit 1
+		;;
+esac
