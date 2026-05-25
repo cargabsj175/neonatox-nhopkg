@@ -10,4 +10,5 @@ AGENTS.md
 build
 builddir
 *.po~
+PROPOSAL-*
 docs/PROPOSAL-*
