@@ -244,7 +244,7 @@ cmd_init() {
 		echog " * Directory '${PKG_NAME}' already exists!" >&2
 		exit 1
 	fi
-	mkdir -p "$proj_dir/patches" "$proj_dir/others" "$proj_dir/sources" "$proj_dir/build"
+	mkdir -p "$proj_dir/patches" "$proj_dir/others"
 
 	PKG_IS_GIT="no"
 	if [[ "$PKG_PACKAGEURL" == git+* ]]; then
@@ -260,8 +260,10 @@ cmd_init() {
 			echo "$tarball_name"
 			wget --https-only -cqt 3 -T 20 -O "${NHOPKG_TMPDIR}/${tarball_name}" "$PKG_PACKAGEURL" 2>/dev/null
 			if [[ $? -eq 0 ]]; then
-				cp "${NHOPKG_TMPDIR}/${tarball_name}" "${proj_dir}/sources/"
-				PKG_SHA256=$(sha256sum "${NHOPKG_TMPDIR}/${tarball_name}")
+				cp "${NHOPKG_TMPDIR}/${tarball_name}" "${proj_dir}/"
+				pushd "${NHOPKG_TMPDIR}"
+				PKG_SHA256=$(sha256sum "${tarball_name}")
+				popd
 				echog "   SHA256 calculated."
 			else
 				echog "   Download failed. SHA256 will be left pending." >&2
