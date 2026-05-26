@@ -15,6 +15,9 @@ nhopkg-src \- create, validate, and build source package projects for nhopkg
 \fB\-\-validate\fR [\fIfile\fR]
 .br
 .B nhopkg-src
+\fB\-\-get-source\fR \fIproject\fR [\fB\-\-ref\fR \fIref\fR]
+.br
+.B nhopkg-src
 \fB\-h\fR, \fB\-\-help\fR
 .br
 .B nhopkg-src
@@ -99,6 +102,17 @@ The tool determines the expected .srcnho filename by reading the nhoid metadata
 in the current directory. Always prompts for sudo credentials.
 
 .TP
+.B \-\-get-source \fIproject\fR [\fB\-\-ref\fR \fIref\fR]
+Clone a source project from the \fBNHOPKG_GIT_SOURCES\fR repository.
+.br
+The project is cloned into a subdirectory named after the project. If
+\fB\-\-ref\fR is given, it is passed to git as a tag, branch, or commit
+reference. After cloning, the standard \fIpatches/\fR and \fIothers/\fR
+directories are created so the project is ready for editing and packaging.
+.br
+The repository URL is built as \fI${NHOPKG_GIT_SOURCES}/${project}.git\fR.
+
+.TP
 .B \-\-validate [\fIfile\fR]
 Validate a .srcnho package or the nhoid file in the current directory.
 .br
@@ -135,6 +149,9 @@ Warns if Description is empty
 .TP
 .B \-\-force
 With \fB\-\-createpackage\fR, overwrite existing .srcnho file without prompting.
+.TP
+.B \-\-ref \fIref\fR
+Git reference (tag, branch, or commit) for \fB\-\-get-source\fR.
 .SH EXAMPLES
 .TP
 Create a new project
@@ -148,6 +165,12 @@ Build the package
 .TP
 Validate the result
 .B nhopkg-src \-\-validate myapp-1.0-1.srcnho
+.TP
+Clone a source project
+.B nhopkg-src \-\-get-source gcc
+.TP
+Clone a source project with a specific branch
+.B nhopkg-src \-\-get-source gcc \-\-ref n2027
 .SH FILES
 .TP
 .I nhoid

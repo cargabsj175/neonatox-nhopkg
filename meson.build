@@ -46,11 +46,11 @@ conf.set('RELEASEDATE', '2026')
 # === Verificación de dependencias del sistema ===
 required_tools = [
   'bash', 'tar', 'zstd', 'bsdtar', 'sha256sum', 'make',
-  'grep', 'awk', 'sed', 'find'
+  'grep', 'awk', 'sed', 'find', 'wget'
 ]
 
 optional_tools = [
-  'wget', 'curl', 'git', 'ldconfig', 'gettext', '7z'
+  'curl', 'ldconfig', 'gettext', '7z', 'git', 'svn', 'hg'
 ]
 
 # Verificar herramientas requeridas

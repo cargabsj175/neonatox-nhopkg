@@ -131,6 +131,7 @@ sudo nhopkg -z slackware-package.tgz
 
 | Tool | Purpose | Reference |
 |------|---------|-----------|
+| `nhoget` | Unified download tool (HTTP/HTTPS + VCS) for builds and CLI | [`docs/nhoget.md`](nhoget.md) |
 | `nhopkg-src` | Source-package creation wizard | [`docs/nhopkg-src.md`](nhopkg-src.md) |
 | `nhopkg-repos` | Repository creation and maintenance (`--create-repo`, `--add-to-repo`) | [`docs/repositorios.md`](repositorios.md) |
 | `nhouser` | Idempotent system user/group creation (used in `npostinstall()`) | [`docs/usuarios-servicios.md`](usuarios-servicios.md) |

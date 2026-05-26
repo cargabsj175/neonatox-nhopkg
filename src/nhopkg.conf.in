@@ -44,6 +44,9 @@ NHOPKG_BUILDIR=${BUILDIR}/nhopkg
 # Core common functions
 NHOPKG_LIB=@prefix@/lib/nhopkg/libnhopkg
 
+# Download library (nhoget)
+NHOPKG_DOWNLOAD_LIB=@prefix@/lib/nhopkg/libnhopkg_download
+
 # Lock file to avoid multiple nhopkg instances running at the same time
 NHOPKG_LOCKFILE=/var/lock/nhopkg
 
@@ -76,6 +79,27 @@ STRIP_BINARIES=no
 
 # Packages to hold (never delete their files on uninstall)
 NHOHOLD="nhopkg glibc gcc"
+
+
+#==============================================================================
+# Section: Download (nhoget)
+#------------------------------------------------------------------------------
+# Configuration for the unified download system (nhoget).
+# Controls backend selection, timeouts, retries and behavior.
+#==============================================================================
+
+# Download backend: auto, wget, curl, or wget-bb
+# auto = GNU wget (if available) > curl > BusyBox wget
+NHOGET_BACKEND=auto
+
+# Default timeout in seconds for downloads
+NHOGET_TIMEOUT=20
+
+# Default number of download retries
+NHOGET_RETRIES=3
+
+# Enable resume for partial downloads
+NHOGET_RESUME=yes
 
 
 #==============================================================================

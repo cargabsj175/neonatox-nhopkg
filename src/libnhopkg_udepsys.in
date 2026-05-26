@@ -572,7 +572,7 @@ _dep_download_all() {
 		
 		local repo_url=$(get_repo_url "$DEP_FOUND_REPO")
 		
-		wget --https-only -cqt 3 -T 20  --directory-prefix="${ROOT_PKG_STATE_DIR}/cache"  "${repo_url}/${nho_name}"
+		nhoget_url "${repo_url}/${nho_name}" "${ROOT_PKG_STATE_DIR}/cache/${nho_name}"
 		check_if_ok " *** Failed to download package."
 		
 		DCASEPACKAGES+=("$nho_name")

@@ -45,6 +45,11 @@ else
 	echog " * Unable to locate Nhopkg core common functions file!"
 fi
 
+NHOPKG_DOWNLOAD_LIB="${NHOPKG_DOWNLOAD_LIB:-@prefix@/lib/nhopkg/libnhopkg_download}"
+if [[ -e "${NHOPKG_DOWNLOAD_LIB}" ]]; then
+	source "${NHOPKG_DOWNLOAD_LIB}" 2> /dev/null
+fi
+
 #==============================================================================
 # Section: Usage
 #==============================================================================
@@ -54,6 +59,7 @@ nhopkg_src_usage() {
 	echo "  nhopkg-src --createpackage [--force]"
 	echo "  nhopkg-src --buildpackage"
 	echo "  nhopkg-src --validate [<nhoid_file>]"
+	echo "  nhopkg-src --get-source <project> [--ref <ref>]"
 	echo
 	echog "Options:"
 	echo "  --init [<name>]       Create a new source package project"
@@ -61,6 +67,8 @@ nhopkg_src_usage() {
 	echo "  --force               Overwrite existing .srcnho"
 	echo "  --buildpackage        Build source package with nhopkg -bv"
 	echo "  --validate [<file>]   Validate a nhoid file"
+	echo "  --get-source <proj>   Clone source from NHOPKG_GIT_SOURCES"
+	echo "  --ref <ref>           Git reference (tag/branch/commit)"
 	echo "  -h, --help            Show this help"
 	echo "  --version             Show version"
 }
@@ -160,6 +168,7 @@ EOF
 	[[ -n "$PKG_SPLIT" ]] && echo -e "# Splitpackage:\t${PKG_SPLIT}" >> "$nhoid_file"
 	[[ -n "$PKG_PROVIDES" ]] && echo -e "# Provides:\t${PKG_PROVIDES}" >> "$nhoid_file"
 	[[ -n "$PKG_CONFLICTS" ]] && echo -e "# Conflicts:\t${PKG_CONFLICTS}" >> "$nhoid_file"
+	echo >> "$nhoid_file"
 	echo -e "## BuildDep:\t(add your build dependencies here)" >> "$nhoid_file"
 	echo -e "## OptionalBuildDep:\t(add your optional build dependencies)" >> "$nhoid_file"
 	echo -e "## Dep(post):\t(add your runtime dependencies)" >> "$nhoid_file"
@@ -258,7 +267,7 @@ cmd_init() {
 			local tarball_name="${PKG_PACKAGEURL##*/}"
 			echogn " --- Downloading: "
 			echo "$tarball_name"
-			wget --https-only -cqt 3 -T 20 -O "${NHOPKG_TMPDIR}/${tarball_name}" "$PKG_PACKAGEURL" 2>/dev/null
+			nhoget_url "$PKG_PACKAGEURL" "${NHOPKG_TMPDIR}/${tarball_name}" 2>/dev/null
 			if [[ $? -eq 0 ]]; then
 				cp "${NHOPKG_TMPDIR}/${tarball_name}" "${proj_dir}/"
 				pushd "${NHOPKG_TMPDIR}"
@@ -512,6 +521,52 @@ cmd_validate() {
 }
 
 #==============================================================================
+# Section: --get-source
+#==============================================================================
+cmd_getsource() {
+	local project="$1"
+	local ref="$2"
+
+	if [[ -z "$project" ]]; then
+		echog " * No project name specified." >&2
+		exit 1
+	fi
+
+	if [[ -z "$NHOPKG_GIT_SOURCES" ]]; then
+		echog " * NHOPKG_GIT_SOURCES is not configured." >&2
+		exit 1
+	fi
+
+	local git_url="${NHOPKG_GIT_SOURCES}/${project}.git"
+	local proj_dir="${PWD}/${project}"
+
+	if [[ -d "$proj_dir" ]]; then
+		echog " * Directory '${project}' already exists!" >&2
+		exit 1
+	fi
+
+	echogn " --- Cloning source project:"
+	echo " ${project}"
+
+	if [[ -n "$ref" ]]; then
+		export NHOGET_REF="$ref"
+	else
+		export NHOGET_REF=""
+	fi
+
+	nhoget_vcs git "${git_url}" "${proj_dir}" || exit 1
+
+	mkdir -p "${proj_dir}/patches" "${proj_dir}/others"
+
+	echog " --- Source project ready."
+	echo " - cd ${project}"
+	if [[ -f "${proj_dir}/nhoid" ]]; then
+		echo " - Edit nhoid as needed"
+	fi
+	echo " - Run 'nhopkg-src --createpackage' to package"
+}
+
+#==============================================================================
 # Section: Argument parsing
 #==============================================================================
 if [[ $# -eq 0 ]]; then
@@ -522,6 +577,7 @@ fi
 NHOPKG_SRC_CMD=""
 NHOPKG_SRC_FORCE="no"
 NHOPKG_SRC_ARG=""
+NHOPKG_SRC_REF=""
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -553,6 +609,19 @@ while [[ $# -gt 0 ]]; do
 				shift
 			fi
 			;;
+		--get-source)
+			NHOPKG_SRC_CMD="getsource"
+			shift
+			if [[ $# -gt 0 && "$1" != -* ]]; then
+				NHOPKG_SRC_ARG="$1"
+				shift
+			fi
+			;;
+		--ref)
+			shift
+			NHOPKG_SRC_REF="$1"
+			shift
+			;;
 		-h|--help)
 			nhopkg_src_usage
 			exit 0
@@ -581,6 +650,9 @@ case "$NHOPKG_SRC_CMD" in
 		;;
 	validate)
 		cmd_validate "$NHOPKG_SRC_ARG"
+		;;
+	getsource)
+		cmd_getsource "$NHOPKG_SRC_ARG" "$NHOPKG_SRC_REF"
 		;;
 	*)
 		echog " * No command specified." >&2

@@ -172,6 +172,7 @@ General error (invalid arguments, missing package, etc.).
 Insufficient privileges (must be root for most operations).
 .SH SEE ALSO
 .BR nhopkg.conf (5),
+.BR nhoget (8),
 .BR nhopkg-src (8),
 .BR nhopkg-repos (8),
 .BR nhouser (8),

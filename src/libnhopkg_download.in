@@ -1,0 +1,377 @@
+#!/bin/bash
+#==============================================================================
+# libnhopkg_download — Unified Download Management Library
+#==============================================================================
+# Provides: nhoget_url, nhoget_vcs, nhoget_fetch, nhoget_verify_hash
+#
+# This library is self-contained and can be sourced by:
+#   - nhopkg.in (via NHOPKG_DOWNLOAD_LIB)
+#   - nhopkg-src.in
+#   - nhoget CLI (standalone)
+#
+# Backend detection order (auto mode): GNU wget > curl > BusyBox wget
+# Default when NHOGET_BACKEND=auto prefers wget for backward compatibility.
+#==============================================================================
+
+# ---- Default configuration ----
+NHOGET_BACKEND="${NHOGET_BACKEND:-auto}"
+NHOGET_TIMEOUT="${NHOGET_TIMEOUT:-20}"
+NHOGET_RETRIES="${NHOGET_RETRIES:-3}"
+NHOGET_RESUME="${NHOGET_RESUME:-yes}"
+
+# ---- Internal helpers ----
+
+nhoget_msg() {
+	local level="$1"; shift
+	case "$level" in
+		ok)	echo " [OK] $*" ;;
+		info) echo " --- $*" ;;
+		warn) echo " [!] $*" >&2 ;;
+		err)  echo " *** $*" >&2 ;;
+		*)	echo " $*" ;;
+	esac
+}
+
+# ---- Backend detection ----
+
+nhoget_detect_backend() {
+	if [[ "$NHOGET_BACKEND" != "auto" ]]; then
+		echo "$NHOGET_BACKEND"
+		return 0
+	fi
+	# Prefer GNU wget for backward compatibility
+	if command -v wget &>/dev/null; then
+		if wget --help 2>&1 | grep -q BusyBox; then
+			echo "wget-bb"
+		else
+			echo "wget"
+		fi
+	elif command -v curl &>/dev/null; then
+		echo "curl"
+	else
+		echo "none"
+		return 1
+	fi
+}
+
+# ---- HTTP/HTTPS download ----
+
+nhoget_url() {
+	local url="$1"
+	local output="$2"
+	local backend
+	backend=$(nhoget_detect_backend) || {
+		nhoget_msg err "No download backend available (install wget or curl)"
+		return 1
+	}
+
+	local resume_flag=""
+	[[ "$NHOGET_RESUME" = "yes" ]] && resume_flag="yes"
+
+	case "$backend" in
+		wget)
+			if [[ "$resume_flag" = "yes" ]]; then
+				wget --https-only -cqt "$NHOGET_RETRIES" -T "$NHOGET_TIMEOUT" -O "$output" "$url"
+			else
+				wget --https-only -qt "$NHOGET_RETRIES" -T "$NHOGET_TIMEOUT" -O "$output" "$url"
+			fi
+			;;
+		wget-bb)
+			nhoget_url_wget_bb "$url" "$output"
+			;;
+		curl)
+			local curl_opts="-o $output --connect-timeout $NHOGET_TIMEOUT --retry $NHOGET_RETRIES"
+			[[ "$resume_flag" = "yes" ]] && curl_opts="-C - $curl_opts"
+			curl -sL $curl_opts "$url"
+			;;
+	esac
+}
+
+nhoget_url_wget_bb() {
+	local url="$1"
+	local output="$2"
+	local attempt=0
+	while (( attempt < NHOGET_RETRIES )); do
+		attempt=$((attempt + 1))
+		if wget -q -O "$output" -T "$NHOGET_TIMEOUT" "$url"; then
+			return 0
+		fi
+		if (( attempt < NHOGET_RETRIES )); then
+			sleep 2
+		fi
+	done
+	return 1
+}
+
+# ---- Hash verification ----
+
+nhoget_verify_hash() {
+	local file="$1"
+	local hash_type="$2"
+	local expected_hash="$3"
+	local pkg_name="${4:-unknown}"
+	local hash_cmd computed_hash
+
+	case "$hash_type" in
+		md5|MD5)		hash_cmd="md5sum" ;;
+		sha256|SHA256)	hash_cmd="sha256sum" ;;
+		sha512|SHA512)	hash_cmd="sha512sum" ;;
+		bsum|BSUM|b2sum|B2SUM)	hash_cmd="b2sum" ;;
+		*)	nhoget_msg err "Unknown hash type: $hash_type"; return 2 ;;
+	esac
+
+	if ! command -v "$hash_cmd" &>/dev/null; then
+		nhoget_msg err "Hash tool not available: $hash_cmd"
+		return 2
+	fi
+
+	computed_hash=$($hash_cmd "$file" 2>/dev/null | awk '{print $1}')
+	[[ -z "$computed_hash" ]] && { nhoget_msg err "Failed to compute $hash_type hash"; return 1; }
+
+	expected_hash=$(echo "$expected_hash" | tr '[:upper:]' '[:lower:]')
+	computed_hash=$(echo "$computed_hash" | tr '[:upper:]' '[:lower:]')
+
+	if [[ "$computed_hash" = "$expected_hash" ]]; then
+		nhoget_msg ok "${hash_type^^} verification: $pkg_name"
+		return 0
+	else
+		nhoget_msg err "${hash_type^^} MISMATCH: $pkg_name"
+		nhoget_msg err "  Expected: $expected_hash"
+		nhoget_msg err "  Computed: $computed_hash"
+		return 1
+	fi
+}
+
+# ---- VCS (Version Control) operations ----
+
+nhoget_vcs() {
+	local vcs_type="$1"
+	local url="$2"
+	local dest="$3"
+	local ref="${NHOGET_REF:-}"
+
+	case "$vcs_type" in
+		git)	nhoget_vcs_git "$url" "$dest" "$ref" ;;
+		svn)	nhoget_vcs_svn "$url" "$dest" "$ref" ;;
+		hg)		nhoget_vcs_hg "$url" "$dest" "$ref" ;;
+		*)	nhoget_msg err "Unsupported VCS type: $vcs_type"; return 1 ;;
+	esac
+}
+
+nhoget_vcs_git() {
+	local url="$1"
+	local dest="$2"
+	local ref="$3"
+
+	nhoget_msg info "Cloning Git repository: $url"
+	[[ -n "$ref" ]] && nhoget_msg info "  Reference: $ref"
+	mkdir -p "$dest"
+
+	if [[ -d "${dest}/.git" ]]; then
+		nhoget_msg info "  Repository already exists. Updating..."
+		cd "$dest" || return 1
+		git reset --hard >/dev/null 2>&1
+		git clean -fd >/dev/null 2>&1
+		git fetch origin || return 1
+		if [[ -n "$ref" ]]; then
+			git checkout "$ref" || return 1
+		fi
+	else
+		if ! git clone "$url" "$dest"; then
+			nhoget_msg err "Failed to clone Git repository."
+			return 1
+		fi
+		cd "$dest" || return 1
+		if [[ -n "$ref" ]]; then
+			if ! git fetch --depth 1 origin "$ref"; then
+				nhoget_msg err "Failed to fetch reference $ref."
+				return 1
+			fi
+			if ! git checkout "$ref"; then
+				nhoget_msg err "Failed to checkout reference $ref."
+				return 1
+			fi
+		fi
+	fi
+	nhoget_msg info "Source code ready."
+	return 0
+}
+
+nhoget_vcs_svn() {
+	local url="$1"
+	local dest="$2"
+	local ref="$3"
+	local parent
+
+	if ! command -v svn &>/dev/null; then
+		nhoget_msg err "Subversion (svn) is not installed."
+		return 1
+	fi
+
+	nhoget_msg info "Checking out SVN repository: $url"
+	[[ -n "$ref" ]] && nhoget_msg info "  Revision: $ref"
+
+	if [[ -d "${dest}/.svn" ]]; then
+		nhoget_msg info "  Repository already exists. Updating..."
+		cd "$dest" || return 1
+		if [[ -n "$ref" ]]; then
+			svn update -r "$ref" || return 1
+		else
+			svn update || return 1
+		fi
+	else
+		parent="$(dirname "$dest")"
+		mkdir -p "$parent"
+		pushd "$parent" >/dev/null || return 1
+		if [[ -n "$ref" ]]; then
+			svn checkout -r "$ref" "$url" || return 1
+		else
+			svn checkout "$url" || return 1
+		fi
+		popd >/dev/null
+		# SVN creates a directory named after the URL's last component.
+		# Rename it to the expected dest path if different.
+		local svn_dir="${parent}/$(basename "$url")"
+		if [[ "$svn_dir" != "$dest" ]]; then
+			if [[ -e "$dest" ]]; then
+				rm -rf "$dest"
+			fi
+			mv "$svn_dir" "$dest" || return 1
+		fi
+	fi
+	nhoget_msg info "Source code ready."
+	return 0
+}
+
+nhoget_vcs_hg() {
+	local url="$1"
+	local dest="$2"
+	local ref="$3"
+
+	if ! command -v hg &>/dev/null; then
+		nhoget_msg err "Mercurial (hg) is not installed."
+		return 1
+	fi
+
+	nhoget_msg info "Cloning Mercurial repository: $url"
+	[[ -n "$ref" ]] && nhoget_msg info "  Reference: $ref"
+
+	if [[ -d "${dest}/.hg" ]]; then
+		nhoget_msg info "  Repository already exists. Updating..."
+		cd "$dest" || return 1
+		hg pull || return 1
+		if [[ -n "$ref" ]]; then
+			hg update "$ref" || return 1
+		fi
+	else
+		if ! hg clone "$url" "$dest"; then
+			nhoget_msg err "Failed to clone Mercurial repository."
+			return 1
+		fi
+		cd "$dest" || return 1
+		if [[ -n "$ref" ]]; then
+			hg update "$ref" || return 1
+		fi
+	fi
+	nhoget_msg info "Source code ready."
+	return 0
+}
+
+# ---- High-level: auto-detect source type from URL ----
+
+nhoget_fetch() {
+	local url="$1"
+	local dest="$2"
+
+	# Strip VCS prefix and detect type
+	if [[ "$url" =~ ^git\+ ]]; then
+		local vcs_url="${url#git+}"
+		nhoget_vcs git "$vcs_url" "$dest"
+	elif [[ "$url" =~ ^svn\+ ]]; then
+		local vcs_url="${url#svn+}"
+		nhoget_vcs svn "$vcs_url" "$dest"
+	elif [[ "$url" =~ ^hg\+ ]]; then
+		local vcs_url="${url#hg+}"
+		nhoget_vcs hg "$vcs_url" "$dest"
+	elif [[ "$url" =~ \.git ]]; then
+		# Backward compatibility: URL containing .git is treated as git
+		nhoget_vcs git "$url" "$dest"
+	else
+		# Tarball: download to temp and extract
+		nhoget_fetch_tarball "$url" "$dest"
+	fi
+}
+
+nhoget_fetch_tarball() {
+	local url="$1"
+	local dest="$2"
+	local filename="${url##*/}"
+	local tmpfile=""
+
+	if command -v mktemp &>/dev/null; then
+		tmpfile=$(mktemp -p "${TMPDIR:-/tmp}" nhoget.XXXXXXXXXX 2>/dev/null)
+	else
+		tmpfile="${TMPDIR:-/tmp}/nhoget.$$"
+	fi
+
+	nhoget_url "$url" "$tmpfile" || {
+		rm -f "$tmpfile"
+		return 1
+	}
+
+	mkdir -p "$dest"
+
+	case "$filename" in
+		*.tar.zst|*.tar.zst.*)
+			zstdcat "$tmpfile" | tar xf - -C "$dest" --strip-components=1 ;;
+		*.tar.xz|*.tar.xz.*|*.txz)
+			tar xJf "$tmpfile" -C "$dest" --strip-components=1 ;;
+		*.tar.bz2|*.tar.bz2.*|*.tbz2)
+			tar xjf "$tmpfile" -C "$dest" --strip-components=1 ;;
+		*.tar.gz|*.tar.gz.*|*.tgz)
+			tar xzf "$tmpfile" -C "$dest" --strip-components=1 ;;
+		*.tar)
+			tar xf "$tmpfile" -C "$dest" --strip-components=1 ;;
+		*.zip|*.zip.*)
+			bsdtar xf "$tmpfile" -C "$dest" --strip-components=1 ;;
+		*.AppImage|*.appimage)
+			7z x "$tmpfile" -o"$dest" >/dev/null 2>&1 ;;
+		*)
+			nhoget_msg err "Unsupported archive format: $filename"
+			rm -f "$tmpfile"
+			return 1 ;;
+	esac
+
+	rm -f "$tmpfile"
+	nhoget_msg info "Extracted to $dest"
+	return 0
+}
+
+# ---- Print usage ----
+nhoget_usage() {
+	cat <<EOF
+Usage: nhoget <command> [options] <url> [<dest>]
+
+Commands:
+  download     Download a file (HTTP/HTTPS)
+  clone        Clone a VCS repository (git, svn, hg)
+  fetch        Auto-detect from URL and download/clone
+  patch        Download a patch/diff file to current directory
+
+Options:
+  -o, --output FILE         Save to specific file (download only)
+  -O, --output-dir DIR      Save to directory
+  -r, --resume              Resume partial download
+  -t, --timeout SECS        Timeout in seconds (default: $NHOGET_TIMEOUT)
+  --retries N               Number of retries (default: $NHOGET_RETRIES)
+  -q, --quiet               Quiet mode
+  -v, --verbose             Verbose output
+  --hash TYPE:VALUE         Verify hash after download
+  --type TYPE               Force source type (tarball|git|svn|hg)
+  --ref REF                 VCS reference (tag/branch/commit/revision)
+  --depth N                 Shallow clone depth (git only)
+  --backend BACKEND         Force backend (wget|curl|wget-bb|auto)
+  -h, --help                Show this help
+  --version                 Show version
+EOF
+}

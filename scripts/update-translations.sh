@@ -31,11 +31,15 @@ POT_FILE="${POT_DIR}/nhopkg.pot"
 
 # Source files to extract strings from
 SOURCES=(
-    "${PROJECT_DIR}/src/nhopkg.in"
     "${PROJECT_DIR}/src/libnhopkg.in"
-    "${PROJECT_DIR}/src/nhouser.in"
-    "${PROJECT_DIR}/src/nhopkg-repos.in"
+    "${PROJECT_DIR}/src/libnhopkg_download.in"
+    "${PROJECT_DIR}/src/libnhopkg_udepsys.in"
+    "${PROJECT_DIR}/src/nhoget.in"
+    "${PROJECT_DIR}/src/nhopkg.in"
     "${PROJECT_DIR}/src/nhopkg-overlay.in"
+    "${PROJECT_DIR}/src/nhopkg-repos.in"
+    "${PROJECT_DIR}/src/nhopkg-src.in"
+    "${PROJECT_DIR}/src/nhouser.in"
 )
 
 # Check required tools

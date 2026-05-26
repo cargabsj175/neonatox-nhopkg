@@ -254,6 +254,24 @@ outro.diff
 arquivo_extra
 ```
 
+### `--get-source <projeto> [--ref <ref>]`
+
+Clona um projeto fonte do repositório `NHOPKG_GIT_SOURCES`.
+
+O projeto é clonado em um subdiretório com o nome do projeto. Se `--ref` for fornecido, é passado ao git como referência de tag, branch ou commit. Após clonar, os diretórios padrão `patches/` e `others/` são criados para que o projeto esteja pronto para edição e empacotamento.
+
+A URL do repositório é construída como `${NHOPKG_GIT_SOURCES}/${projeto}.git`.
+
+**Exemplos:**
+
+```bash
+# Clonar o projeto gcc
+nhopkg-src --get-source gcc
+
+# Clonar com um branch/tag específico
+nhopkg-src --get-source gcc --ref n2027
+```
+
 ## Veja Também
 
 - [`formato-nhoid.md`](formato-nhoid.md) — referência completa dos campos nhoid

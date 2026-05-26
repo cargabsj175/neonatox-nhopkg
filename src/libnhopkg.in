@@ -587,9 +587,7 @@ download_with_hash_check() {
 	echogn " --- Downloading: "
 	echo "${filename}"
 	
-	wget --https-only -cqt 3 -T 20 -O "$dest_file" "$url"
-	
-	if [[ $? -ne 0 ]]; then
+	if ! nhoget_url "$url" "$dest_file"; then
 		echog " *** Download failed" >&2
 		return 1
 	fi

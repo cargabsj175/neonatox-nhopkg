@@ -106,6 +106,17 @@ else
 	echog " * Unable to locate dependency resolution library!"
 	exit 1
 fi
+
+
+#==============================================================================
+# Section: Download library (nhoget)
+#==============================================================================
+NHOPKG_DOWNLOAD_LIB="@prefix@/lib/nhopkg/libnhopkg_download"
+if [[ -e "${NHOPKG_DOWNLOAD_LIB}" ]]; then
+	source "${NHOPKG_DOWNLOAD_LIB}" 2> /dev/null
+fi
+
+
 #----------------------------------------------------------
 # _dep_install_all_from_queue() - Install all downloaded packages
 #----------------------------------------------------------
@@ -318,7 +329,10 @@ install_init_unit()
 	esac
 
 	if [ ! -d "$dir" ]; then
-		wget -qO- "$url" | tar -xJ -C /usr/src || return 1
+		local tmp_archive="/tmp/nhoget-$$.tar.xz"
+		nhoget_url "$url" "$tmp_archive" || return 1
+		tar -xJf "$tmp_archive" -C /usr/src || { rm -f "$tmp_archive"; return 1; }
+		rm -f "$tmp_archive"
 	fi
 
 	cd "$dir" || return 1
@@ -1275,13 +1289,14 @@ getpackage()
 downloadpackage()
 {
 	# pkgos and pkgarch are already set by getpackage()
+	local nho_file="${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
 	echogn " --- Downloading"
-	echo " ${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	echo " ${nho_file}"
 	# Get repository URL
 	local REPO_URL
 	REPO_URL=$(get_repo_url "${pkgrepo}")
 	# Download from that repository
-	wget --https-only -cqt 3 -T 20 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${REPO_URL}/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho"
+	nhoget_url "${REPO_URL}/${nho_file}" "${ROOT_PKG_STATE_DIR}/cache/${nho_file}"
 	check_if_ok " *** Failed to download package. Please, retry."
 }
 #======================================6
@@ -1497,7 +1512,7 @@ remove_replaced_package()
 #======================================7
 # Build (packages) functions.
 #======================================7
-# set_files_and_patches() is required by the functions build_prepare(), fetch_git_source() and fetch_tarball_source()
+# set_files_and_patches() is required by the functions build_prepare(), fetch_vcs_source() and fetch_tarball_source()
 # it leaves all patches and other files ready to compile.
 set_files_and_patches(){
 	if compgen -G "${NHOPKG_TMPDIR}/*" > /dev/null; then
@@ -1509,51 +1524,33 @@ set_files_and_patches(){
 		done
 	fi
 }
-## fetch_git_source() clones a Git repository and optionally checks out a reference (branch, tag, commit).
-# Usage: fetch_git_source <git_url> [git_ref]
-fetch_git_source() {
-	local git_url="$1"
-	local git_ref="$2"
+## fetch_vcs_source() clones a VCS repository and optionally checks out a reference.
+# Usage: fetch_vcs_source <vcs_type> <url> [ref]
+fetch_vcs_source() {
+	local vcs_type="$1"
+	local repo_url="$2"
+	local repo_ref="$3"
 	local build_dir="${NHOPKG_BUILDIR}/${pkgname}-${pkgversion}"
+	local vcs_name
 
-	echog " - Cloning Git repository: ${git_url}"
-	if [[ -n "${git_ref}" ]]; then
-		echog "   Reference: ${git_ref}"
+	case "$vcs_type" in
+		git) vcs_name="Git" ;;
+		svn) vcs_name="Subversion" ;;
+		hg)  vcs_name="Mercurial" ;;
+		*)   vcs_name="$vcs_type" ;;
+	esac
+
+	echog " - Cloning ${vcs_name} repository: ${repo_url}"
+	if [[ -n "${repo_ref}" ]]; then
+		echog "   Reference: ${repo_ref}"
 	fi
 
-	# Make sure of the build directory
-	mkdir -p "${build_dir}"
-
-	# Detect if the repository already exists
-	if [[ -d "${build_dir}/.git" ]]; then
-		echog "   Repository already exists. Updating..."
-		cd "${build_dir}" || return 1
-		git reset --hard >/dev/null 2>&1
-		git clean -fd >/dev/null 2>&1
-		git fetch origin || return 1
-		if [[ -n "${git_ref}" ]]; then
-			git checkout "${git_ref}" || return 1
-		fi
-	else
-		# Clone directly to the build directory
-		if ! git clone "${git_url}" "${build_dir}"; then
-			echog " * Failed to clone Git repository." >&2
-			return 1
-		fi
-		cd "${build_dir}" || return 1
-		if [[ -n "${git_ref}" ]]; then
-			if ! git fetch --depth 1 origin "${git_ref}"; then
-				echog " * Failed to fetch reference ${git_ref}." >&2
-				return 1
-			fi
-			if ! git checkout "${git_ref}"; then
-				echog " * Failed to checkout reference ${git_ref}." >&2
-				return 1
-			fi
-		fi
+	NHOGET_REF="${repo_ref}"
+	if ! nhoget_vcs "$vcs_type" "${repo_url}" "${build_dir}"; then
+		echog " * Failed to clone ${vcs_name} repository." >&2
+		return 1
 	fi
-	
-	# Move patches or additional files to the build dir
+
 	set_files_and_patches
 
 	echog " - Source code ready for build."
@@ -1630,13 +1627,16 @@ build_prepare() {
 		return 1
 	fi
 
-	# 1. If there is pkgsrcurl, try Git or tarball
+	# 1. If there is pkgsrcurl, try VCS or tarball
 	if [[ -n "${pkgsrcurl}" ]]; then
 		if [[ "${pkgsrcurl}" == git+* ]]; then
-			local git_url="${pkgsrcurl#git+}"
-			fetch_git_source "${git_url}" "${pkggitref}"
+			fetch_vcs_source git "${pkgsrcurl#git+}" "${pkggitref}"
+		elif [[ "${pkgsrcurl}" == svn+* ]]; then
+			fetch_vcs_source svn "${pkgsrcurl#svn+}" "${pkggitref}"
+		elif [[ "${pkgsrcurl}" == hg+* ]]; then
+			fetch_vcs_source hg "${pkgsrcurl#hg+}" "${pkggitref}"
 		elif [[ "${pkgsrcurl}" == *".git"* ]]; then
-			fetch_git_source "${pkgsrcurl}" "${pkggitref}"
+			fetch_vcs_source git "${pkgsrcurl}" "${pkggitref}"
 		else
 			# fetch_tarball_source already verifies hash via download_with_hash_check()
 			fetch_tarball_source "${pkgsrcurl}"
@@ -2441,7 +2441,7 @@ update_repositories()
 		mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
 		
 		# Download lastsync
-		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/lastsync"
+		nhoget_url "${repo_url}/lastsync" "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 		check_if_ok " * Unable to download lastsync for ${repo}."
 		
 		# Check if it's already updated
@@ -2457,9 +2457,9 @@ update_repositories()
 		
 		# Download databases
 		echog "   - Downloading database..."
-		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.packages.tar.zst"
+		nhoget_url "${repo_url}/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
 		check_if_ok " *** Failed to download packages DB for ${repo}."
-		wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.files.tar.zst"
+		nhoget_url "${repo_url}/core.files.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 		check_if_ok " *** Failed to download files DB for ${repo}."
 		
 		# Extract files
@@ -3403,7 +3403,7 @@ case "${NHOPKG_OPTION}" in
 			# 2. Clone repo to temporary directory
 			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
 			echog " - Cloning ${git_url}..."
-			git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" 2>/dev/null || {
 				echog " * Failed to clone ${git_url}" >&2
 				cleanup_tmp_dir
 				exit 1
@@ -3523,7 +3523,7 @@ case "${NHOPKG_OPTION}" in
 					git_url="${NHOPKG_GIT_SOURCES}/${pkg_base_name}.git"
 
 					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
-					git clone --depth=1 "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+					NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" 2>/dev/null || {
 						echog " * Failed to clone ${git_url}" >&2
 						cleanup_tmp_dir
 						exit 1
@@ -3683,7 +3683,7 @@ case "${NHOPKG_OPTION}" in
 				mkdir -p "${ROOT_PKG_STATE_DIR}/cache"
 			fi
 			if [[ -f "${ROOT_PKG_STATE_DIR}/repo/lastsync" ]]; then
-				wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/lastsync"
+				nhoget_url "${NHOPKG_REPO}/lastsync" "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 				check_if_ok " * Unable to download files from repository."
 				ISYNC=$(cat ${ROOT_PKG_STATE_DIR}/repo/lastsync)
 				FSYNC=$(cat ${ROOT_PKG_STATE_DIR}/cache/lastsync)
@@ -3693,19 +3693,19 @@ case "${NHOPKG_OPTION}" in
 				fi
 				rm -f "${ROOT_PKG_STATE_DIR}/repo/lastsync"
 			else
-				wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/lastsync"
+				nhoget_url "${NHOPKG_REPO}/lastsync" "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 				check_if_ok " * Unable to download files from repository."
 				rm -f "${ROOT_PKG_STATE_DIR}/repo/files/"*
 				rm -f "${ROOT_PKG_STATE_DIR}/repo/packages/"*
 			fi
 			echog " - Downloading configuration files from server."
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/content.db.zst"
+			nhoget_url "${NHOPKG_REPO}/content.db.zst" "${ROOT_PKG_STATE_DIR}/cache/content.db.zst"
 			check_if_ok " * Unable to download files from repository."
 			echog " --- Downloading files database."
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/core.files.tar.zst"
+			nhoget_url "${NHOPKG_REPO}/core.files.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
 			echog " --- Downloading packages database."
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${NHOPKG_REPO}/core.packages.tar.zst"
+			nhoget_url "${NHOPKG_REPO}/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
 			mv "${ROOT_PKG_STATE_DIR}/cache/content.db.zst" "${ROOT_PKG_STATE_DIR}/repo/content.db.zst"
 			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/packages" 2> /dev/null
@@ -3756,7 +3756,7 @@ case "${NHOPKG_OPTION}" in
 			mkdir -p "${REPO_PKG_DIR}" "${REPO_FILE_DIR}"
 
 			# Download lastsync
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/lastsync"
+			nhoget_url "${repo_url}/lastsync" "${ROOT_PKG_STATE_DIR}/cache/lastsync"
 			check_if_ok " * Unable to download lastsync for ${repo}."
 
 			# Check if it's already synchronized
@@ -3772,9 +3772,9 @@ case "${NHOPKG_OPTION}" in
 
 			# Download databases
 			echog "   - Downloading database..."
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.packages.tar.zst"
+			nhoget_url "${repo_url}/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
 			check_if_ok " *** Failed to download packages DB for ${repo}."
-			wget --https-only -cqt 3 --directory-prefix="${ROOT_PKG_STATE_DIR}/cache" "${repo_url}/core.files.tar.zst"
+			nhoget_url "${repo_url}/core.files.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst"
 			check_if_ok " *** Failed to download files DB for ${repo}."
 
 			# Extract to the repo subdirectory

@@ -44,16 +44,30 @@ libnhopkg_udepsys = configure_file(
   configuration: conf
 )
 
+# Configurar librería de descargas (nhoget) en /usr/lib/nhopkg
+libnhopkg_download = configure_file(
+  input: 'libnhopkg_download.in',
+  output: 'libnhopkg_download',
+  configuration: conf
+)
+
+# Configurar nhoget CLI
+nhoget = configure_file(
+  input: 'nhoget.in',
+  output: 'nhoget',
+  configuration: conf
+)
+
 # Instalar los scripts ejecutables
 install_data(
-  [nhopkg_script, nhopkg_repos, nhouser, nhopkg_overlay, nhopkg_src],
+  [nhopkg_script, nhopkg_repos, nhouser, nhopkg_overlay, nhopkg_src, nhoget],
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x'
 )
 
 # Instalar librería en libdir/nhopkg (/usr/lib/nhopkg)
 install_data(
-  [libnhopkg, libnhopkg_udepsys],
+  [libnhopkg, libnhopkg_udepsys, libnhopkg_download],
   install_dir: join_paths(get_option('libdir'), 'nhopkg'),
   install_mode: 'rw-r--r--'
 )

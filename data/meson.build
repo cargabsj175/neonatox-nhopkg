@@ -1,3 +1,11 @@
+# nhoget.8 man page
+man_nhoget8 = configure_file(
+  input: 'nhoget.8.in',
+  output: 'nhoget.8',
+  configuration: conf
+)
+install_data(man_nhoget8, install_dir: join_paths(get_option('datadir'), 'man', 'man8'))
+
 # nhopkg.8 man page
 man8 = configure_file(
   input: 'nhopkg.8.in',

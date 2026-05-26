@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+#==============================================================================
+#	nhoget v. @PACKAGE_VERSION@ @RELEASEDATE@  <https://github.com/cargabsj175/neonatox-nhopkg/>
+#
+#	Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>
+#
+#	This program is free software: you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation, either version 3 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Description:  Unified Download Tool, part of the nhopkg project.
+#               Downloads files, clones VCS repositories, auto-detects source types.
+#
+# Usage: nhoget <command> [options] <url> [<dest>]
+#==============================================================================
+
+set -e
+
+PACKAGE_VERSION="@PACKAGE_VERSION@"
+
+# ---- Source library ----
+prefix="@prefix@"
+NHOPKG_CONF="@sysconfdir@/nhopkg/nhopkg.conf"
+NHOPKG_CONF_DEFAULT="@pkgdatadir@/nhopkg.conf"
+
+if [[ -e "${NHOPKG_CONF}" ]]; then
+	source "${NHOPKG_CONF}" 2> /dev/null
+elif [[ -e "${NHOPKG_CONF_DEFAULT}" ]]; then
+	echog " * Unable to locate Nhopkg configuration file!"
+	echog " - Loading default Nhopkg configuration file..."
+	source "${NHOPKG_CONF_DEFAULT}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg configuration file!"
+	exit 1
+fi
+
+if [[ -e "${NHOPKG_LIB}" ]]; then
+	source "${NHOPKG_LIB}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg core common functions file!"
+fi
+
+
+NHOGET_DOWNLOAD_LIB="${NHOGET_DOWNLOAD_LIB:-@prefix@/lib/nhopkg/libnhopkg_download}"
+if [[ -f "$NHOGET_DOWNLOAD_LIB" ]]; then
+	source "$NHOGET_DOWNLOAD_LIB"
+elif [[ -f "/usr/lib/nhopkg/libnhopkg_download" ]]; then
+	source "/usr/lib/nhopkg/libnhopkg_download"
+elif [[ -f "./libnhopkg_download.in" ]]; then
+	# Development mode
+	source "./libnhopkg_download.in"
+else
+	echo " *** Unable to locate libnhopkg_download" >&2
+	exit 1
+fi
+
+# ---- Parse options ----
+NHOGET_CMD=""
+NHOGET_OUTPUT=""
+NHOGET_OUTPUT_DIR=""
+NHOGET_REF=""
+NHOGET_TYPE=""
+NHOGET_DEPTH=""
+NHOGET_HASH=""
+NHOGET_SHOW_HELP=""
+NHOGET_SHOW_VERSION=""
+
+parse_opts() {
+	local args=()
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h|--help)		NHOGET_SHOW_HELP=1; return 0 ;;
+			--version)		NHOGET_SHOW_VERSION=1; return 0 ;;
+			-o|--output)	shift; NHOGET_OUTPUT="$1" ;;
+			-O|--output-dir)	shift; NHOGET_OUTPUT_DIR="$1" ;;
+			-r|--resume)	NHOGET_RESUME="yes" ;;
+			-t|--timeout)	shift; NHOGET_TIMEOUT="$1" ;;
+			--retries)		shift; NHOGET_RETRIES="$1" ;;
+			-q|--quiet)		NHOGET_QUIET=1 ;;
+			-v|--verbose)	NHOGET_VERBOSE=1 ;;
+			--hash)			shift; NHOGET_HASH="$1" ;;
+			--type)			shift; NHOGET_TYPE="$1" ;;
+			--ref)			shift; NHOGET_REF="$1" ;;
+			--depth)		shift; NHOGET_DEPTH="$1" ;;
+			--backend)		shift; NHOGET_BACKEND="$1" ;;
+			download|clone|fetch|patch)
+				NHOGET_CMD="$1" ;;
+			--*)			echo " *** Unknown option: $1" >&2; exit 1 ;;
+			-*)				echo " *** Unknown option: $1" >&2; exit 1 ;;
+			*)				args+=("$1") ;;
+		esac
+		shift
+	done
+	set -- "${args[@]}"
+	NHOGET_URL="${1:-}"
+	NHOGET_DEST="${2:-}"
+}
+
+# ---- Main ----
+main() {
+	parse_opts "$@"
+
+	if [[ -n "$NHOGET_SHOW_HELP" ]]; then
+		nhoget_usage
+		exit 0
+	fi
+
+	if [[ -n "$NHOGET_SHOW_VERSION" ]]; then
+		echo "nhoget version $PACKAGE_VERSION"
+		exit 0
+	fi
+
+	if [[ -z "$NHOGET_CMD" ]]; then
+		echo " *** No command specified. Use -h for help." >&2
+		exit 1
+	fi
+
+	if [[ -z "$NHOGET_URL" ]]; then
+		echo " *** No URL specified." >&2
+		exit 1
+	fi
+
+	# Export NHOGET_REF so library functions can read it
+	export NHOGET_REF
+
+	case "$NHOGET_CMD" in
+		download)
+			local dest="${NHOGET_OUTPUT:-${NHOGET_OUTPUT_DIR:+${NHOGET_OUTPUT_DIR}/${NHOGET_URL##*/}}}"
+			[[ -z "$dest" ]] && dest="${NHOGET_DEST:-${NHOGET_URL##*/}}"
+			nhoget_url "$NHOGET_URL" "$dest" || exit 1
+			if [[ -n "$NHOGET_HASH" ]]; then
+				local hash_type="${NHOGET_HASH%%:*}"
+				local hash_val="${NHOGET_HASH#*:}"
+				nhoget_verify_hash "$dest" "$hash_type" "$hash_val" || exit 1
+			fi
+			;;
+		clone)
+			local vcs_type="${NHOGET_TYPE:-git}"
+			local dest="${NHOGET_OUTPUT_DIR:-${NHOGET_DEST:-$(basename "${NHOGET_URL%.git}")}}"
+			nhoget_vcs "$vcs_type" "$NHOGET_URL" "$dest" || exit 1
+			;;
+		fetch)
+			local dest="${NHOGET_OUTPUT_DIR:-${NHOGET_DEST:-${NHOGET_URL##*/}}}"
+			if [[ -n "$NHOGET_TYPE" ]]; then
+				case "$NHOGET_TYPE" in
+					tarball) nhoget_fetch_tarball "$NHOGET_URL" "$dest" || exit 1 ;;
+					git|svn|hg) nhoget_vcs "$NHOGET_TYPE" "$NHOGET_URL" "$dest" || exit 1 ;;
+				esac
+			else
+				nhoget_fetch "$NHOGET_URL" "$dest" || exit 1
+			fi
+			;;
+		patch)
+			local name="${NHOGET_URL##*/}"
+			local dest="../${name}"
+			echog "   Downloading patch: $name"
+			nhoget_url "$NHOGET_URL" "$dest" || exit 1
+			;;
+	esac
+}
+
+main "$@"
