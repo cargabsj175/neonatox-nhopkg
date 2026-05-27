@@ -1,28 +1,124 @@
----- nhopkg git 2025-10-01 20:59:36 ----
+2026.3 (2026-05-26)
+--------------------------------
+* Implement nhoget unified download system and extend nhopkg-src
+* Improve nhopkg-src init: remove sources/build from mkdir, fix SHA256 path
+* Add PROPOSAL-* to gitignore
+* Add nhopkg-src tool, comprehensive documentation and manpages
+* Refactor UDEPSYS to external library and add build environment setup
+* Add NHOHOLD, Backup features and fix groups validation/multilinea
+* Fix gettext calls, get_basic_data return, and install-group dedup
+* Improve build_nhoid_to_bin() for split packages
+* Fix build_prepare flow, git source handling, repo isolation, and exFAT support
+* Add legacy TODO items as long-term goals (Nhopkg 0.6+)
+* Reorganize documentation: create DONE.md, streamline TODO.md
+* Fix languages and revert -s argument for gettext
+* Update TODO.md: mark i18n fuzzy resolution as completed
+* Update i18n: translate fuzzy entries, fix .po formatting, and improve translation script
+* Update README: English as primary language, add ES/PT_BR links
+* Update i18n plan and mark fuzzy entries after .pot regeneration
+* Add automated translation update workflow with Meson
+* Fix i18n: correct gettext flags and regenerate translation template
+* Remove strict overlay kernel check in nhopkg-overlay
+* Fix dependency resolution: strict nhoid name validation
+* Fix dependency installation: skip already installed packages
+* Fix dependency resolution false positives for similar package names
+* Fix nhouser reserved variable and add informative messages
+* Improve upgrade and install-group with per-package install
+* nhouser as wrapper
+* New nhopkg core common functions (libnhopkg) and standalone tools (repos, overlay and nhouser)
+* Add resolve_virtual_package function for package resolution
+* Refactor package name search logic
+* Simplify package name candidate selection
+* Refactoring for translatable text
+* Fix message position
+* feat(repo): agrega -A/--add-to-repo y --repo-dir para agregar paquetes de forma incremental sin una reconstrucción completa (a diferencia de la compilación monolítica --create-repo)
+* feat: add -X/--strip-binaries to force stripping when STRIP_BINARIES=no
+* prefix lib32- for lib32 packages with defined groups
+* Extracts and accumulates the commands defined in the npostinstall() section of a package nhoid into a deferred postinstall script when --root is used.
+* Pretty nhopkg.conf
+* fix md docs index.md => README.md
+* fix md docs .html => .md
+* Adding inital documentation
+* New get_packages_by_group() function & --install-group section: Installs binaries packages from a specified group from the repository.
+* New install_init_unit(): Install or remove init service units using external providers (BLFS) Systemd or Sysvinit..
+* New function nhouser(): creates or verifies system users and groups.
+* Strip binaries and libraries disabled on nhopkg.conf.in
+* Redundant functions removed in --upgrade
+* Making sh friendly
 
-Changes since the start of the project:
--------------------------------------
-- Update nhopkg.in (9eb1295) - 2025-10-01
-- Update nhopkg.in (-x & --update-shooters as arguments) (ec08b78) - 2025-10-01
-- Update nhopkg.in (shooter_updates function) (0b0bd1b) - 2025-10-01
-- Update nhopkg.in (8328369) - 2025-09-27
-- Update nhopkg.in (e92c718) - 2025-09-08
-- Update nhopkg.in (1a980d2) - 2025-09-07
-- Update nhopkg.in (2f55439) - 2025-09-05
-- Update nhopkg.in (8651c20) - 2025-09-04
-- Update nhopkg.in (b249bf3) - 2025-09-01
-- Update nhopkg.conf.in (f56d662) - 2025-08-07
-- Update x-nho.xml (4020f8b) - 2025-08-07
-- Update nhopkg.in (7649a74) - 2025-08-07
-- Update nhopkg.in (Nhopkg finally creates split packages! Yeah!) (1a582e2) - 2025-07-15
-- Update nhopkg.in (First implementations for building split packages) (a88344d) - 2025-07-03
-- Update nhopkg.conf.in (2482115) - 2025-07-02
-- Update nhopkg.in (799f198) - 2025-07-02
-- Update LINGUAS (699dd49) - 2024-10-13
-- Create pt_BR.po (ea9d840) - 2024-10-13
-- Update configure.ac - functional default repository via GIT ;-) (6d793d8) - 2023-12-27
-- Update nhopkg.in - Allows installing old versions of binaries (bz2 and xz) (354b15b) - 2023-12-27
-- Minor debugs (cb80bd5) - 2023-12-13
+2026.2 (2026-01-19)
+--------------------------------
+* Fix logs path y directory creation (fix regression)
+* Update nhopkg.in - Improvements to message
+* Fix arch on binary package name
+* Fix logs path y directory creation
+* Refactoring of the --upgrade function
+* meson config for multi-repos. Strip binaries and libraries if enabled  (experimental)
+* Refactor architecture and sha256 sum determination in binary nhoid
+* Implement upgrade functionality for Nhopkg
+* Enhance package handling and repository checks
+* Refactor echo to printf and improve variable handling (shellcheck)
+* Save original package name for later use in --super-build
+* Refine comments and default repository settings
+* Implement multiple repository support in nhopkg
+* Improve package conflict checks and version comparison
+* Update nhopkg.in
+* Update README.md
+* Package Resolution and Dependency Checking Improvements
+* Update nhopkg.in (fix on create-repo)
+
+2026.1 (2025-10-30)
+--------------------------------
+* Add multilib (lib32) support and centralized package name handling
+* Implement package signing and verification options
+* Function --cerate-source patch (legacy)
+* Update autopackage patch (legacy)
+* Removed the --create-source wizard
+* Fix SHORTOPTIONS in nhopkg.in
+* Fix SHORTOPTIONS and update LONGOPTIONS in patch
+* Implement tgz to nho conversion in package manager (legacy patch)
+* Add auto-package feature to nhopkg (legacy patch)
+* Remove auto-package, tgz2nho options and refactored related functions to streamline package management.
+* Improve package checking functions structure
+* Fix git URL format in nhopkg.in
+* Refactor dependency checking functions
+* Refactor shooter_updates function
+* Enhanced dependency system with package name and version control support
+* Enable HTTPS for wget commands
+* Translate comments from Spanish to English
+* Add checks for npostinstall function existence
+* Update nhopkg.in (Super Build)
+* Update nhopkg.in (check_if_installed_package for slpit packages)
+* Update meson.build
+* Update meson_options.txt
+* Update meson_options.txt (Super Build)
+* Update meson.build (Super Build)
+* Update nhopkg.conf.in (Super Build)
+* Update nhopkg.in (fix xarch and xHOST_ARCH variables)
+* Update nhopkg.in (fix BUILD_DATE & INSTALL_DATE variables)
+
+2026 (2025-10-02)
+--------------------------------
+* Update README.md (logo nuevo)
+* Update README.md (fix)
+* switchover to meson
+* Update nhopkg.in (-x & --update-shooters as arguments)
+* Update nhopkg.in (shooter_updates function)
+
+2025 (2025-09-01)
+--------------------------------
+* Update nhopkg.conf.in
+* Update x-nho.xml
+* Update nhopkg.in (Nhopkg finally creates split packages! Yeah!)
+* Update nhopkg.in (First implementations for building split packages)
+* Update LINGUAS
+* Create pt_BR.po
+* Update configure.ac - functional default repository via GIT ;-)
+* Update nhopkg.in - Allows installing old versions of binaries (bz2 and xz)
+* Minor debugs
+
+2023.1 (2023-12-13)
+--------------------------------
 - Update nhopkg.in (167c8e5) - 2023-12-13
 - Replace XZ for Zstandard - this fix DATE variables for build and install (3ca8c4e) - 2023-12-13
 - update repo url to n2017.1 (063e135) - 2016-07-05
