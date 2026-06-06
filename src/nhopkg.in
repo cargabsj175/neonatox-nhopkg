@@ -152,17 +152,32 @@ _dep_install_single() {
     
     # Check if package is already installed in root (skip if same or newer version)
     if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
-        get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
-        local installed_ver="${pkgversion}-${pkgrevision}"
-        local new_ver="${pkgversion}-${pkgrevision}"
-        
-        if version_compare "$new_ver" "<=" "$installed_ver"; then
-            echog " - Skipping dependency: ${pkgname} (already installed: ${installed_ver})"
+        local pkg_ver="${pkgversion}"
+        local pkg_rev="${pkgrevision}"
+        local inst_ver inst_rev
+        inst_ver=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+        inst_rev=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+
+        if version_compare "${pkg_ver}" "<" "${inst_ver}"; then
+            echog " - Skipping dependency: ${pkgname} (installed ${inst_ver}-${inst_rev} is newer)"
             cleanup_tmp_dir
             return 0
-        else
-            echog " - Upgrading dependency: ${pkgname} (${installed_ver} -> ${new_ver})"
+        elif [[ "${pkg_ver}" == "${inst_ver}" ]] && [[ "${pkg_rev}" != "${inst_rev}" ]]; then
+            local repo_bd inst_bd
+            inst_bd=$(grep "^# Build-Date:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+            repo_bd=$(grep "^# Build-Date:" "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null | awk -F'\t' '{print $2}')
+            if [[ -n "${inst_bd}" ]] && [[ -n "${repo_bd}" ]] && (( repo_bd <= inst_bd )); then
+                echog " - Skipping dependency: ${pkgname} (Build-Date not newer)"
+                cleanup_tmp_dir
+                return 0
+            fi
+        elif version_compare "${pkg_ver}-${pkg_rev}" "<=" "${inst_ver}-${inst_rev}"; then
+            echog " - Skipping dependency: ${pkgname} (already installed: ${inst_ver}-${inst_rev})"
+            cleanup_tmp_dir
+            return 0
         fi
+
+        echog " - Upgrading dependency: ${pkgname} (${inst_ver}-${inst_rev} -> ${pkg_ver}-${pkg_rev})"
     fi
     
     # Security checks.
@@ -1924,9 +1939,10 @@ build_nhoid_to_bin()
 	# Force "multilib" as repo in lib32 packages
 	if [ "$part" = "lib32" ]; then
 	echo -e "# Repository:\tmultilib" >> "${NHOPKG_TMPDIR}/nhoid"
-	# Allow set repositories on split packages
+	# Allow set repositories on split packages, default to extra
 	elif [ -n "$part" ] && [ "$part" != "lib32" ]; then
-		grep "^# Repository${part:+_${part}}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Repository${part:+_${part}}:/# Repository:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
+		grep "^# Repository${part:+_${part}}:" "${NHOPKG_TMPDIR}/.nhoid" | sed "s/^# Repository${part:+_${part}}:/# Repository:/" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null \
+			|| echo -e "# Repository:\textra" >> "${NHOPKG_TMPDIR}/nhoid"
 	else
 	# Copy the Repository field if it exists
 	grep '^# Repository:' "${NHOPKG_TMPDIR}/.nhoid" >> "${NHOPKG_TMPDIR}/nhoid" 2>/dev/null || true
@@ -2355,19 +2371,22 @@ package_exists_in_repos()
 # get_latest_version_in_repos()
 # Description: Gets the latest version of a package from the active repositories.
 # Parameters: pkg_name
-# Returns: Variables pkgname, pkgversion, pkgrevision, pkgrepo.
+# Returns: Variables pkgname, pkgversion, pkgrevision, pkgrepo, REPO_PKG_FILE.
 # ---------------------------------------------------------
+REPO_PKG_FILE=""
 get_latest_version_in_repos()
 {
 	local pkg_name="$1"
 	local repo candidate best_version="" best_repo=""
+	REPO_PKG_FILE=""
 	
 	[[ -z "${NHOPKG_ACTIVE_REPOS}" ]] && NHOPKG_ACTIVE_REPOS="extra"
 	
 	for repo in ${NHOPKG_ACTIVE_REPOS}; do
 		# Find the exact version first
 		if [[ -f "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}" ]]; then
-			get_basic_data "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}"
+			REPO_PKG_FILE="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/${pkg_name}"
+			get_basic_data "${REPO_PKG_FILE}"
 			pkgrepo="${repo}"
 			return 0
 		fi
@@ -2387,6 +2406,7 @@ get_latest_version_in_repos()
 	done
 	
 	if [[ -n "${best_version}" ]]; then
+		REPO_PKG_FILE="${best_pkgfile}"
 		get_basic_data "${best_pkgfile}"
 		pkgrepo="${best_repo}"
 		return 0
@@ -3403,7 +3423,7 @@ case "${NHOPKG_OPTION}" in
 			# 2. Clone repo to temporary directory
 			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
 			echog " - Cloning ${git_url}..."
-			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
 				echog " * Failed to clone ${git_url}" >&2
 				cleanup_tmp_dir
 				exit 1
@@ -3523,7 +3543,7 @@ case "${NHOPKG_OPTION}" in
 					git_url="${NHOPKG_GIT_SOURCES}/${pkg_base_name}.git"
 
 					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
-					NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" 2>/dev/null || {
+			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
 						echog " * Failed to clone ${git_url}" >&2
 						cleanup_tmp_dir
 						exit 1
@@ -3839,17 +3859,32 @@ case "${NHOPKG_OPTION}" in
 
 		get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${installed_pkg}"
 		current_pkgname="${pkgname}"
-		current_full_version="${pkgversion}-${pkgrevision}"
+		current_pkgver="${pkgversion}"
+		current_pkgrev="${pkgrevision}"
 
 		package_exists_in_repos "${current_pkgname}" || continue
+		REPO_PKG_FILE=""
 		get_latest_version_in_repos "${current_pkgname}" || continue
 
 		new_full_version="${pkgversion}-${pkgrevision}"
 
-		if version_compare "${new_full_version}" ">" "${current_full_version}"; then
+		# Smart upgrade check:
+		# 1. Different upstream version → upgrade
+		# 2. Same version, different revision → compare Build-Date
+		# 3. Same everything → skip
+		if version_compare "${pkgversion}" ">" "${current_pkgver}"; then
 			packages_to_update+=("${current_pkgname}")
-			current_versions+=("${current_full_version}")
+			current_versions+=("${current_pkgver}-${current_pkgrev}")
 			new_versions+=("${new_full_version}")
+		elif [[ "${pkgversion}" == "${current_pkgver}" ]] && [[ "${pkgrevision}" != "${current_pkgrev}" ]]; then
+			local repo_bd inst_bd
+			inst_bd=$(grep "^# Build-Date:" "${ROOT_PKG_STATE_DIR}/packages/${installed_pkg}" 2>/dev/null | awk -F'\t' '{print $2}')
+			repo_bd=$(grep "^# Build-Date:" "${REPO_PKG_FILE}" 2>/dev/null | awk -F'\t' '{print $2}')
+			if [[ -n "${inst_bd}" ]] && [[ -n "${repo_bd}" ]] && (( repo_bd > inst_bd )); then
+				packages_to_update+=("${current_pkgname}")
+				current_versions+=("${current_pkgver}-${current_pkgrev}")
+				new_versions+=("${new_full_version}")
+			fi
 		fi
 	done
 
@@ -3877,12 +3912,28 @@ case "${NHOPKG_OPTION}" in
 
 		# Check if package is already installed with same or newer version
 		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
-			get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"
-			installed_ver="${pkgversion}-${pkgrevision}"
-			new_ver="${pkgversion}-${pkgrevision}"
+			local repo_ver="${pkgversion}"
+			local repo_rev="${pkgrevision}"
+			local inst_ver inst_rev
+			inst_ver=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+			inst_rev=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
 
-			if version_compare "$new_ver" "<=" "$installed_ver"; then
-				echog " --- Skipping: $pkg_name (already installed: $installed_ver)"
+			# Smart upgrade check
+			if version_compare "${repo_ver}" "<" "${inst_ver}"; then
+				echog " --- Skipping: $pkg_name (installed version ${inst_ver}-${inst_rev} is newer)"
+				continue
+			elif [[ "${repo_ver}" == "${inst_ver}" ]] && [[ "${repo_rev}" != "${inst_rev}" ]]; then
+				local repo_bd inst_bd
+				inst_bd=$(grep "^# Build-Date:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+				local repo_file="${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}"
+				[[ ! -f "${repo_file}" ]] && repo_file="${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${repo_ver}-${repo_rev}"
+				repo_bd=$(grep "^# Build-Date:" "${repo_file}" 2>/dev/null | awk -F'\t' '{print $2}')
+				if [[ -n "${inst_bd}" ]] && [[ -n "${repo_bd}" ]] && (( repo_bd <= inst_bd )); then
+					echog " --- Skipping: $pkg_name (Build-Date not newer)"
+					continue
+				fi
+			elif version_compare "${repo_ver}-${repo_rev}" "<=" "${inst_ver}-${inst_rev}"; then
+				echog " --- Skipping: $pkg_name (already installed: ${inst_ver}-${inst_rev})"
 				continue
 			fi
 		fi
@@ -4031,26 +4082,43 @@ case "${NHOPKG_OPTION}" in
 			continue
 		fi
 
-		# Save repo version BEFORE get_basic_data overwrites it
-		new_ver="${pkgversion}-${pkgrevision}"
-
 		# Check if package is already installed (in root or host)
 		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
-			if ! get_basic_data "${ROOT_PKG_STATE_DIR}/packages/${pkgname}"; then
+			local repo_ver="${pkgversion}"
+			local repo_rev="${pkgrevision}"
+			local inst_ver inst_rev
+			inst_ver=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+			inst_rev=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+
+			if [[ -z "${inst_ver}" ]] || [[ -z "${inst_rev}" ]]; then
 				echog " * Failed to get installed package info for: ${pkgname}" >&2
 				cleanup_tmp_dir
 				continue
 			fi
-			installed_ver="${pkgversion}-${pkgrevision}"
 
-			# Compare versions: if same or newer, skip
-			if version_compare "$new_ver" "<=" "$installed_ver"; then
-				echog " --- Skipping: $pkg (already installed: $installed_ver)"
+			# Smart upgrade check
+			if version_compare "${repo_ver}" "<" "${inst_ver}"; then
+				echog " --- Skipping: $pkg (installed version ${inst_ver}-${inst_rev} is newer)"
 				PROCESSED_PKGS[${pkgname}]=1
 				continue
-			else
-				echog " --- Upgrading: $pkg (installed: $installed_ver)"
+			elif [[ "${repo_ver}" == "${inst_ver}" ]] && [[ "${repo_rev}" != "${inst_rev}" ]]; then
+				local repo_bd inst_bd
+				inst_bd=$(grep "^# Build-Date:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
+				local repo_file="${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}"
+				[[ ! -f "${repo_file}" ]] && repo_file="${ROOT_PKG_STATE_DIR}/repo/${pkgrepo}/packages/${pkgname}-${repo_ver}-${repo_rev}"
+				repo_bd=$(grep "^# Build-Date:" "${repo_file}" 2>/dev/null | awk -F'\t' '{print $2}')
+				if [[ -n "${inst_bd}" ]] && [[ -n "${repo_bd}" ]] && (( repo_bd <= inst_bd )); then
+					echog " --- Skipping: $pkg (Build-Date not newer)"
+					PROCESSED_PKGS[${pkgname}]=1
+					continue
+				fi
+			elif version_compare "${repo_ver}-${repo_rev}" "<=" "${inst_ver}-${inst_rev}"; then
+				echog " --- Skipping: $pkg (already installed: ${inst_ver}-${inst_rev})"
+				PROCESSED_PKGS[${pkgname}]=1
+				continue
 			fi
+
+			echog " --- Upgrading: $pkg (installed: ${inst_ver}-${inst_rev})"
 		fi
 
 		PROCESSED_PKGS[${pkgname}]=1

@@ -165,7 +165,6 @@ nhoget_vcs_git() {
 
 	nhoget_msg info "Cloning Git repository: $url"
 	[[ -n "$ref" ]] && nhoget_msg info "  Reference: $ref"
-	mkdir -p "$dest"
 
 	if [[ -d "${dest}/.git" ]]; then
 		nhoget_msg info "  Repository already exists. Updating..."
@@ -177,6 +176,11 @@ nhoget_vcs_git() {
 			git checkout "$ref" || return 1
 		fi
 	else
+		# Remove stale directory if it exists (non-git or empty)
+		if [[ -e "$dest" ]]; then
+			rm -rf "$dest"
+		fi
+		mkdir -p "$dest"
 		if ! git clone "$url" "$dest"; then
 			nhoget_msg err "Failed to clone Git repository."
 			return 1
@@ -220,6 +224,10 @@ nhoget_vcs_svn() {
 			svn update || return 1
 		fi
 	else
+		# Remove stale directory if it exists (non-svn)
+		if [[ -e "$dest" ]]; then
+			rm -rf "$dest"
+		fi
 		parent="$(dirname "$dest")"
 		mkdir -p "$parent"
 		pushd "$parent" >/dev/null || return 1
@@ -264,6 +272,10 @@ nhoget_vcs_hg() {
 			hg update "$ref" || return 1
 		fi
 	else
+		# Remove stale directory if it exists (non-hg)
+		if [[ -e "$dest" ]]; then
+			rm -rf "$dest"
+		fi
 		if ! hg clone "$url" "$dest"; then
 			nhoget_msg err "Failed to clone Mercurial repository."
 			return 1
