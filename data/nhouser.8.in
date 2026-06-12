@@ -54,6 +54,9 @@ Numeric group ID.
 .B \-\-groups \fI"g1,g2"\fR
 Comma-separated list of supplementary groups.
 .TP
+.B \-\-locked
+Lock the user account immediately after creation (calls \fBpasswd \-l\fR).
+.TP
 .B \-v, \-\-verbose
 Verbose output.
 .SH EXAMPLES

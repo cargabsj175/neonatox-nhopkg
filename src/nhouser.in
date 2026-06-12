@@ -65,6 +65,7 @@ usage() {
 	echo "  --group NAME"
 	echo "  --gid GID"
 	echo "  --groups \"g1,g2\""
+	echo "  --locked\tLock the user account (passwd -l)."
 	echo
 	echog "  -v, --verbose\tVerbose operations."
 }
@@ -81,6 +82,12 @@ while [ $# -gt 0 ]; do
 			ARGS+=("$1" "$2")
 			shift
 			;;
+		--locked|--verbose)
+			ARGS+=("$1")
+			;;
+		-v)
+			ARGS+=("--verbose")
+			;;
 		-h|--help)
 			usage
 			exit 0
@@ -89,9 +96,6 @@ while [ $# -gt 0 ]; do
 			echo "nhouser @PACKAGE_VERSION@"
 			echo "Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>"
 			exit 0
-			;;
-		-v|--verbose)
-			ARGS+=("$1")
 			;;
 		*)
 			echo "Invalid option: $1" >&2

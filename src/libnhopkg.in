@@ -811,7 +811,7 @@ nhouser()
 
 	local USER="" U_ID="" COMMENT="" HOME="" SHELL=""
 	local GNAME="" G_ID="" ADDITIONAL_GROUPS=""
-	local GROUP_DONE=0
+	local GROUP_DONE=0 LOCKED=0
 
 	[ "${1}" = "--verbose" ] && VERBOSE=1
 
@@ -823,8 +823,9 @@ nhouser()
 	find_free_id() {
 		local type="$1"
 		local i="${2:-100}"
+		local max="${3:-998}"
 
-		while :; do
+		while [ "$i" -le "$max" ]; do
 			if [ "$type" = "uid" ]; then
 				getent passwd "$i" >/dev/null 2>&1 || { echo "$i"; return; }
 			else
@@ -832,9 +833,9 @@ nhouser()
 			fi
 			i=$((i+1))
 		done
+		echo ""
 	}
 
-	local ARG_USER ARG_UID_ARG COMMENT_ARG HOME_ARG SHELL_ARG GNAME_ARG G_ID_ARG ADDITIONAL_GROUPS_ARG
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			--user) USER="$2"; shift ;;
@@ -845,6 +846,8 @@ nhouser()
 			--group) GNAME="$2"; shift ;;
 			--gid) G_ID="$2"; shift ;;
 			--groups) ADDITIONAL_GROUPS="$2"; shift ;;
+			--locked) LOCKED=1 ;;
+			--verbose) VERBOSE=1 ;;
 			*) echo "Invalid option: $1" >&2; return 1 ;;
 		esac
 		shift
@@ -871,15 +874,24 @@ nhouser()
 				return 1
 			fi
 			if [ -n "$G_ID" ]; then
-				EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
-				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
-					log "GID $G_ID in use by $EXIST_NAME, searching free GID..."
-					G_ID=$(find_free_id gid "$G_ID")
-					log "Using GID $G_ID"
+				if [ "$G_ID" -ge 999 ] 2>/dev/null; then
+					log "GID $G_ID is >= 999, searching lower..."
+					G_ID=$(find_free_id gid 100)
+					[ -z "$G_ID" ] && { echog " * No free GID available below 999" >&2; return 1; }
+				else
+					EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
+					if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
+						log "GID $G_ID in use by $EXIST_NAME, searching free GID..."
+						G_ID=$(find_free_id gid)
+						[ -z "$G_ID" ] && { echog " * No free GID available below 999" >&2; return 1; }
+					fi
 				fi
+			else
+				G_ID=$(find_free_id gid 100)
+				[ -z "$G_ID" ] && { echog " * No free GID available below 999" >&2; return 1; }
 			fi
 			echog " * Creating group $GNAME"
-			groupadd ${G_ID:+-g "$G_ID"} "$GNAME" || return 1
+			groupadd -g "$G_ID" "$GNAME" || return 1
 			GROUP_DONE=1
 		fi
 	fi
@@ -893,28 +905,45 @@ nhouser()
 				fi
 			fi
 			echog " - User $USER already exists (UID: $EXIST_UID)"
+			if [ -n "$LOCKED" ]; then
+				passwd -l "$USER" >/dev/null 2>&1 || true
+				log " - User $USER locked"
+			fi
 		else
 			if [ "$MODE" = "--check" ]; then
 				echog " - User $USER does not exist"
 				return 1
 			fi
 			if [ -n "$U_ID" ]; then
-				EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
-				if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
-					log "UID $U_ID in use by $EXIST_NAME, searching free UID..."
-					U_ID=$(find_free_id uid "$U_ID")
-					log "Using UID $U_ID"
+				if [ "$U_ID" -ge 999 ] 2>/dev/null; then
+					log "UID $U_ID is >= 999, searching lower..."
+					U_ID=$(find_free_id uid 100)
+					[ -z "$U_ID" ] && { echog " * No free UID available below 999" >&2; return 1; }
+				else
+					EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
+					if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
+						log "UID $U_ID in use by $EXIST_NAME, searching free UID..."
+						U_ID=$(find_free_id uid)
+						[ -z "$U_ID" ] && { echog " * No free UID available below 999" >&2; return 1; }
+					fi
 				fi
+			else
+				U_ID=$(find_free_id uid 100)
+				[ -z "$U_ID" ] && { echog " * No free UID available below 999" >&2; return 1; }
 			fi
 			echog " * Creating user $USER"
 			useradd -M \
-				${U_ID:+-u "$U_ID"} \
+				-u "$U_ID" \
 				${COMMENT:+-c "$COMMENT"} \
 				${HOME:+-d "$HOME"} \
 				${SHELL:+-s "$SHELL"} \
 				${GNAME:+-g "$GNAME"} \
 				${ADDITIONAL_GROUPS:+-G "$ADDITIONAL_GROUPS"} \
 				"$USER" || return 1
+			if [ -n "$LOCKED" ]; then
+				passwd -l "$USER" >/dev/null 2>&1 || true
+				log " - User $USER locked"
+			fi
 		fi
 	fi
 
