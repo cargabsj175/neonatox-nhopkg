@@ -1,6 +1,6 @@
 .TH NHOPKG-REPOS 8 "@RELEASEDATE@" "@PACKAGE_VERSION@" "Nhopkg Manual"
 .SH NAME
-nhopkg-repos \- create and maintain nhopkg binary package repositories
+nhopkg-repos \- create, maintain, and sign nhopkg binary package repositories
 .SH SYNOPSIS
 .B nhopkg-repos
 \fB\-g\fR, \fB\-\-create-repo\fR \fI<dir>\fR
@@ -9,16 +9,51 @@ nhopkg-repos \- create and maintain nhopkg binary package repositories
 \fB\-A\fR, \fB\-\-add-to-repo\fR [\fB\-\-repo\-dir\fR \fI<dir>\fR] \fI<package.nho>...\fR
 .br
 .B nhopkg-repos
+\fB\-s\fR, \fB\-\-sign\fR [\fB\-k\fR \fI<key>\fR] \fI<package.nho>\fR
+.br
+.B nhopkg-repos
+\fB\-\-sign-all\fR [\fB\-k\fR \fI<key>\fR] \fB\-\-repo\-dir\fR \fI<dir>\fR
+.br
+.B nhopkg-repos
+\fB\-\-verify\fR \fI<package.nho>\fR
+.br
+.B nhopkg-repos
+\fB\-\-keygen\fR [\fB\-\-batch\fR] [\fB\-\-passphrase-file\fR \fI<file>\fR]
+.br
+.B nhopkg-repos
+\fB\-\-import-key\fR \fI<file|url>\fR
+.br
+.B nhopkg-repos
+\fB\-\-export-key\fR [\fI<id>\fR]
+.br
+.B nhopkg-repos
+\fB\-\-list-keys\fR
+.br
+.B nhopkg-repos
+\fB\-\-remove-key\fR \fI<id>\fR
+.br
+.B nhopkg-repos
+\fB\-\-add-repo\fR \fI<name>\fR \fI<url>\fR
+.br
+.B nhopkg-repos
+\fB\-\-remove-repo\fR \fI<name>\fR
+.br
+.B nhopkg-repos
+\fB\-\-list-repos\fR
+.br
+.B nhopkg-repos
 \fB\-h\fR, \fB\-\-help\fR
 .br
 .B nhopkg-repos
 \fB\-\-version\fR
 .SH DESCRIPTION
-\fBnhopkg-repos\fR creates and maintains binary package repositories for nhopkg.
+\fBnhopkg-repos\fR creates and maintains binary package repositories for nhopkg
+and provides GPG signing and verification for packages and repository metadata.
 It organizes \fI.nho\fR packages into subdirectories by repository type
 (core, extra, multilib) based on the \fB# Repository:\fR field in each package's
 nhoid metadata.
 .SH COMMANDS
+.SS Repository Management
 .TP
 .B \-g, \-\-create-repo \fI<dir>\fR
 Create a new repository structure from \fI.nho\fR packages found in \fI<dir>\fR.
@@ -32,6 +67,8 @@ them into subdirectories by repository type. Generates:
 \fIcontent.db.zst\fR
 .IP \(bu 4
 \fIlastsync\fR (timestamp file)
+.IP \(bu 4
+\fI*.asc\fR (GPG signatures for each metadata file)
 .RE
 .P
 Requires root privileges.
@@ -45,10 +82,93 @@ Keeps only the latest version per package. Rebuilds affected metadata.
 \fB\-\-repo\-dir\fR specifies the repository root directory (required).
 .P
 Requires root privileges.
+
+.TP
+.B \-\-add-repo \fI<name>\fR \fI<url>\fR
+Add a new repository to the nhopkg configuration. Appends the repository name
+to \fBNHOPKG_ACTIVE_REPOS\fR and adds a \fBNHOPKG_REPO_<NAME>\fR variable
+with the given URL.
+
+.TP
+.B \-\-remove-repo \fI<name>\fR
+Remove a repository from the nhopkg configuration. Removes the name from
+\fBNHOPKG_ACTIVE_REPOS\fR and comments out the corresponding
+\fBNHOPKG_REPO_<NAME>\fR variable.
+
+.TP
+.B \-\-list-repos
+List all currently configured repositories with their URLs.
+
+.SS Signing & Verification
+.TP
+.B \-s, \-\-sign [\fB\-k\fR \fI<key>\fR] \fI<package.nho>\fR
+Sign a single \fI.nho\fR package with a GPG key. If the package already has a
+signature, the operation is skipped unless \fB\-\-force\fR is used (not yet
+implemented). Use \fB\-k\fR to specify the signing key ID; otherwise the
+default key is used.
+.br
+Each signing creates \fIsignature.gpg\fR inside the package. Multiple
+signatures are stored as \fIsignature\-<fingerprint>.gpg\fR.
+
+.TP
+.B \-\-sign-all [\fB\-k\fR \fI<key>\fR] \fB\-\-repo\-dir\fR \fI<dir>\fR
+Sign all unsigned \fI.nho\fR packages in a repository. Skips packages that
+already have at least one signature. Reports counts of signed, skipped, and
+failed packages.
+
+.TP
+.B \-\-verify \fI<package.nho>\fR
+Verify the GPG signature(s) of a \fI.nho\fR package against the trusted
+keyring. Returns success if at least one signature is valid.
+
+.TP
+.B \-\-keygen [\fB\-\-batch\fR] [\fB\-\-passphrase-file\fR \fI<file>\fR]
+Generate a new GPG key for package signing. The key name is automatically
+derived from the first configured repository name, or from the key id if
+provided. Use \fB\-\-batch\fR and \fB\-\-passphrase-file\fR for non-interactive
+(CI/CD) key generation.
+
+.TP
+.B \-\-import-key \fI<file|url>\fR
+Import a public key into the trusted keyring from a local file or remote URL.
+The key is added to the nhopkg signing keyring stored in
+\fI/etc/nhopkg/signing\-keys/\fR.
+
+.TP
+.B \-\-export-key [\fI<id>\fR]
+Export a public key from the trusted keyring to stdout. If no key ID is given,
+exports the default signing key. Pipe to a file to save.
+
+.TP
+.B \-\-list-keys
+List all trusted keys in the nhopkg signing keyring with their fingerprints.
+
+.TP
+.B \-\-remove-key \fI<id>\fR
+Remove a key from the trusted keyring by fingerprint or key ID.
 .SH OPTIONS
 .TP
 .B \-o, \-\-repo\-dir \fI<dir>\fR
-Repository root directory for \fB\-\-add-to-repo\fR.
+Repository root directory for \fB\-\-add-to-repo\fR and \fB\-\-sign-all\fR.
+
+.TP
+.B \-k, \-\-key \fI<id>\fR
+Key ID or fingerprint to use for signing operations.
+
+.TP
+.B \-\-batch
+Enable non-interactive (batch) mode for key generation. Suppresses GPG prompts.
+
+.TP
+.B \-\-passphrase-file \fI<file>\fR
+Read the passphrase for the signing key from \fI<file>\fR. Used with
+\fB\-\-batch\fR for automated signing in CI/CD environments.
+
+.TP
+.B \-\-verify-incoming
+Verify GPG signatures of incoming packages during \fB\-\-add-to-repo\fR
+operations. Also honored via \fBNHOPKG_VERIFY_INCOMING=yes\fR in
+\fBnhopkg.conf\fR.
 .SH EXAMPLES
 .TP
 Create a repository from a directory of .nho files
@@ -56,6 +176,27 @@ Create a repository from a directory of .nho files
 .TP
 Add packages to an existing repository
 .B nhopkg-repos \-A \-\-repo\-dir /var/www/repo *.nho
+.TP
+Sign a package with a specific key
+.B nhopkg-repos \-s \-k 0xDEADBEEF package.nho
+.TP
+Sign all unsigned packages in a repository
+.B nhopkg-repos \-\-sign-all \-\-repo\-dir /var/www/repo \-k 0xDEADBEEF
+.TP
+Verify a package signature
+.B nhopkg-repos \-\-verify package.nho
+.TP
+Generate a key in batch mode for CI/CD
+.B nhopkg-repos \-\-keygen \-\-batch \-\-passphrase-file /etc/nhopkg/passphrase
+.TP
+Import a key from a remote URL
+.B nhopkg-repos \-\-import-key https://keyserver.example.com/pubkey.asc
+.TP
+List trusted keys
+.B nhopkg-repos \-\-list-keys
+.TP
+Add and list repositories
+.B nhopkg-repos \-\-add-repo myrepo https://mirror.example.com/nho && nhopkg-repos \-\-list-repos
 .SH SEE ALSO
 .BR nhopkg (8),
 .BR nhopkg.conf (5),

@@ -1,0 +1,512 @@
+#!/bin/bash
+# /usr/lib/nhopkg/libnhopkg_crypto
+# Cryptographic functions for nhopkg signing and verification.
+# Shared by nhopkg.in, nhopkg-repos.in, and future tools.
+
+#==============================================================================
+# Section: GPG presence check
+#==============================================================================
+CRYPTO_GPG_AVAILABLE=0
+command -v gpg &>/dev/null && CRYPTO_GPG_AVAILABLE=1
+
+#==============================================================================
+# crypto_init_keyring()
+# Description: Auto-initializes trusted GPG keyring from default public key.
+# Parameters: none
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_init_keyring()
+{
+	local TRUSTED_KEYS_DIR="${NHOPKG_TRUSTED_KEYS_DIR}"
+	local DEFAULT_PUBKEY="${TRUSTED_KEYS_DIR}/nhopkg-repo.pub"
+
+	[[ ! -f "${TRUSTED_KEYS_DIR}/pubring.kbx" ]] || return 0
+	[[ -f "${DEFAULT_PUBKEY}" ]] || return 1
+
+	mkdir -p "${TRUSTED_KEYS_DIR}"
+	echog " --- Initializing trusted keyring..."
+	if gpg --homedir "${TRUSTED_KEYS_DIR}" --import "${DEFAULT_PUBKEY}" &>/dev/null; then
+		echog " --- Trusted keyring initialized."
+		return 0
+	else
+		echog " *** WARNING: Failed to initialize trusted keyring." >&2
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_verify_signature()
+# Description: Verifies GPG signature of data.tar.zst using trusted keyring.
+#    Searches for signature-*.gpg inside NHOPKG_TMPDIR (multi-signature support).
+# Parameters: none
+# Returns: 0 if OK or signature not required; 1 if verification fails.
+#==============================================================================
+crypto_verify_signature()
+{
+	[[ "${NHOPKG_VERIFY_SIGNATURE}" == "yes" ]] || return 0
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 0
+
+	local TRUSTED_KEYS_DIR="${NHOPKG_TRUSTED_KEYS_DIR}"
+
+	# Auto-initialize keyring
+	crypto_init_keyring
+
+	# Find all signature files (multi-signature support)
+	local sig_files=()
+	while IFS= read -r -d '' f; do
+		sig_files+=("$f")
+	done < <(find "${NHOPKG_TMPDIR}" -maxdepth 1 -name 'signature*.gpg' -print0 2>/dev/null)
+
+	if [[ ${#sig_files[@]} -eq 0 ]]; then
+		echog " *** WARNING: Package is not signed." >&2
+		if [[ "${NHOPKG_REQUIRE_SIGNATURE}" == "yes" ]]; then
+			echog " *** Signature required. Aborting." >&2
+			return 1
+		fi
+		return 0
+	fi
+
+	if [[ ! -f "${TRUSTED_KEYS_DIR}/pubring.kbx" ]]; then
+		echog " *** ERROR: No trusted keyring found." >&2
+		return 1
+	fi
+
+	# Try each signature file against the trusted keyring
+	local sig_ok=0
+	for sig_file in "${sig_files[@]}"; do
+		echog " --- Verifying GPG signature: $(basename "${sig_file}")..."
+		if gpg --homedir "${TRUSTED_KEYS_DIR}" --lock-never --batch --quiet \
+			--verify "${sig_file}" "${NHOPKG_TMPDIR}/data.tar.zst" 2>/dev/null; then
+			echog " --- Signature OK."
+			sig_ok=1
+			break
+		fi
+	done
+
+	if [[ ${sig_ok} -eq 1 ]]; then
+		return 0
+	else
+		echog " *** BAD SIGNATURE! Package may be tampered." >&2
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_sign_package()
+# Description: Signs data.tar.zst with GPG and creates signature.gpg.
+# Parameters: none (uses NHOPKG_TMPDIR, NHOPKG_SIGN_KEY, NHOPKG_SIGN_PACKAGES)
+# Returns: 0 on success or skip; 1 on failure.
+#==============================================================================
+crypto_sign_package()
+{
+	[[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]] || return 0
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 0
+	[[ -f "${NHOPKG_TMPDIR}/data.tar.zst" ]] || return 0
+
+	echog " --- Signing package with GPG..."
+	if gpg --default-key "${NHOPKG_SIGN_KEY}" --detach-sign --armor \
+		"${NHOPKG_TMPDIR}/data.tar.zst" 2>/dev/null; then
+		mv "${NHOPKG_TMPDIR}/data.tar.zst.asc" "${NHOPKG_TMPDIR}/signature.gpg"
+		return 0
+	else
+		echog " *** WARNING: Failed to sign package. Continuing without signature." >&2
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_sign_package_ext()
+# Description: Signs an external data.tar.zst with specified key.
+# Parameters:
+#   $1: path to data.tar.zst (required)
+#   $2: output directory for signature.gpg (optional, defaults to same dir)
+#   $3: key ID (optional, defaults to NHOPKG_SIGN_KEY)
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_sign_package_ext()
+{
+	local data_tar="$1"
+	local out_dir="${2:-$(dirname "$data_tar")}"
+	local key="${3:-${NHOPKG_SIGN_KEY}}"
+
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -f "${data_tar}" ]] || return 1
+
+	if gpg --default-key "${key}" --detach-sign --armor "${data_tar}" 2>/dev/null; then
+		mv "${data_tar}.asc" "${out_dir}/signature.gpg"
+		return 0
+	fi
+	return 1
+}
+
+#==============================================================================
+# crypto_sign_file()
+# Description: Low-level GPG detached signature of any file.
+# Parameters:
+#   $1: file to sign
+#   $2: key ID (optional, defaults to NHOPKG_SIGN_KEY)
+#   $3: output signature path (optional, defaults to <file>.asc)
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_sign_file()
+{
+	local file="$1"
+	local key="${2:-${NHOPKG_SIGN_KEY}}"
+	local output="${3:-${file}.asc}"
+
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -f "${file}" ]] || return 1
+
+	gpg --default-key "${key}" --detach-sign --armor \
+		--output "${output}" "${file}" 2>/dev/null
+}
+
+#==============================================================================
+# crypto_verify_file()
+# Description: Low-level GPG verification of a detached signature.
+# Parameters:
+#   $1: signed file (original data)
+#   $2: signature file (.asc)
+#   $3: keyring directory (optional, defaults to NHOPKG_TRUSTED_KEYS_DIR)
+# Returns: 0 on valid signature, 1 on failure.
+#==============================================================================
+crypto_verify_file()
+{
+	local file="$1"
+	local sig="$2"
+	local keyring="${3:-${NHOPKG_TRUSTED_KEYS_DIR}}"
+
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -f "${file}" ]] || return 1
+	[[ -f "${sig}" ]] || return 1
+	[[ -f "${keyring}/pubring.kbx" ]] || return 1
+	[[ -r "${keyring}/pubring.kbx" ]] || return 1
+
+	gpg --homedir "${keyring}" --lock-never --batch --quiet \
+		--verify "${sig}" "${file}" 2>/dev/null
+}
+
+#==============================================================================
+# crypto_verify_repo_metadata()
+# Description: Verifies all signed metadata files in a repository directory.
+#    Checks each .zst file against its .asc counterpart.
+# Parameters:
+#   $1: repository directory (e.g., /srv/repo/core)
+#   $2: keyring directory (optional, defaults to NHOPKG_TRUSTED_KEYS_DIR)
+# Globals: NHOPKG_VERIFY_REPO_METADATA, NHOPKG_REQUIRE_SIGNED_METADATA
+# Returns: 0 if all verifications pass or skipped; 1 on failure.
+#==============================================================================
+crypto_verify_repo_metadata()
+{
+	local repo_dir="$1"
+	local keyring="${2:-${NHOPKG_TRUSTED_KEYS_DIR}}"
+
+	[[ "${NHOPKG_VERIFY_REPO_METADATA}" == "yes" ]] || return 0
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 0
+	[[ -d "${repo_dir}" ]] || return 0
+
+	# Files to verify: look for .zst + .asc pairs
+	local files_verified=0
+	local files_failed=0
+
+	for meta_file in "${repo_dir}"/*.zst; do
+		[[ -f "${meta_file}" ]] || continue
+		local sig_file="${meta_file}.asc"
+		[[ -f "${sig_file}" ]] || continue
+
+		if crypto_verify_file "${meta_file}" "${sig_file}" "${keyring}"; then
+			files_verified=$((files_verified + 1))
+		else
+			echog " *** BAD SIGNATURE: $(basename "${meta_file}")" >&2
+			files_failed=$((files_failed + 1))
+		fi
+	done
+
+	# Also check lastsync
+	if [[ -f "${repo_dir}/lastsync" ]] && [[ -f "${repo_dir}/lastsync.asc" ]]; then
+		if crypto_verify_file "${repo_dir}/lastsync" "${repo_dir}/lastsync.asc" "${keyring}"; then
+			files_verified=$((files_verified + 1))
+		else
+			echog " *** BAD SIGNATURE: lastsync" >&2
+			files_failed=$((files_failed + 1))
+		fi
+	fi
+
+	if [[ ${files_failed} -gt 0 ]]; then
+		if [[ "${NHOPKG_REQUIRE_SIGNED_METADATA}" == "yes" ]]; then
+			echog " *** Signed metadata required. Aborting." >&2
+			return 1
+		fi
+		echog " *** WARNING: ${files_failed} metadata file(s) have invalid signatures." >&2
+	fi
+
+	[[ ${files_verified} -gt 0 ]] && echog " --- Repository metadata verified (${files_verified} files)."
+	return 0
+}
+
+#==============================================================================
+# crypto_sign_repo_metadata()
+# Description: Signs all metadata files in a repository directory.
+#    Creates .asc for each .zst and lastsync.
+# Parameters:
+#   $1: repository directory (e.g., /srv/repo/core)
+#   $2: key ID (optional, defaults to NHOPKG_SIGN_KEY)
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_sign_repo_metadata()
+{
+	local repo_dir="$1"
+	local key="${2:-${NHOPKG_SIGN_KEY}}"
+
+	[[ "${NHOPKG_SIGN_REPO_METADATA}" == "yes" ]] || return 0
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 0
+	[[ -d "${repo_dir}" ]] || return 0
+
+	local signed=0
+	for meta_file in "${repo_dir}"/*.zst; do
+		[[ -f "${meta_file}" ]] || continue
+		if crypto_sign_file "${meta_file}" "${key}"; then
+			signed=$((signed + 1))
+		fi
+	done
+
+	if [[ -f "${repo_dir}/lastsync" ]]; then
+		if crypto_sign_file "${repo_dir}/lastsync" "${key}"; then
+			signed=$((signed + 1))
+		fi
+	fi
+
+	[[ ${signed} -gt 0 ]] && echog " --- Repository metadata signed (${signed} files)."
+	return 0
+}
+
+#==============================================================================
+# crypto_generate_key()
+# Description: Generates a new GPG key pair for a packager.
+# Parameters:
+#   $1: key ID / email (optional, prompts if missing)
+#   $2: full name (optional)
+# Parameters via flags: --key-id, --name, --batch, --passphrase-file
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_generate_key()
+{
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || {
+		echog " * GPG is not available. Cannot generate keys." >&2
+		return 1
+	}
+
+	local key_id="" key_name="" batch="" passphrase_file=""
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--key-id) key_id="$2"; shift ;;
+			--name) key_name="$2"; shift ;;
+			--batch) batch="--batch" ;;
+			--passphrase-file) passphrase_file="$2"; shift ;;
+		esac
+		shift
+	done
+
+	[[ -z "${key_id}" ]] && read -r -p "Key email/ID: " key_id
+	[[ -z "${key_name}" ]] && read -r -p "Full name: " key_name
+	[[ -z "${key_id}" ]] && { echog " * Key ID is required." >&2; return 1; }
+	[[ -z "${key_name}" ]] && key_name="${key_id}"
+
+	local tmpdir
+	tmpdir=$(mktemp -d) || return 1
+
+	cat > "${tmpdir}/batch-config" <<-EOF
+		%echo Generating GPG key for ${key_name} <${key_id}>
+		Key-Type: RSA
+		Key-Length: 4096
+		Subkey-Type: RSA
+		Subkey-Length: 4096
+		Name-Real: ${key_name}
+		Name-Email: ${key_id}
+		Expire-Date: 5y
+		%commit
+		%echo Key generation done.
+	EOF
+
+	local batch_opt="--batch"
+	[[ -n "${passphrase_file}" ]] && batch_opt="${batch_opt} --passphrase-file ${passphrase_file}"
+
+	if gpg ${batch_opt} --gen-key --batch "${tmpdir}/batch-config" 2>/dev/null; then
+		echog " --- Key generated: ${key_id}"
+		rm -rf "${tmpdir}"
+		return 0
+	else
+		echog " *** Failed to generate key." >&2
+		rm -rf "${tmpdir}"
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_import_key()
+# Description: Imports a public key into the trusted keyring.
+# Parameters:
+#   $1: path to public key file, or URL to download
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_import_key()
+{
+	local source="$1"
+	[[ -n "${source}" ]] || { echog " * No key source specified." >&2; return 1; }
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+
+	local tmpfile=""
+	local key_file="${source}"
+
+	# If it's a URL, download it first
+	if [[ "${source}" =~ ^https?:// ]]; then
+		tmpfile=$(mktemp) || return 1
+		if command -v wget &>/dev/null; then
+			wget -q -O "${tmpfile}" "${source}" 2>/dev/null || {
+				rm -f "${tmpfile}"; echog " * Failed to download key." >&2; return 1
+			}
+		elif command -v curl &>/dev/null; then
+			curl -s -o "${tmpfile}" "${source}" 2>/dev/null || {
+				rm -f "${tmpfile}"; echog " * Failed to download key." >&2; return 1
+			}
+		else
+			rm -f "${tmpfile}"; echog " * No downloader available." >&2; return 1
+		fi
+		key_file="${tmpfile}"
+	fi
+
+	[[ -f "${key_file}" ]] || { echog " * Key file not found: ${key_file}" >&2; return 1; }
+
+	mkdir -p "${NHOPKG_TRUSTED_KEYS_DIR}"
+	if gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --import "${key_file}" 2>/dev/null; then
+		local fp
+		fp=$(gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --with-colons --list-keys 2>/dev/null | grep '^pub' | head -1 | cut -d: -f5)
+		echog " --- Key imported: ${fp:-unknown}"
+		rm -f "${tmpfile}"
+		return 0
+	else
+		echog " *** Failed to import key." >&2
+		rm -f "${tmpfile}"
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_export_key()
+# Description: Exports a public key from the trusted keyring.
+# Parameters:
+#   $1: key ID (optional, defaults to first key)
+#   --output <file>: output file (optional, defaults to stdout)
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_export_key()
+{
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -d "${NHOPKG_TRUSTED_KEYS_DIR}" ]] || return 1
+
+	local key_id="" output=""
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--output) output="$2"; shift ;;
+			*) key_id="$1" ;;
+		esac
+		shift
+	done
+
+	[[ -r "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || { echog " * No permission to read keyring (try as root)." >&2; return 1; }
+
+	if [[ -n "${output}" ]]; then
+		gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --lock-never --export --armor "${key_id}" > "${output}" 2>/dev/null
+	else
+		gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --lock-never --export --armor "${key_id}" 2>/dev/null
+	fi
+}
+
+#==============================================================================
+# crypto_list_keys()
+# Description: Lists all keys in the trusted keyring.
+# Parameters: none
+# Returns: 0.
+#==============================================================================
+crypto_list_keys()
+{
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || { echog " * GPG not available." >&2; return 0; }
+	[[ -d "${NHOPKG_TRUSTED_KEYS_DIR}" ]] || { echog " * No trusted keyring found at ${NHOPKG_TRUSTED_KEYS_DIR}." >&2; return 0; }
+	[[ -f "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || { echog " * Keyring not initialized." >&2; return 0; }
+	[[ -r "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || { echog " * No permission to read keyring (try as root)." >&2; return 0; }
+
+	gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --lock-never --list-keys 2>/dev/null || {
+		echog " * Failed to list keys (keyring may be locked or inaccessible)." >&2
+		return 0
+	}
+}
+
+#==============================================================================
+# crypto_remove_key()
+# Description: Removes a key from the trusted keyring.
+# Parameters:
+#   $1: key ID to remove
+# Returns: 0 on success, 1 on failure.
+#==============================================================================
+crypto_remove_key()
+{
+	local key_id="$1"
+	[[ -n "${key_id}" ]] || { echog " * No key ID specified." >&2; return 1; }
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -f "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || { echog " * Keyring not initialized." >&2; return 1; }
+
+	if gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --batch --yes \
+		--delete-keys "${key_id}" 2>/dev/null; then
+		echog " --- Key removed: ${key_id}"
+		return 0
+	else
+		echog " *** Failed to remove key: ${key_id}" >&2
+		return 1
+	fi
+}
+
+#==============================================================================
+# crypto_verify_incoming()
+# Description: Verifies that a .nho package has a valid signature from a
+#    trusted key in the keyring. Used with --verify-incoming on add-to-repo.
+# Parameters:
+#   $1: path to .nho file
+# Returns: 0 if valid trusted signature, 1 otherwise.
+#==============================================================================
+crypto_verify_incoming()
+{
+	local pkg_path="$1"
+	[[ -f "${pkg_path}" ]] || return 1
+	[[ ${CRYPTO_GPG_AVAILABLE} -eq 1 ]] || return 1
+	[[ -f "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || return 1
+
+	local tmpdir
+	tmpdir=$(mktemp -d) || return 1
+
+	# Extract data.tar.zst and signature files
+	tar xf "${pkg_path}" -C "${tmpdir}" data.tar.zst 2>/dev/null || {
+		rm -rf "${tmpdir}"; return 1
+	}
+
+	local sig_found=0
+	local sig_ok=0
+	for sig_file in "${tmpdir}"/signature*.gpg; do
+		[[ -f "${sig_file}" ]] || continue
+		sig_found=1
+		if gpg --homedir "${NHOPKG_TRUSTED_KEYS_DIR}" --batch --quiet \
+			--verify "${sig_file}" "${tmpdir}/data.tar.zst" 2>/dev/null; then
+			sig_ok=1
+			break
+		fi
+	done
+
+	rm -rf "${tmpdir}"
+
+	[[ ${sig_found} -eq 0 ]] && { echog " * No signature found in package." >&2; return 1; }
+	[[ ${sig_ok} -eq 0 ]] && { echog " * Incoming package signature is not trusted." >&2; return 1; }
+
+	echog " --- Incoming package signature verified (trusted key)."
+	return 0
+}

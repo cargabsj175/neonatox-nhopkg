@@ -51,6 +51,13 @@ libnhopkg_download = configure_file(
   configuration: conf
 )
 
+# Configurar librería criptográfica en /usr/lib/nhopkg
+libnhopkg_crypto = configure_file(
+  input: 'libnhopkg_crypto.in',
+  output: 'libnhopkg_crypto',
+  configuration: conf
+)
+
 # Configurar nhoget CLI
 nhoget = configure_file(
   input: 'nhoget.in',
@@ -67,7 +74,7 @@ install_data(
 
 # Instalar librería en libdir/nhopkg (/usr/lib/nhopkg)
 install_data(
-  [libnhopkg, libnhopkg_udepsys, libnhopkg_download],
+  [libnhopkg, libnhopkg_udepsys, libnhopkg_download, libnhopkg_crypto],
   install_dir: join_paths(get_option('libdir'), 'nhopkg'),
   install_mode: 'rw-r--r--'
 )

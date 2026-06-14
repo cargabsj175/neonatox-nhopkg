@@ -47,6 +47,9 @@ NHOPKG_LIB=@prefix@/lib/nhopkg/libnhopkg
 # Download library (nhoget)
 NHOPKG_DOWNLOAD_LIB=@prefix@/lib/nhopkg/libnhopkg_download
 
+# Crypto library (signing/verification)
+NHOPKG_CRYPTO_LIB=@prefix@/lib/nhopkg/libnhopkg_crypto
+
 # Lock file to avoid multiple nhopkg instances running at the same time
 NHOPKG_LOCKFILE=/var/lock/nhopkg
 
@@ -161,6 +164,21 @@ NHOPKG_VERIFY_SIGNATURE=yes
 
 # Require valid signature (abort install if missing or invalid)
 NHOPKG_REQUIRE_SIGNATURE=no
+
+# Verify incoming package signatures when adding to repo (collaborators)
+NHOPKG_VERIFY_INCOMING=no
+
+# Sign repository metadata (core.packages.tar.zst, lastsync, etc.)
+NHOPKG_SIGN_REPO_METADATA=yes
+
+# Verify repository metadata signatures when updating (nhopkg -U)
+NHOPKG_VERIFY_REPO_METADATA=yes
+
+# Require valid metadata signatures (abort update if missing or invalid)
+NHOPKG_REQUIRE_SIGNED_METADATA=no
+
+# CI/CD: path to GPG passphrase file (optional, for non-interactive signing)
+# NHOPKG_SIGN_PASSPHRASE_FILE=
 
 
 #==============================================================================

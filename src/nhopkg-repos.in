@@ -20,20 +20,19 @@
 #
 ###############################################################################
 # Description: Repository management tool for nhopkg package manager.
-#  Supports two operations:
-#  - create-repo: Creates new repository structure from .nho packages,
-#				organizing them by repository type (core, extra, multilib) based on
-#				package metadata, generating all required database files.
-#  - add-to-repo: Incrementally adds .nho packages to existing repository,
-#				keeping only latest version per package, rebuilding affected metadata.
-#  Both operations generate: core.packages.tar.zst, core.files.tar.zst,
-#  content.db.zst, and lastsync timestamp.
-#  Requires root privileges for write operations.
-# Parameters: -g/--create-repo <dir>  : Create repository from directory
-#			 -A/--add-to-repo		: Add packages to existing repository
-#			 -o/--repo-dir <dir>	 : Repository root directory (for add-to-repo)
-#			 --help				  : Show usage information
-#			 --version			   : Show version information
+#  Operations:
+#  - create-repo:      Create new repository structure from .nho packages
+#  - add-to-repo:      Incrementally add .nho packages to existing repository
+#  - sign, sign-all:   Sign packages with GPG
+#  - verify:           Verify package GPG signature
+#  - keygen:           Generate new GPG key for packager
+#  - import-key:       Import public key to trusted keyring
+#  - export-key:       Export public key from trusted keyring
+#  - list-keys:        List trusted keys
+#  - remove-key:       Remove key from trusted keyring
+#  - add-repo:         Add repository to configuration
+#  - remove-repo:      Remove repository from configuration
+#  - list-repos:       List configured repositories
 ###############################################################################
 #==============================================================================
 # Section: Basic configurations.
@@ -61,12 +60,27 @@ else
 	echog " * Unable to locate Nhopkg core common functions file!"
 fi
 
-SHORTOPTIONS="g:Ao:"
-LONGOPTIONS="create-repo:,add-to-repo,repo-dir:,help,version"
+# Get crypto library (signing/verification)
+NHOPKG_CRYPTO_LIB="${NHOPKG_CRYPTO_LIB:-@prefix@/lib/nhopkg/libnhopkg_crypto}"
+if [[ -f "${NHOPKG_CRYPTO_LIB}" ]]; then
+	source "${NHOPKG_CRYPTO_LIB}" 2> /dev/null
+fi
+
+#==============================================================================
+# Section: Argument parsing
+#==============================================================================
+SHORTOPTIONS="g:Ao:sk:"
+LONGOPTIONS="create-repo:,add-to-repo,repo-dir:,sign:,sign-all,verify:,keygen,import-key:,export-key:,list-keys,remove-key:,add-repo:,remove-repo:,list-repos,key:,batch,passphrase-file:,verify-incoming,help,version"
 
 NHPARAMS=$(getopt -o ${SHORTOPTIONS} -l ${LONGOPTIONS} -n "nhopkg-repos" -- "$@")
 [[ "${?}" != "0" ]] && { echo "Use --help for usage."; exit 1; }
 eval set -- $NHPARAMS
+
+# Variables for argument parsing
+SIGN_KEY="${NHOPKG_SIGN_KEY}"
+SIGN_BATCH=""
+SIGN_PASSPHRASE_FILE=""
+VERIFY_INCOMING=0
 
 while [[ "${1}" != "--" ]]; do
 	case "${1}" in
@@ -78,125 +92,425 @@ while [[ "${1}" != "--" ]]; do
 				echog " * The selected directory doesn't exist in your system." >&2
 				exit 1
 			fi
-			if [[ -z "${NHOPKG_OPTION}" ]]; then
-				NHOPKG_OPTION="create-repo"
-			else
-				echog " * You have selected more than one valid option." >&2
-				exit 1
-			fi
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="create-repo"
 			shift
 		;;
 		-A|--add-to-repo)
 			shift
-		if [[ -z "${NHOPKG_OPTION}" ]]; then
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
 			NHOPKG_OPTION="add-to-repo"
-		else
-			echog " * You have selected more than one valid option." >&2
-			exit 1
-		fi
 		;;
 		-o|--repo-dir)
 			shift
-		if [[ -d "${1}" ]]; then
-			REPO_ROOT="$(echo ${1} | sed -e 's@/$@@')"
-		else
-			echog " * The selected directory doesn't exist in your system." >&2
-			exit 1
-		fi
+			if [[ -d "${1}" ]]; then
+				REPO_ROOT="$(echo ${1} | sed -e 's@/$@@')"
+			else
+				echog " * The selected directory doesn't exist in your system." >&2
+				exit 1
+			fi
 			shift
 		;;
+		-s|--sign)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="sign"
+			SIGN_PACKAGE="${1}"
+			shift
+		;;
+		--sign-all)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="sign-all"
+		;;
+		--verify)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="verify"
+			VERIFY_PACKAGE="${1}"
+			shift
+		;;
+		--keygen)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="keygen"
+		;;
+		--import-key)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="import-key"
+			IMPORT_KEY_SOURCE="${1}"
+			shift
+		;;
+		--export-key)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="export-key"
+			EXPORT_KEY_ID="${1}"
+			shift
+		;;
+		--list-keys)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="list-keys"
+		;;
+		--remove-key)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="remove-key"
+			REMOVE_KEY_ID="${1}"
+			shift
+		;;
+		--add-repo)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="add-repo"
+			ADD_REPO_NAME="${1}"
+			shift
+			ADD_REPO_URL="${1}"
+			shift
+		;;
+		--remove-repo)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="remove-repo"
+			REMOVE_REPO_NAME="${1}"
+			shift
+		;;
+		--list-repos)
+			shift
+			[[ -z "${NHOPKG_OPTION}" ]] || { echog " * You have selected more than one valid option." >&2; exit 1; }
+			NHOPKG_OPTION="list-repos"
+		;;
+		-k|--key)
+			shift
+			SIGN_KEY="${1}"
+			shift
+		;;
+		--batch)
+			shift
+			SIGN_BATCH="--batch"
+		;;
+		--passphrase-file)
+			shift
+			SIGN_PASSPHRASE_FILE="--passphrase-file ${1}"
+			shift
+		;;
+		--verify-incoming)
+			shift
+			VERIFY_INCOMING=1
+		;;
 		-h|--help)
-			echog "Usage: nhopkg-repos [OPTION]..."
+			echog "Usage: nhopkg-repos <command> [options]"
 			echo
-			echog "Repository management for nhopkg."
+			echog "Repository management:"
+			echog "  -g, --create-repo <dir>       Create repository from directory"
+			echog "  -A, --add-to-repo             Add packages to existing repository"
+			echog "  -o, --repo-dir <dir>          Repository root directory"
+			echog "      --add-repo <name> <url>   Add repository to configuration"
+			echog "      --remove-repo <name>      Remove repository from configuration"
+			echog "      --list-repos              List configured repositories"
 			echo
-			echog "  -A, --add-to-repo	Add .nho packages to repository"
-			echog "  -g, --create-repo <dir>	Create repository in directory"
-			echog "  -o, --repo-dir <dir>	Repository root directory"
-			echog "  --version	Shows version."
-			echog "  -h, --help\tShows this help page."
+			echog "Signing & verification:"
+			echog "  -s, --sign <pkg.nho>          Sign a package"
+			echog "      --sign-all                Sign unsigned packages in repo"
+			echog "      --verify <pkg.nho>        Verify package signature"
+			echog "      --keygen                  Generate new GPG key"
+			echog "      --import-key <file|url>   Import public key"
+			echog "      --export-key [<id>]       Export public key"
+			echog "      --list-keys               List trusted keys"
+			echog "      --remove-key <id>         Remove key from trust ring"
+			echo
+			echog "Options:"
+			echog "  -k, --key <id>                Key to use for signing"
+			echog "      --batch                   Non-interactive mode (CI/CD)"
+			echog "      --passphrase-file <file>  Passphrase file (batch mode)"
+			echog "      --verify-incoming         Verify incoming package signatures"
+			echo
+			echog "  -h, --help                    Show this help"
+			echog "      --version                 Show version"
 			exit 0
-			;;
+		;;
 		--version)
 			echo "nhopkg-repos @PACKAGE_VERSION@"
 			echo "Copyright (C) 2009-@RELEASEDATE@  Carlos Sánchez <cargabsj175@gmail.com>"
 			exit 0
-			;;
+		;;
 		--)
 			shift
 			break
-			;;
+		;;
 		*)
 			shift
-			;;
+		;;
 	esac
 done
 
 CASEPACKAGES="$@"
 
-# Validar opción requerida
 [[ -z "${NHOPKG_OPTION}" ]] && {
 	echog " * No operation specified. Use --help." >&2
 	exit 1
 }
 
-# Validar root para operaciones que lo requieren
+# Root validation for repo operations
 if [[ "${NHOPKG_OPTION}" == "create-repo" || "${NHOPKG_OPTION}" == "add-to-repo" ]]; then
-	[[ "${UID}" != "0" ]] && {
-		echo " * Root privileges required." >&2
-		exit 1
-	}
+	[[ "${UID}" != "0" ]] && { echo " * Root privileges required." >&2; exit 1; }
 fi
 
+#==============================================================================
+# Section: Operation dispatch
+#==============================================================================
 case "${NHOPKG_OPTION}" in
-	create-repo)
-	# ********************************************************************
-	#
-	# Section: Create Repo (Multiple Repositories)
-	# 1. Basic configurations.
-	# 2. Check input directory (source of .nho files).
-	# 3. Determine active repositories from config (NHOPKG_ACTIVE_REPOS).
-	# 4. Iterate through .nho files in input directory.
-	# 5. Extract # Repository: from nhoid inside each .nho.
-	# 6. Assign to 'extra' if # Repository: is missing or invalid.
-	# 7. Group .nho files by determined repository.
-	# 8. For each active repo with assigned packages:
-	#	a. Create temporary staging area for that repo's metadata.
-	#	b. Process assigned .nho files, adding their metadata to staging.
-	#	c. Create repo-specific packages.tar.zst and files.tar.zst.
-	#	d. Place final files in subdirectory within output directory (e.g., REPO_DIR/core/, REPO_DIR/extra/).
-	#	e. Copy original .nho files to the corresponding repo subdirectory.
-	# 9. Clean up and exit.
-	#
-	# ********************************************************************
+	#----------------------------------------------------------------------
+	# sign: sign a single .nho package
+	#----------------------------------------------------------------------
+	sign)
+		[[ -f "${SIGN_PACKAGE}" ]] || { echog " * Package not found: ${SIGN_PACKAGE}" >&2; exit 1; }
+		echogn " :: Signing:"
+		echo " $(basename "${SIGN_PACKAGE}")"
 
-	# 1. Basic configurations.
+		# Extract data.tar.zst from the .nho
+		pkg_dir=$(mktemp -d) || exit 1
+		tar xf "${SIGN_PACKAGE}" -C "${pkg_dir}" data.tar.zst 2>/dev/null || {
+			echog " * Invalid package." >&2; rm -rf "${pkg_dir}"; exit 1
+		}
+
+		# Check if already signed
+		has_sig=0
+		for sig in "${pkg_dir}"/signature*.gpg; do
+			[[ -f "${sig}" ]] && { has_sig=1; break; }
+		done
+
+		if [[ ${has_sig} -eq 1 ]]; then
+			echog " - Package already has a signature. Use --force to add another."
+			rm -rf "${pkg_dir}"
+			exit 0
+		fi
+
+		# Sign
+		if crypto_sign_package_ext "${pkg_dir}/data.tar.zst" "${pkg_dir}" "${SIGN_KEY}"; then
+			echog " --- Signature created: signature.gpg"
+
+			# Repack the .nho with the new signature
+			cd "${pkg_dir}" && tar cp * > "${SIGN_PACKAGE}" && cd "${CWD}"
+			echog " - Package signed: $(basename "${SIGN_PACKAGE}")"
+			rm -rf "${pkg_dir}"
+			exit 0
+		else
+			echog " *** Failed to sign package." >&2
+			rm -rf "${pkg_dir}"
+			exit 1
+		fi
+		;;
+
+	#----------------------------------------------------------------------
+	# sign-all: sign all unsigned packages in a repo
+	#----------------------------------------------------------------------
+	sign-all)
+		[[ -n "${REPO_ROOT}" ]] || { echog " * Must specify --repo-dir." >&2; exit 1; }
+		[[ -d "${REPO_ROOT}" ]] || { echog " * Repository root does not exist." >&2; exit 1; }
+
+		signed=0
+		skipped=0
+		failed=0
+
+		while IFS= read -r -d '' pkg; do
+			echogn " :: $(basename "${pkg}")..."
+
+			pkg_dir=$(mktemp -d) || continue
+			tar xf "${pkg}" -C "${pkg_dir}" data.tar.zst 2>/dev/null || {
+				rm -rf "${pkg_dir}"; continue
+			}
+
+			# Check for existing signature
+			has_sig=0
+			for sig in "${pkg_dir}"/signature*.gpg; do
+				[[ -f "${sig}" ]] && { has_sig=1; break; }
+			done
+
+			if [[ ${has_sig} -eq 1 ]]; then
+				echo " already signed (skipped)"
+				skipped=$((skipped + 1))
+				rm -rf "${pkg_dir}"
+				continue
+			fi
+
+			if crypto_sign_package_ext "${pkg_dir}/data.tar.zst" "${pkg_dir}" "${SIGN_KEY}"; then
+				cd "${pkg_dir}" && tar cp * > "${pkg}" && cd "${CWD}"
+				echo " signed"
+				signed=$((signed + 1))
+			else
+				echo " FAILED"
+				failed=$((failed + 1))
+			fi
+			rm -rf "${pkg_dir}"
+		done < <(find "${REPO_ROOT}" -name '*.nho' -print0 2>/dev/null)
+
+		echog " --- Sign-all complete: ${signed} signed, ${skipped} skipped, ${failed} failed."
+		[[ ${failed} -eq 0 ]] || exit 1
+		exit 0
+		;;
+
+	#----------------------------------------------------------------------
+	# verify: verify a package signature
+	#----------------------------------------------------------------------
+	verify)
+		[[ -f "${VERIFY_PACKAGE}" ]] || { echog " * Package not found: ${VERIFY_PACKAGE}" >&2; exit 1; }
+
+		tmpdir=$(mktemp -d) || exit 1
+		tar xf "${VERIFY_PACKAGE}" -C "${tmpdir}" data.tar.zst 2>/dev/null || {
+			echog " * Invalid package." >&2; rm -rf "${tmpdir}"; exit 1
+		}
+
+		NHOPKG_TMPDIR="${tmpdir}"
+		if crypto_verify_signature; then
+			echog " --- Package signature is valid."
+			rm -rf "${tmpdir}"
+			exit 0
+		else
+			echog " *** Package signature verification FAILED." >&2
+			rm -rf "${tmpdir}"
+			exit 1
+		fi
+		;;
+
+	#----------------------------------------------------------------------
+	# keygen: generate new GPG key
+	#----------------------------------------------------------------------
+	keygen)
+		crypto_generate_key --key-id "${ADD_REPO_NAME}" --name "${ADD_REPO_URL}" \
+			${SIGN_BATCH} ${SIGN_PASSPHRASE_FILE}
+		exit $?
+		;;
+
+	#----------------------------------------------------------------------
+	# import-key: import public key to trusted keyring
+	#----------------------------------------------------------------------
+	import-key)
+		crypto_import_key "${IMPORT_KEY_SOURCE}"
+		exit $?
+		;;
+
+	#----------------------------------------------------------------------
+	# export-key: export public key from trusted keyring
+	#----------------------------------------------------------------------
+	export-key)
+		crypto_export_key "${EXPORT_KEY_ID}"
+		exit $?
+		;;
+
+	#----------------------------------------------------------------------
+	# list-keys: list trusted keys
+	#----------------------------------------------------------------------
+	list-keys)
+		crypto_list_keys
+		exit 0
+		;;
+
+	#----------------------------------------------------------------------
+	# remove-key: remove key from trusted keyring
+	#----------------------------------------------------------------------
+	remove-key)
+		crypto_remove_key "${REMOVE_KEY_ID}"
+		exit $?
+		;;
+
+	#----------------------------------------------------------------------
+	# add-repo: add repository to configuration
+	#----------------------------------------------------------------------
+	add-repo)
+		[[ -n "${ADD_REPO_NAME}" && -n "${ADD_REPO_URL}" ]] || {
+			echog " * Usage: nhopkg-repos --add-repo <name> <url>" >&2; exit 1
+		}
+
+		upper_name="${ADD_REPO_NAME^^}"
+		conf="${NHOPKG_CONF}"
+
+		# Add to NHOPKG_ACTIVE_REPOS if not already present
+		if ! grep -q "NHOPKG_ACTIVE_REPOS.*${ADD_REPO_NAME}" "${conf}" 2>/dev/null; then
+			sed -i "/^NHOPKG_ACTIVE_REPOS=/ s/\"$/ ${ADD_REPO_NAME}\"/" "${conf}"
+			echog " --- Added ${ADD_REPO_NAME} to NHOPKG_ACTIVE_REPOS"
+		else
+			echog " - ${ADD_REPO_NAME} already in NHOPKG_ACTIVE_REPOS"
+		fi
+
+		# Add repo URL variable at the end of the repo section
+		if ! grep -q "^NHOPKG_REPO_${upper_name}=" "${conf}" 2>/dev/null; then
+			# Find the last NHOPKG_REPO_ line and insert after it
+			last_line=$(grep -n "^NHOPKG_REPO_" "${conf}" 2>/dev/null | tail -1 | cut -d: -f1)
+			if [[ -n "${last_line}" ]]; then
+				sed -i "${last_line}a NHOPKG_REPO_${upper_name}=\"${ADD_REPO_URL}\"" "${conf}"
+			else
+				echo "NHOPKG_REPO_${upper_name}=\"${ADD_REPO_URL}\"" >> "${conf}"
+			fi
+			echog " --- Repository added: ${ADD_REPO_NAME} -> ${ADD_REPO_URL}"
+		else
+			echog " - NHOPKG_REPO_${upper_name} already exists in config."
+		fi
+		exit 0
+		;;
+
+	#----------------------------------------------------------------------
+	# remove-repo: remove repository from configuration
+	#----------------------------------------------------------------------
+	remove-repo)
+		[[ -n "${REMOVE_REPO_NAME}" ]] || {
+			echog " * Usage: nhopkg-repos --remove-repo <name>" >&2; exit 1
+		}
+
+		upper_name="${REMOVE_REPO_NAME^^}"
+		conf="${NHOPKG_CONF}"
+
+		# Remove from NHOPKG_ACTIVE_REPOS
+		sed -i "/^NHOPKG_ACTIVE_REPOS=/ s/ ${REMOVE_REPO_NAME}//; s/${REMOVE_REPO_NAME} //" "${conf}"
+
+		# Comment out (don't delete) the NHOPKG_REPO_ line
+		sed -i "/^NHOPKG_REPO_${upper_name}=/ s/^/# /" "${conf}"
+
+		echog " --- Repository removed: ${REMOVE_REPO_NAME}"
+		exit 0
+		;;
+
+	#----------------------------------------------------------------------
+	# list-repos: list configured repositories
+	#----------------------------------------------------------------------
+	list-repos)
+		conf="${NHOPKG_CONF}"
+		echog "Active repositories:"
+		for repo in ${NHOPKG_ACTIVE_REPOS}; do
+			var="NHOPKG_REPO_${repo^^}"
+			url="${!var}"
+			echo "  ${repo} -> ${url:-<no URL>}"
+		done
+		exit 0
+		;;
+
+	#----------------------------------------------------------------------
+	# create-repo: Create repository structure from .nho packages
+	#----------------------------------------------------------------------
+	create-repo)
 	echogn " :: Creating software repository from:"
-	echo " ${REPO_DIR}" # This is the INPUT directory containing .nho files
-	# Define OUTPUT directory (could be the same as input or different)
-	# For this example, assume REPO_DIR is the output root where subdirectories (core/, extra/, etc.) will be created.
+	echo " ${REPO_DIR}"
 	REPO_OUTPUT_ROOT="${REPO_DIR}"
 	get_pwd_dir
 	check_if_root_uid
 
-	# 2. Check input directory.
 	if [[ ! -d "${REPO_OUTPUT_ROOT}" ]]; then
 		echog " * Input/output directory does not exist: ${REPO_OUTPUT_ROOT}" >&2
 		exit 1
 	fi
 
-	# 3. Determine active repositories from config.
+	# Determine active repositories from config
 	if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
-		# Auto-detect like in 'update' section if not explicitly set
 		NHOPKG_ACTIVE_REPOS=""
 		for var in $(compgen -v NHOPKG_REPO_); do
 			repo_name="${var#NHOPKG_REPO_}"
-			# Only add if NHOPKG_REPO_<name> is defined and not empty
 			if [[ -n "${!var}" ]]; then
 				NHOPKG_ACTIVE_REPOS+="${repo_name} "
 			fi
 		done
-		NHOPKG_ACTIVE_REPOS=$(echo "${NHOPKG_ACTIVE_REPOS}" | xargs) # Trim whitespace
+		NHOPKG_ACTIVE_REPOS=$(echo "${NHOPKG_ACTIVE_REPOS}" | xargs)
 	fi
 
 	if [[ -z "${NHOPKG_ACTIVE_REPOS}" ]]; then
@@ -204,11 +518,8 @@ case "${NHOPKG_OPTION}" in
 		exit 1
 	fi
 	echogn " :: Active Repositories:"
-	for repo_name in ${NHOPKG_ACTIVE_REPOS}; do
-		echo " - ${repo_name}"
-	done
+	for repo_name in ${NHOPKG_ACTIVE_REPOS}; do echo " - ${repo_name}"; done
 
-	# 4. Clean up nhopkg temporal directory.
 	cleanup_tmp_dir
 	make_tmp_dir
 
@@ -224,301 +535,222 @@ case "${NHOPKG_OPTION}" in
 		exit 1
 	fi
 
-	# 5, 6, 7. Determine repo for each .nho and group them.
-	declare -A repo_packages # Associative array: repo_name -> list of .nho paths
+	# Determine repo for each .nho and group them
+	declare -A repo_packages
 	for nhopackage_path in "${nhopackage_list[@]}"; do
 		nhopackage_basename=$(basename "${nhopackage_path}")
 
-		# Extract # Repository: field from the nhoid inside the .nho package
 		pkg_repo=$(tar xfO "${nhopackage_path}" "nhoid" 2>/dev/null | grep "^# Repository:" | awk -F'\t' '{print $2}' | tr '[:upper:]' '[:lower:]')
 
 		if [[ -z "${pkg_repo}" ]]; then
-			echog " - Package ${nhopackage_basename} has no '# Repository:' field. Assigning to 'extra'."
 			pkg_repo="extra"
 		else
-			# Validate against active repos
 			repo_found=0
 			for active_repo in ${NHOPKG_ACTIVE_REPOS}; do
-				if [[ "${pkg_repo}" == "${active_repo}" ]]; then
-					repo_found=1
-					break
-				fi
+				[[ "${pkg_repo}" == "${active_repo}" ]] && { repo_found=1; break; }
 			done
-			if [[ ${repo_found} -eq 0 ]]; then
-				echog " - Package ${nhopackage_basename} assigned to repository '${pkg_repo}', which is not in NHOPKG_ACTIVE_REPOS. Assigning to 'extra' instead."
-				pkg_repo="extra"
-			fi
+			[[ ${repo_found} -eq 0 ]] && pkg_repo="extra"
 		fi
 
-		# Add to the appropriate list
 		repo_packages["${pkg_repo}"]+="${nhopackage_path} "
-		echogn " - Package ${nhopackage_basename}"
-		echo "   -> Repository: ${pkg_repo}"
+		echogn " - ${nhopackage_basename}"; echo "   -> Repository: ${pkg_repo}"
 	done
 
-	# 8. Process each active repository that has packages assigned.
+	# Process each active repository
 	for repo_name in ${NHOPKG_ACTIVE_REPOS}; do
 		repo_pkg_list_str="${repo_packages[${repo_name}]}"
-		if [[ -z "${repo_pkg_list_str}" ]]; then
-			echog " :: No packages found for repository: ${repo_name}. Skipping metadata generation and copy."
-			continue
-		fi
+		[[ -z "${repo_pkg_list_str}" ]] && { echog " :: No packages for: ${repo_name}. Skipping."; continue; }
 
 		echogn " :: Processing repository: ${repo_name}"
-		repo_pkg_list=($repo_pkg_list_str) # Convert string list to array
+		repo_pkg_list=($repo_pkg_list_str)
 
-		# --- Create target directory for .nho files for this repo ---
 		repo_nho_dir="${REPO_OUTPUT_ROOT}/${repo_name}"
 		mkdir -p "${repo_nho_dir}"
 
-		# --- Staging area for this specific repo's metadata ---
 		repo_tmp_dir="${NHOPKG_TMPDIR}/${repo_name}_staging"
 		mkdir -p "${repo_tmp_dir}"
 		repo_packages_file="${repo_tmp_dir}/repo_packages.tar"
 		repo_files_file="${repo_tmp_dir}/repo_files.tar"
 
-		# Ensure tar files start fresh
 		tar cf "${repo_packages_file}" --files-from /dev/null 2>/dev/null || touch "${repo_packages_file}"
 		tar cf "${repo_files_file}" --files-from /dev/null 2>/dev/null || touch "${repo_files_file}"
 
-		# --- Process each .nho assigned to this repo ---
 		for nhopackage_path in "${repo_pkg_list[@]}"; do
 			nhopackage_basename=$(basename "${nhopackage_path}")
-			echogn " - Adding"
-			echo " ${nhopackage_basename}..."
+			echogn " - Adding ${nhopackage_basename}..."
 
-			# Extract nhoid to get metadata
-			if ! tar xfO "${nhopackage_path}" "nhoid" 2> /dev/null > "${NHOPKG_TMPDIR}/nhoid"; then
-				 echog " * Error: Failed to extract 'nhoid' from ${nhopackage_path}" >&2
-				 cleanup_tmp_dir
-				 exit 1
+			if ! tar xfO "${nhopackage_path}" "nhoid" 2>/dev/null > "${NHOPKG_TMPDIR}/nhoid"; then
+				echog " * Error extracting nhoid from ${nhopackage_path}" >&2
+				cleanup_tmp_dir; exit 1
 			fi
 
-			# Load metadata from the extracted nhoid
 			if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
-				# Ensure we get the correct pkgname, pkgversion, pkgrevision
-				# Use the get_basic_data function or similar logic to populate them
-				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid" # This populates pkgname, pkgversion, pkgrevision, etc.
+				get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 			else
-				 echog " * Error: Extracted 'nhoid' from ${nhopackage_path} is invalid." >&2
-				 cleanup_tmp_dir
-				 exit 1
+				echog " * Invalid nhoid in ${nhopackage_path}" >&2
+				cleanup_tmp_dir; exit 1
 			fi
 
-			# --- Add package metadata entry to repo_packages_file ---
-			# Create a temporary file with the correct name structure
 			pkg_metadata_name="${pkgname}-${pkgversion}-${pkgrevision}"
 			mv "${NHOPKG_TMPDIR}/nhoid" "${repo_tmp_dir}/${pkg_metadata_name}"
-			# Create symlinks for name and name-version
 			ln -sf "${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}-${pkgversion}"
 			ln -sf "${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}"
 
-			# Add the metadata files (pkgname-ver-rev, symlinks) to the packages tar
 			tar rf "${repo_packages_file}" -C "${repo_tmp_dir}" "${pkg_metadata_name}" "${pkgname}-${pkgversion}" "${pkgname}"
 
-			# --- Add file list entry to repo_files_file ---
-			# Extract the file list from the .nho package (assuming it's stored as 'files' inside)
-			# You might need to adapt this if the file list is stored differently
-			# For now, let's assume it exists as 'files' inside the .nho
-			# Create a temporary file named after the package to hold its file list
 			pkg_files_name="${pkgname}-${pkgversion}-${pkgrevision}"
 			if tar -xf "${nhopackage_path}" --to-command='zstd -dc | tar -tf -' data.tar.zst > "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null; then
-			#if tar xfO "${nhopackage_path}" "files" 2>/dev/null > "${repo_tmp_dir}/${pkg_files_name}"; then
-				 # Add the file list file to the files tar
-				 tar rf "${repo_files_file}" -C "${repo_tmp_dir}" "${pkg_files_name}"
-				 # Compress the individual file list file
-				 zstd --rm "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null
-			else
-				 echog " - Warning: No 'files' list found in ${nhopackage_basename}. Skipping file list entry."
-				 # Create an empty file list entry anyway to maintain structure?
-				 # touch "${repo_tmp_dir}/${pkg_files_name}"
-				 # tar rf "${repo_files_file}" -C "${repo_tmp_dir}" "${pkg_files_name}"
-				 # zstd --rm "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null
+				tar rf "${repo_files_file}" -C "${repo_tmp_dir}" "${pkg_files_name}"
+				zstd --rm "${repo_tmp_dir}/${pkg_files_name}" 2>/dev/null
 			fi
 
-			# Clean up temporary nhoid file for next iteration
 			rm -f "${repo_tmp_dir}/${pkg_metadata_name}" "${repo_tmp_dir}/${pkgname}" "${repo_tmp_dir}/${pkgname}-${pkgversion}"
 
-			# --- Copy .nho file to corresponding repo subdirectory ---
-			# Determine destination path for the .nho file
 			dest_nho_path="${repo_nho_dir}/${nhopackage_basename}"
-			# Only copy if it's not already in the target directory (to avoid overwriting or unnecessary copy if input=output)
 			if [[ "${nhopackage_path}" != "${dest_nho_path}" ]]; then
-				echogn "   - Copying .nho file to ${repo_name}/ directory..."
-				# Use cp to copy, preserving attributes might be useful (-p), but -a is often too much (preserves links/ownership)
-				# Standard cp should suffice for the file itself
-				if ! cp "${nhopackage_path}" "${dest_nho_path}"; then
-					 echog "   * Error: Failed to copy ${nhopackage_basename} to ${repo_nho_dir}/" >&2
-					 # Decide whether to exit or continue processing other packages for this repo
-					 # For now, let's continue
-					 continue
-				fi
-				echog "   - Copied ${nhopackage_basename} to ${repo_nho_dir}/"
-			else
-				# If the input path is the same as the output path (e.g., REPO_DIR is both input and output root),
-				# the .nho is already in the right place conceptually. We could log this.
-				echog "   - .nho file ${nhopackage_basename} is already in the target directory ${repo_nho_dir}/"
+				cp "${nhopackage_path}" "${dest_nho_path}" || continue
 			fi
-			# --- End of copy section ---
+		done
 
-		done # End loop for packages in this repo
-
-		# --- Compress and finalize metadata for this repo ---
-		# repo_final_dir is already set to "${REPO_OUTPUT_ROOT}/${repo_name}" where .nho files were copied
-		# repo_final_dir="${REPO_OUTPUT_ROOT}/${repo_name}" # This is implied from repo_nho_dir
-
-		# Compress the accumulated tar files for this repo
+		# Compress metadata
 		if [[ -f "${repo_packages_file}" ]] && [[ -s "${repo_packages_file}" ]]; then
-			zstd --rm "${repo_packages_file}" 2> /dev/null
-			if [[ $? -ne 0 ]]; then
-				 echog " *** Unable to compress packages DB for ${repo_name}." >&2
-				 cleanup_tmp_dir
-				 exit 1
-			fi
-			mv "${repo_packages_file}.zst" "${repo_nho_dir}/core.packages.tar.zst" # Keep 'core' name for compatibility with 'update' logic if needed, or use ${repo_name}.packages.tar.zst
-			# If using ${repo_name}.packages.tar.zst, 'update' section needs adjustment
-		else
-			 echog " - No packages added for ${repo_name}, not creating packages DB."
+			zstd --rm "${repo_packages_file}" 2>/dev/null || {
+				echog " *** Unable to compress packages DB for ${repo_name}." >&2
+				cleanup_tmp_dir; exit 1
+			}
+			mv "${repo_packages_file}.zst" "${repo_nho_dir}/core.packages.tar.zst"
 		fi
 
 		if [[ -f "${repo_files_file}" ]] && [[ -s "${repo_files_file}" ]]; then
-			zstd --rm "${repo_files_file}" 2> /dev/null
-			if [[ $? -ne 0 ]]; then
-				 echog " *** Unable to compress files DB for ${repo_name}." >&2
-				 cleanup_tmp_dir
-				 exit 1
-			fi
-			mv "${repo_files_file}.zst" "${repo_nho_dir}/core.files.tar.zst" # Keep 'core' name for compatibility with 'update' logic if needed, or use ${repo_name}.files.tar.zst
-			# If using ${repo_name}.files.tar.zst, 'update' section needs adjustment
-		else
-			 echog " - No files added for ${repo_name}, not creating files DB."
+			zstd --rm "${repo_files_file}" 2>/dev/null || {
+				echog " *** Unable to compress files DB for ${repo_name}." >&2
+				cleanup_tmp_dir; exit 1
+			}
+			mv "${repo_files_file}.zst" "${repo_nho_dir}/core.files.tar.zst"
 		fi
 
-		# Update lastsync for this repo
+		# Update lastsync
 		echo $(date -u +%s) > "${repo_nho_dir}/lastsync"
-		
-		# Create content.db for this repo
+
+		# Create content.db
 		cd "${repo_nho_dir}" && du *[0-9].nho > content.db && zstd --rm content.db && cd "${CWD}"
-		echog " - Repository '${repo_name}' metadata created and .nho files copied successfully in ${repo_nho_dir}."
 
-	done # End loop for active repos
+		# Sign repo metadata (via libnhopkg_crypto)
+		crypto_sign_repo_metadata "${repo_nho_dir}" "${SIGN_KEY}"
 
-	echog " - All repository metadata has been created and .nho files copied successfully."
+		echog " - Repository '${repo_name}' created in ${repo_nho_dir}."
+	done
 
-	# 9. Clean up and exit.
 	cleanup_tmp_dir
+	echog " - All repository metadata created successfully."
 	exit 0
 	;;
-	add-to-repo)
-	# ==========================================================
-	# Section: Incremental Repository Update (Safe Mode)
-	# ----------------------------------------------------------
-	# Adds .nho packages to repository root
-	# Keeps ONLY latest version per package
-	# Rebuilds:
-	#	   core.packages.tar.zst
-	#	   core.files.tar.zst
-	#	   content.db.zst
-	#	   lastsync
-	# Preserves deterministic metadata
-	#
-	# Flow:
-	# 1. Process incoming packages
-	# 2. Rebuild repository metadata (per affected repo)
-	# ==========================================================
 
+	#----------------------------------------------------------------------
+	# add-to-repo: Incrementally add packages to existing repository
+	#----------------------------------------------------------------------
+	add-to-repo)
 	get_pwd_dir
 	check_if_root_uid
 
-	[ -z "$CASEPACKAGES" ] && {
-		echog " * Must specify .nho packages."
-		exit 1
-	}
+	[ -z "$CASEPACKAGES" ] && { echog " * Must specify .nho packages." >&2; exit 1; }
+	[ -z "$REPO_ROOT" ] && { echog " * Must specify --repo-dir." >&2; exit 1; }
+	[ ! -d "$REPO_ROOT" ] && { echog " * Repository root does not exist." >&2; exit 1; }
 
-	[ -z "$REPO_ROOT" ] && {
-		echog " * Must specify --repo-dir."
-		exit 1
-	}
+	# --verify-incoming: check NHOPKG_VERIFY_INCOMING from config too
+	[[ "${NHOPKG_VERIFY_INCOMING}" == "yes" ]] && VERIFY_INCOMING=1
 
-	[ ! -d "$REPO_ROOT" ] && {
-		echog " * Repository root does not exist."
-		exit 1
-	}
+	if [[ ${VERIFY_INCOMING} -eq 1 ]]; then
+		[[ -f "${NHOPKG_TRUSTED_KEYS_DIR}/pubring.kbx" ]] || \
+			crypto_init_keyring
+	fi
 
 	cleanup_tmp_dir
 	make_tmp_dir
 
-	# ----------------------------------------------------------
+	#-----------------------------------------------------------
 	# 1. Process incoming packages
-	# ----------------------------------------------------------
+	#-----------------------------------------------------------
 	for pkgpath in $CASEPACKAGES; do
 		case "$pkgpath" in
 			--*) continue ;;
 		esac
 
-		[ ! -f "$pkgpath" ] && {
-			echog " * Package not found: $pkgpath"
-			continue
-		}
+		[ ! -f "$pkgpath" ] && { echog " * Package not found: $pkgpath"; continue; }
 
-		echogn " :: Adding package:"
-		echo " $(basename "$pkgpath")"
+		echogn " :: Adding package: $(basename "$pkgpath")"
 
-		# Extract nhoid safely
+		# --verify-incoming: check signature before processing
+		if [[ ${VERIFY_INCOMING} -eq 1 ]]; then
+			if ! crypto_verify_incoming "$pkgpath"; then
+				echog " *** REJECTED: package signature not trusted." >&2
+				continue
+			fi
+		fi
+
+		# Extract nhoid
 		tar xfO "$pkgpath" nhoid > "$NHOPKG_TMPDIR/nhoid" 2>/dev/null || {
-			echog " * Invalid package."
-			continue
+			echog " * Invalid package."; continue
 		}
 
 		get_nhoid_data "$NHOPKG_TMPDIR/nhoid"
 
 		repo="${pkgrepo:-extra}"
 		repodir="$REPO_ROOT/$repo"
-
 		mkdir -p "$repodir"
 
-		# Remove older versions automatically
+		# Remove older versions
 		for old in "$repodir"/"${pkgname}"-*.nho; do
 			[ -f "$old" ] || continue
-				old_name=$(tar xfO "$old" nhoid 2>/dev/null | grep "^# Name:" | awk -F'\t' '{print $2}')
+			old_name=$(tar xfO "$old" nhoid 2>/dev/null | grep "^# Name:" | awk -F'\t' '{print $2}')
 			[ "$old_name" = "$pkgname" ] && rm -f "$old"
 		done
+
+		# Sign package if it has no signature and signing is enabled
+		if [[ "${NHOPKG_SIGN_PACKAGES}" == "yes" ]]; then
+			has_sig=0
+			pkg_tmp=$(mktemp -d) || continue
+			tar xf "$pkgpath" -C "$pkg_tmp" data.tar.zst 2>/dev/null || { rm -rf "$pkg_tmp"; continue; }
+			for sig in "$pkg_tmp"/signature*.gpg; do
+				[[ -f "$sig" ]] && { has_sig=1; break; }
+			done
+
+			if [[ ${has_sig} -eq 0 ]]; then
+				echog "   - Signing package..."
+				if crypto_sign_package_ext "$pkg_tmp/data.tar.zst" "$pkg_tmp" "${SIGN_KEY}"; then
+					cd "$pkg_tmp" && tar cp * > "$pkgpath" && cd "$CWD"
+					echog "   - Signed."
+				fi
+			fi
+			rm -rf "$pkg_tmp"
+		fi
 
 		cp "$pkgpath" "$repodir/"
 
 		# Prepare repo staging structure
-		mkdir -p "$NHOPKG_TMPDIR/$repo/packages"
-		mkdir -p "$NHOPKG_TMPDIR/$repo/files"
+		mkdir -p "$NHOPKG_TMPDIR/$repo/packages" "$NHOPKG_TMPDIR/$repo/files"
 
 		meta_name="$pkgname-$pkgversion-$pkgrevision"
+		cp "$NHOPKG_TMPDIR/nhoid" "$NHOPKG_TMPDIR/$repo/packages/$meta_name"
 
-		cp "$NHOPKG_TMPDIR/nhoid" \
-		   "$NHOPKG_TMPDIR/$repo/packages/$meta_name"
-
-		# Extract file list silently
+		# Extract file list
 		tar xf "$pkgpath" -C "$NHOPKG_TMPDIR" data.tar.zst 2>/dev/null
-
 		if [ -f "$NHOPKG_TMPDIR/data.tar.zst" ]; then
 			zstd -dc "$NHOPKG_TMPDIR/data.tar.zst" 2>/dev/null | \
-			tar -tf - 2>/dev/null > \
-			"$NHOPKG_TMPDIR/$repo/files/$meta_name"
-
+			tar -tf - 2>/dev/null > "$NHOPKG_TMPDIR/$repo/files/$meta_name"
 			rm -f "$NHOPKG_TMPDIR/data.tar.zst"
 		fi
 	done
 
-	# ----------------------------------------------------------
+	#-----------------------------------------------------------
 	# 2. Rebuild repository metadata (per affected repo)
-	# ----------------------------------------------------------
+	#-----------------------------------------------------------
 	for repo in "$NHOPKG_TMPDIR"/*; do
 		[ -d "$repo" ] || continue
 
 		reponame=$(basename "$repo")
 		repodir="$REPO_ROOT/$reponame"
-
-		echogn " :: Updating repository:"
-		echo " $reponame"
-
+		echogn " :: Updating repository: $reponame"
 		mkdir -p "$repodir"
 
 		# ---------- PACKAGES ----------
@@ -532,24 +764,17 @@ case "${NHOPKG_OPTION}" in
 
 		for newmeta in "$repo/packages/"*; do
 			[ -f "$newmeta" ] || continue
-
 			get_basic_data "$newmeta"
 			full="$pkgname-$pkgversion-$pkgrevision"
-
-			rm -f "$tmpbuild/$pkgname"-*
-			rm -f "$tmpbuild/$pkgname"
-
+			rm -f "$tmpbuild/$pkgname"-* "$tmpbuild/$pkgname"
 			cp "$newmeta" "$tmpbuild/$full"
-
 			ln -sf "$full" "$tmpbuild/$pkgname-$pkgversion"
 			ln -sf "$full" "$tmpbuild/$pkgname"
 		done
 
 		tar cf "$NHOPKG_TMPDIR/$reponame/.packages.$$" -C "$tmpbuild" . 2>/dev/null
 		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.packages.$$"
-		mv -f "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst" \
-			  "$repodir/core.packages.tar.zst"
-
+		mv -f "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst" "$repodir/core.packages.tar.zst"
 		rm -rf "$tmpbuild" "$NHOPKG_TMPDIR/$reponame/.packages.$$"
 
 		# ---------- FILES ----------
@@ -565,16 +790,13 @@ case "${NHOPKG_OPTION}" in
 			[ -f "$newfile" ] || continue
 			name=$(basename "$newfile")
 			pkgbase=$(echo "$name" | sed 's/-[^-]*-[^-]*$//')
-
 			rm -f "$tmpfiles/$pkgbase"-*
 			cp "$newfile" "$tmpfiles/"
 		done
 
 		tar cf "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$" -C "$tmpfiles" . 2>/dev/null
 		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
-		mv -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst" \
-			  "$repodir/core.files.tar.zst"
-
+		mv -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst" "$repodir/core.files.tar.zst"
 		rm -rf "$tmpfiles" "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
 
 		# ---------- content.db ----------
@@ -590,11 +812,15 @@ case "${NHOPKG_OPTION}" in
 
 		date -u +%s > "$repodir/lastsync"
 
+		# Sign repo metadata
+		crypto_sign_repo_metadata "${repodir}" "${SIGN_KEY}"
+
 		echog " - Repository $reponame updated."
 	done
 
 	cleanup_tmp_dir
 	echog " - Incremental repository update completed."
 	exit 0
-		;;
+	;;
+
 esac

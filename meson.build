@@ -50,7 +50,7 @@ required_tools = [
 ]
 
 optional_tools = [
-  'curl', 'ldconfig', 'gettext', '7z', 'git', 'svn', 'hg'
+  'curl', 'gpg', 'ldconfig', 'gettext', '7z', 'git', 'svn', 'hg'
 ]
 
 # Verificar herramientas requeridas
