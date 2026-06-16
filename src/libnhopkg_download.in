@@ -91,9 +91,12 @@ nhoget_url_wget_bb() {
 	local url="$1"
 	local output="$2"
 	local attempt=0
+	local wget_opts="-q -O $output -T $NHOGET_TIMEOUT"
+	# BusyBox wget lacks TLS validation; suppress warning and attempt anyway
+	[[ "$url" =~ ^https:// ]] && wget_opts="$wget_opts --no-check-certificate"
 	while (( attempt < NHOGET_RETRIES )); do
 		attempt=$((attempt + 1))
-		if wget -q -O "$output" -T "$NHOGET_TIMEOUT" "$url"; then
+		if wget $wget_opts "$url" 2>/dev/null; then
 			return 0
 		fi
 		if (( attempt < NHOGET_RETRIES )); then
