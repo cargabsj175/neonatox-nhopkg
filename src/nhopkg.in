@@ -254,7 +254,7 @@ run_trigger() {
 $body
 }
 
-echo "** Running triggers for $0"
+echo "** Running triggers for \$0"
 run_trigger
 TRIGGER_EOF
 

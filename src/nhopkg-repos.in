@@ -618,7 +618,7 @@ case "${NHOPKG_OPTION}" in
 				echog " *** Unable to compress packages DB for ${repo_name}." >&2
 				cleanup_tmp_dir; exit 1
 			}
-			mv "${repo_packages_file}.zst" "${repo_nho_dir}/core.packages.tar.zst"
+			cp "${repo_packages_file}.zst" "${repo_nho_dir}/core.packages.tar.zst" && rm -f "${repo_packages_file}.zst"
 		fi
 
 		if [[ -f "${repo_files_file}" ]] && [[ -s "${repo_files_file}" ]]; then
@@ -626,7 +626,7 @@ case "${NHOPKG_OPTION}" in
 				echog " *** Unable to compress files DB for ${repo_name}." >&2
 				cleanup_tmp_dir; exit 1
 			}
-			mv "${repo_files_file}.zst" "${repo_nho_dir}/core.files.tar.zst"
+			cp "${repo_files_file}.zst" "${repo_nho_dir}/core.files.tar.zst" && rm -f "${repo_files_file}.zst"
 		fi
 
 		# Update lastsync
@@ -774,7 +774,7 @@ case "${NHOPKG_OPTION}" in
 
 		tar cf "$NHOPKG_TMPDIR/$reponame/.packages.$$" -C "$tmpbuild" . 2>/dev/null
 		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.packages.$$"
-		mv -f "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst" "$repodir/core.packages.tar.zst"
+		cp "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst" "$repodir/core.packages.tar.zst" && rm -f "$NHOPKG_TMPDIR/$reponame/.packages.$$.zst"
 		rm -rf "$tmpbuild" "$NHOPKG_TMPDIR/$reponame/.packages.$$"
 
 		# ---------- FILES ----------
@@ -796,7 +796,7 @@ case "${NHOPKG_OPTION}" in
 
 		tar cf "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$" -C "$tmpfiles" . 2>/dev/null
 		zstd -q -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
-		mv -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst" "$repodir/core.files.tar.zst"
+		cp "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst" "$repodir/core.files.tar.zst" && rm -f "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$.zst"
 		rm -rf "$tmpfiles" "$NHOPKG_TMPDIR/$reponame/.filesbuild.$$"
 
 		# ---------- content.db ----------
