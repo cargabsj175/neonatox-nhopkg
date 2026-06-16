@@ -315,6 +315,7 @@ case "${NHOPKG_OPTION}" in
 		skipped=0
 		failed=0
 
+		find "${REPO_ROOT}" -name '*.nho' -print0 2>/dev/null > "${REPO_ROOT}/.nho-list.tmp"
 		while IFS= read -r -d '' pkg; do
 			echogn " :: $(basename "${pkg}")..."
 
@@ -345,7 +346,8 @@ case "${NHOPKG_OPTION}" in
 				failed=$((failed + 1))
 			fi
 			rm -rf "${pkg_dir}"
-		done < <(find "${REPO_ROOT}" -name '*.nho' -print0 2>/dev/null)
+		done < "${REPO_ROOT}/.nho-list.tmp"
+		rm -f "${REPO_ROOT}/.nho-list.tmp"
 
 		echog " --- Sign-all complete: ${signed} signed, ${skipped} skipped, ${failed} failed."
 		[[ ${failed} -eq 0 ]] || exit 1
@@ -525,9 +527,13 @@ case "${NHOPKG_OPTION}" in
 
 	# Find all .nho packages in the input directory
 	nhopackage_list=()
+	local _cr_tmp
+	_cr_tmp=$(mktemp) || exit 1
+	find "${REPO_OUTPUT_ROOT}" -maxdepth 1 -name '*.nho' -print0 > "$_cr_tmp"
 	while IFS= read -r -d '' nhopackage_file; do
 		nhopackage_list+=("$nhopackage_file")
-	done < <(find "${REPO_OUTPUT_ROOT}" -maxdepth 1 -name '*.nho' -print0)
+	done < "$_cr_tmp"
+	rm -f "$_cr_tmp"
 
 	if (( ${#nhopackage_list[@]} == 0 )); then
 		echog " *** No .nho packages found in input directory: ${REPO_OUTPUT_ROOT}" >&2

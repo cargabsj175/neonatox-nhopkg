@@ -85,6 +85,9 @@ dep_resolve_from_nhoid() {
 		echo " (${type_label})"
 	fi
 	
+	local _dep_tmp
+	_dep_tmp=$(mktemp) || { echog " *** Failed to create temp file." >&2; return 1; }
+	grep "$dep_pattern" "$nhoid_file" 2>/dev/null > "$_dep_tmp"
 	while IFS= read -r dep_line; do
 		local deps=$(echo "$dep_line" | awk -F'\t' '{print $2}')
 		[[ -z "$deps" ]] && continue
@@ -101,7 +104,8 @@ dep_resolve_from_nhoid() {
 				echog " *** Optional dependency not found: ${dep_spec}"
 			fi
 		done
-	done < <(grep "$dep_pattern" "$nhoid_file" 2>/dev/null)
+	done < "$_dep_tmp"
+	rm -f "$_dep_tmp"
 	
 	if [[ "$silent" != "yes" ]] && [[ $deps_found -eq 0 ]]; then
 		echog "   - No ${dep_type} dependencies found"
@@ -181,15 +185,19 @@ dep_check_conflicts() {
 	local provides_list=()
 	local conflicts_specs=()
 	
+	local _ud_tmp
+	_ud_tmp=$(mktemp) || { echog " *** Failed to create temp file." >&2; return 1; }
+	grep "^# Provides:" "${nhoid_file}" 2>/dev/null > "$_ud_tmp"
 	while IFS= read -r line; do
 		local value=$(echo "$line" | awk -F'\t' '{print $2}')
 		[[ -n "$value" ]] && read -ra items <<< "$value" && provides_list+=("${items[@]}")
-	done < <(grep "^# Provides:" "${nhoid_file}" 2>/dev/null)
-	
+	done < "$_ud_tmp"
+	grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null > "$_ud_tmp"
 	while IFS= read -r line; do
 		local value=$(echo "$line" | awk -F'\t' '{print $2}')
 		[[ -n "$value" ]] && read -ra items <<< "$value" && conflicts_specs+=("${items[@]}")
-	done < <(grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null)
+	done < "$_ud_tmp"
+	rm -f "$_ud_tmp"
 	
 	[[ ${#conflicts_specs[@]} -eq 0 ]] && return 0
 	
@@ -510,12 +518,16 @@ _dep_resolve_children() {
 		optional_build) dep_pattern="^# OptionalBuildDep:" ;;
 	esac
 	
+	local _rc_tmp
+	_rc_tmp=$(mktemp) || { echog " *** Failed to create temp file." >&2; return 1; }
+	grep "$dep_pattern" "$pkgfile" 2>/dev/null > "$_rc_tmp"
 	while IFS= read -r dep_line; do
 		local deps=$(echo "$dep_line" | awk -F'\t' '{print $2}')
 		for dep in $deps; do
 			[[ -n "$dep" ]] && _dep_resolve_single "$dep" "$dep_type" "yes" "$silent" "$search_repos"
 		done
-	done < <(grep "$dep_pattern" "$pkgfile" 2>/dev/null)
+	done < "$_rc_tmp"
+	rm -f "$_rc_tmp"
 }
 
 #----------------------------------------------------------
@@ -610,6 +622,9 @@ resolve_virtual_package()
 		pkgdir="${ROOT_PKG_STATE_DIR}/repo/${repo}/packages"
 		[[ -d "$pkgdir" ]] || continue
 
+		local _rvp_tmp
+		_rvp_tmp=$(mktemp) || continue
+		find "$pkgdir" -maxdepth 1 -type f 2>/dev/null | sort -V > "$_rvp_tmp"
 		while IFS= read -r pkgfile; do
 			[[ -L "$pkgfile" ]] && continue
 
@@ -623,11 +638,13 @@ resolve_virtual_package()
 					"$search_name"|"$search_name"=*)
 						RESOLVED_PKGFILE="$pkgfile"
 						RESOLVED_REPO="$repo"
+						rm -f "$_rvp_tmp"
 						break 3
 						;;
 				esac
 			done
-		done < <(find "$pkgdir" -maxdepth 1 -type f 2>/dev/null | sort -V)
+		done < "$_rvp_tmp"
+		rm -f "$_rvp_tmp"
 	done
 }
 

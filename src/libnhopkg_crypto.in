@@ -53,9 +53,13 @@ crypto_verify_signature()
 
 	# Find all signature files (multi-signature support)
 	local sig_files=()
+	local _cs_tmp
+	_cs_tmp=$(mktemp) || return 1
+	find "${NHOPKG_TMPDIR}" -maxdepth 1 -name 'signature*.gpg' -print0 2>/dev/null > "$_cs_tmp"
 	while IFS= read -r -d '' f; do
 		sig_files+=("$f")
-	done < <(find "${NHOPKG_TMPDIR}" -maxdepth 1 -name 'signature*.gpg' -print0 2>/dev/null)
+	done < "$_cs_tmp"
+	rm -f "$_cs_tmp"
 
 	if [[ ${#sig_files[@]} -eq 0 ]]; then
 		echog " *** WARNING: Package is not signed." >&2
