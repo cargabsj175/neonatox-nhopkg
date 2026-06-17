@@ -490,7 +490,7 @@ print_background_title()
 	MESSAGE_CHARS=$(echog "${MESSAGE}" | wc -m)
 	((MESSAGE_CHARS++))
 	# Count colums of shell.
-	SHELL_COLUMS=$(tput cols)
+	SHELL_COLUMS=$(tput cols 2>/dev/null || echo 80)
 	TITLE_COLUMS=$((${SHELL_COLUMS} - ${MESSAGE_CHARS}))
 	TITLE_COLUMS=$((${TITLE_COLUMS} / 2))
 	for ((i=0;i<${TITLE_COLUMS};i++));
@@ -769,22 +769,29 @@ get_package_provides_and_conflicts()
 		return
 	fi
 	# Provides: names only
+	local __np_tmp
+	__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+	grep "^# Provides:" "${nhoid_file}" 2>/dev/null > "$__np_tmp"
 	while IFS= read -r line; do
 		local value=$(echo "$line" | awk -F'\t' '{print $2}')
 		if [[ -n "$value" ]]; then
 			read -ra items <<< "$value"
 			PROVIDES_LIST+=("${items[@]}")
 		fi
-	done < <(grep "^# Provides:" "${nhoid_file}" 2>/dev/null)
+	done < "$__np_tmp"
+	rm -f "$__np_tmp"
 
 	# Conflicts: We saved the complete original chain
+	__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+	grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null > "$__np_tmp"
 	while IFS= read -r line; do
 		local value=$(echo "$line" | awk -F'\t' '{print $2}')
 		if [[ -n "$value" ]]; then
 			read -ra items <<< "$value"
 			CONFLICTS_SPECS+=("${items[@]}")
 		fi
-	done < <(grep "^# Conflicts:" "${nhoid_file}" 2>/dev/null)
+	done < "$__np_tmp"
+	rm -f "$__np_tmp"
 }
 ## check_package_arch(). Check architecture of package and compare it with the system.
 # Usage: check_package_arch (without arguments)
@@ -913,7 +920,7 @@ bin_install_progress()
 	local TAR_FILE="${3}"
 	local FILE_NAME="${4}"
 	local INSTALLED_SIZE="${5}"
-	SHELL_COLUMS=$(tput cols)
+	SHELL_COLUMS=$(tput cols 2>/dev/null || echo 80)
 	UNTAR_SIZE=0
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-$(echo "${INSTALLED_SIZE}" | wc -m)-25))
 	MIN_BAR_WIDTH="5"
@@ -988,9 +995,13 @@ bin_install()
 	declare -a BACKUP_FILES=()
 	local BACKUP_DIR="${NHOPKG_TMPDIR}/backup"
 	if [[ -f "${NHOPKG_TMPDIR}/nhoid" ]]; then
+		local __np_tmp
+		__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+		grep "^# Backup:" "${NHOPKG_TMPDIR}/nhoid" | awk -F'\t' '{print $2}' > "$__np_tmp"
 		while IFS= read -r backup_file; do
 			[[ -n "$backup_file" ]] && BACKUP_FILES+=("$backup_file")
-		done < <(grep "^# Backup:" "${NHOPKG_TMPDIR}/nhoid" | awk -F'\t' '{print $2}')
+		done < "$__np_tmp"
+		rm -f "$__np_tmp"
 	fi
 	if [[ ${#BACKUP_FILES[@]} -gt 0 ]]; then
 		mkdir -p "$BACKUP_DIR"
@@ -1340,7 +1351,7 @@ remove_package()
 	# Progress Bar variables.
 	TOTAL_FILES=$(zstd -dc "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2>/dev/null | grep -vc "^#")
 	DELETED_FILES="0"
-	SHELL_COLUMS=$(tput cols)
+	SHELL_COLUMS=$(tput cols 2>/dev/null || echo 80)
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-22))
 	MIN_BAR_WIDTH="5"
 	export PERCENT
@@ -1809,16 +1820,23 @@ build_search_for_files()
 			continue
 		fi
 		if grep -- "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" &>/dev/null; then
+			local __np_tmp
+			__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+			grep -- "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "$__np_tmp" || true
 			while IFS= read -r noupgrade2; do
 				# Remove exact matches lines.
 				sed -e "s@^${noupgrade2}@@" -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
 				# Remove empty lines.
 				sed -e '/^$/d' -i "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" 2> /dev/null || true
-			done < <(grep -- "${noupgrade}" "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" || true)
+			done < "$__np_tmp"
+			rm -f "$__np_tmp"
 		fi
 	done
 	# Check if files exists and gets package size.
 	PACKAGE_SIZE=0
+	local __np_tmp
+	__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+	grep -v '^#' "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "$__np_tmp" || true
 	while IFS= read -r casefile; do
 		[[ -n "${casefile}" ]] || continue
 		if [[ ! -e "${casefile}" ]]; then
@@ -1828,7 +1846,8 @@ build_search_for_files()
 			# Use du -- to be safe with leading dashes.
 			PACKAGE_SIZE=$(( PACKAGE_SIZE + $(du -- "${casefile}" | awk '{print $1}') ))
 		fi
-	done < <(grep -v '^#' "${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" || true)
+	done < "$__np_tmp"
+	rm -f "$__np_tmp"
 }
 ## get_build_time(). Calculates time on build and install a package.
 # Usage: get_build_time (without arguments)
@@ -2316,17 +2335,21 @@ get_latest_version_in_repos()
 		fi
 		
 		# Search for all available versions in this repository
+		local __np_tmp
+		__np_tmp="$(mktemp -t nhopkg.XXXXXX 2>/dev/null || echo "/tmp/nhopkg.${$}")"
+		find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f -print0 2>/dev/null > "$__np_tmp"
 		while IFS= read -r -d '' pkgfile; do
 			local pkg_version_file=$(basename "${pkgfile}")
 			local pkg_version="${pkg_version_file#${pkg_name}-}"
-			
+
 			# Compare versions to find the latest
 			if [[ -z "${best_version}" ]] || version_compare "${pkg_version}" ">" "${best_version}"; then
 				best_version="${pkg_version}"
 				best_repo="${repo}"
 				best_pkgfile="${pkgfile}"
 			fi
-		done < <(find "${ROOT_PKG_STATE_DIR}/repo/${repo}/packages/" -maxdepth 1 -name "${pkg_name}-[0-9]*" -type f -print0 2>/dev/null)
+		done < "$__np_tmp"
+		rm -f "$__np_tmp"
 	done
 	
 	if [[ -n "${best_version}" ]]; then
