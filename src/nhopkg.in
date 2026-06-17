@@ -145,7 +145,7 @@ _dep_install_single() {
     local pkgfile="${ROOT_PKG_STATE_DIR}/cache/${pkg_basename}"
     [[ -f "$pkgfile" ]] || return 1
     
-    tar xfC "$pkgfile" "$NHOPKG_TMPDIR"
+    tar xf "$pkgfile" -C "$NHOPKG_TMPDIR"
     check_if_ok " * Unable to uncompress package."
     
     # Get data from package. Checks that is good package and get data from it.
@@ -1610,7 +1610,7 @@ build_prepare() {
 			srcfile_found=true
 			case "${ext}" in
 				zst)
-					zstd -dc "${srcfile}" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null ;;
+					zstd -dc "${srcfile}" | tar xf - -C "${NHOPKG_BUILDIR}" &> /dev/null ;;
 				xz)
 					tar xJf "${srcfile}" -C "${NHOPKG_BUILDIR}" &> /dev/null ;;
 				bz2)
@@ -2426,12 +2426,12 @@ update_repositories()
 		fi
 		
 		# Extract files
-		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null || {
+		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xf - -C "${REPO_PKG_DIR}" 2>/dev/null || {
 			echog " *** Failed to extract packages DB for ${repo}." >&2
 			cleanup_tmp_dir
 			exit 1
 		}
-		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null || {
+		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xf - -C "${REPO_FILE_DIR}" 2>/dev/null || {
 			echog " *** Failed to extract files DB for ${repo}." >&2
 			cleanup_tmp_dir
 			exit 1
@@ -2871,7 +2871,7 @@ case "${NHOPKG_OPTION}" in
 			# Saving package base tempdir
 			ORIG_NHOPKG_TMPDIR="${NHOPKG_TMPDIR}"
 			# Uncompress package.
-			tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+			tar xf "${CASEPACKAGE}" -C "${NHOPKG_TMPDIR}" 2> /dev/null
 			# Comprueba que no ha habido error al descomprimir
 			check_if_ok " * Unable to uncompress package."
 			# Get data from package.
@@ -3190,7 +3190,7 @@ case "${NHOPKG_OPTION}" in
 			ORIG_NHOPKG_TMPDIR="${NHOPKG_TMPDIR}"
 			
 			# Uncompress package.
-			tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+			tar xf "${CASEPACKAGE}" -C "${NHOPKG_TMPDIR}" 2> /dev/null
 			check_if_ok " * Unable to uncompress package."
 			
 			# Get data from package.
@@ -3278,7 +3278,7 @@ case "${NHOPKG_OPTION}" in
 					make_tmp_dir
 
 					# Extract again the source package
-					tar xfC "${CASEPACKAGE}" "${NHOPKG_TMPDIR}" 2> /dev/null
+					tar xf "${CASEPACKAGE}" -C "${NHOPKG_TMPDIR}" 2> /dev/null
 					check_if_ok " * Unable to uncompress package for split."
 
 					# Retrieve data from the main package
@@ -3681,12 +3681,12 @@ case "${NHOPKG_OPTION}" in
 			nhoget_url "${NHOPKG_REPO}/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
 			mv "${ROOT_PKG_STATE_DIR}/cache/content.db.zst" "${ROOT_PKG_STATE_DIR}/repo/content.db.zst"
-			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/packages" 2>/dev/null || {
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xf - -C "${ROOT_PKG_STATE_DIR}/repo/packages" 2>/dev/null || {
 				echog " *** Failed to extract packages DB." >&2
 				cleanup_tmp_dir
 				exit 1
 			}
-			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/files" 2>/dev/null || {
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xf - -C "${ROOT_PKG_STATE_DIR}/repo/files" 2>/dev/null || {
 				echog " *** Failed to extract files DB." >&2
 				cleanup_tmp_dir
 				exit 1
@@ -3759,12 +3759,12 @@ case "${NHOPKG_OPTION}" in
 			check_if_ok " *** Failed to download files DB for ${repo}."
 
 			# Extract to the repo subdirectory
-			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null || {
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" 2>/dev/null | tar xf - -C "${REPO_PKG_DIR}" 2>/dev/null || {
 				echog " *** Failed to extract packages DB for ${repo}." >&2
 				cleanup_tmp_dir
 				exit 1
 			}
-			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null || {
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" 2>/dev/null | tar xf - -C "${REPO_FILE_DIR}" 2>/dev/null || {
 				echog " *** Failed to extract files DB for ${repo}." >&2
 				cleanup_tmp_dir
 				exit 1
@@ -3918,7 +3918,7 @@ case "${NHOPKG_OPTION}" in
 		cleanup_tmp_dir
 		make_tmp_dir
 
-		tar xfC "${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" || exit 1
+		tar xf "${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" -C "${NHOPKG_TMPDIR}" || exit 1
 		get_nhoid_data "${NHOPKG_TMPDIR}/nhoid"
 
 		# Security checks
@@ -4103,8 +4103,8 @@ case "${NHOPKG_OPTION}" in
 		cleanup_tmp_dir
 		make_tmp_dir
 
-		tar xfC \
-			"${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" "${NHOPKG_TMPDIR}" 2>/dev/null
+		tar xf \
+			"${ROOT_PKG_STATE_DIR}/cache/${pkgname}-${pkgversion}-${pkgrevision}.${pkgos}-${pkgarch}.nho" -C "${NHOPKG_TMPDIR}" 2>/dev/null
 		check_if_ok " * Unable to uncompress package."
 
 		if [ -f "${NHOPKG_TMPDIR}/nhoid" ]; then
