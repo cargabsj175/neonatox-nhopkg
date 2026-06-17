@@ -4070,7 +4070,8 @@ case "${NHOPKG_OPTION}" in
 		# Skip empty lines
 		[[ -z "$pkg" ]] && continue
 		
-		echog "--- Processing: $pkg" >&2
+		echogn " --- Processing: " 
+		echo $pkg
 		
 		# Resolve package info (get pkgname, pkgversion, pkgrevision FROM REPO)
 		CASEPACKAGE="$pkg"
@@ -4090,9 +4091,8 @@ case "${NHOPKG_OPTION}" in
 
 		# Check if package is already installed (in root or host)
 		if [[ -f "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" ]]; then
-			local repo_ver="${pkgversion}"
-			local repo_rev="${pkgrevision}"
-			local inst_ver inst_rev
+			repo_ver="${pkgversion}"
+			repo_rev="${pkgrevision}"
 			inst_ver=$(grep "^# Version:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
 			inst_rev=$(grep "^# Release:" "${ROOT_PKG_STATE_DIR}/packages/${pkgname}" 2>/dev/null | awk -F'\t' '{print $2}')
 
