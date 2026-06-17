@@ -338,7 +338,7 @@ nhoget_fetch_tarball() {
 
 	case "$filename" in
 		*.tar.zst|*.tar.zst.*)
-			zstdcat "$tmpfile" | tar xf - -C "$dest" --strip-components=1 ;;
+			zstd -dc "$tmpfile" | tar xf - -C "$dest" --strip-components=1 ;;
 		*.tar.xz|*.tar.xz.*|*.txz)
 			tar xJf "$tmpfile" -C "$dest" --strip-components=1 ;;
 		*.tar.bz2|*.tar.bz2.*|*.tbz2)

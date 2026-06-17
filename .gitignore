@@ -12,3 +12,4 @@ builddir
 *.po~
 PROPOSAL-*
 docs/PROPOSAL-*
+fake*

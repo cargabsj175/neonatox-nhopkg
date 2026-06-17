@@ -921,7 +921,7 @@ bin_install_progress()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	(zstdcat ${TAR_FILE}) | (
+	(zstd -dc ${TAR_FILE}) | (
 	while (( ${UNTAR_SIZE} < ${INSTALLED_SIZE} ));
 	do
 		dd bs=512 count=2048 2>/dev/null # || return 1
@@ -1020,7 +1020,7 @@ bin_install()
 			check_if_ok " *** Failed to install package."
 		else
 			# Checks if data.tar.zst is preceded by / or not.
-			if [[ $(zstdcat "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null | tar tfP - | head -1 | grep '^/') ]] || [[ $(tar JtfP "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null | head -1 | grep '^/') ]] || [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
+			if [[ $(zstd -dc "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null | tar tfP - | head -1 | grep '^/') ]] || [[ $(tar JtfP "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null | head -1 | grep '^/') ]] || [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
 				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
@@ -1164,7 +1164,14 @@ getpackage()
 	if [[ $found -eq 0 ]]; then
 		# Fallback: search via file list (old method)
 		get_good_file_name "${CASEPACKAGE}"
-		local MATCHPACKAGE=$(zstdgrep -l "${GOOD_FILE_NAME}$" "${ROOT_PKG_STATE_DIR}/repo/"*/files/*.zst 2>/dev/null | head -n1)
+		local MATCHPACKAGE=""
+		for __zst_file in "${ROOT_PKG_STATE_DIR}/repo/"*/files/*.zst; do
+			[[ -f "$__zst_file" ]] || continue
+			if zstd -dc "$__zst_file" 2>/dev/null | grep -q "${GOOD_FILE_NAME}$"; then
+				MATCHPACKAGE="$__zst_file"
+				break
+			fi
+		done
 		if [[ -n "${MATCHPACKAGE}" ]]; then
 			local repo_dir=$(echo "${MATCHPACKAGE}" | sed -E 's@.*/repo/([^/]*)/files/.*@\1@')
 			local pkgfile=$(basename "${MATCHPACKAGE}" .zst)
@@ -1292,9 +1299,9 @@ check_inverse_dependencies()
 			for depfile in ${DEPFILES};
 			do
 				# Could fail.
-				#RETURN=$(zstdgrep -c "${depfile#/*/*/}" "${NHOPKG_LOCALSTATEDIR}/files/${1}.zst")
+				#RETURN=$(zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${1}.zst" 2>/dev/null | grep -c "${depfile#/*/*/}")
 				get_good_file_name "${depfile}"
-				RETURN=$(zstdgrep -c "${GOOD_FILE_NAME}$" "${NHOPKG_LOCALSTATEDIR}/files/${1}.zst")
+				RETURN=$(zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${1}.zst" 2>/dev/null | grep -c "${GOOD_FILE_NAME}$")
 				if [[ "${RETURN}" != "0" ]]; then
 					if [[ -z "${INVERSEDEPS[@]}" ]]; then
 						INVERSEDEPS=("${package}")
@@ -1331,7 +1338,7 @@ remove_package()
 	fi
 
 	# Progress Bar variables.
-	TOTAL_FILES=$(zstdgrep -vc "^#" "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
+	TOTAL_FILES=$(zstd -dc "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2>/dev/null | grep -vc "^#")
 	DELETED_FILES="0"
 	SHELL_COLUMS=$(tput cols)
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-22))
@@ -1341,7 +1348,7 @@ remove_package()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	for removefiles in $(zstdgrep -v "^#" "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst")
+	for removefiles in $(zstd -dc "${state_dir}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2>/dev/null | grep -v "^#")
 	do
 		# Check that file begin with /.
 		if  [[ $(echo "${removefiles}" | grep "^/") ]]; then
@@ -1516,7 +1523,7 @@ fetch_tarball_source() {
 	# Unpacking according to the extension
 	case "${tarball_file}" in
 		*.tar.zst|*.tar.zst.*)
-			zstdcat "${tarball_file}" | tar xf - -C "${build_dir}" --strip-components=1 ;;
+			zstd -dc "${tarball_file}" | tar xf - -C "${build_dir}" --strip-components=1 ;;
 		*.tar.xz|*.tar.xz.*|*.txz)
 			tar xJf "${tarball_file}" -C "${build_dir}" --strip-components=1 ;;
 		*.tar.bz2|*.tar.bz2.*|*.tbz2)
@@ -1603,7 +1610,7 @@ build_prepare() {
 			srcfile_found=true
 			case "${ext}" in
 				zst)
-					zstdcat "${srcfile}" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null ;;
+					zstd -dc "${srcfile}" | tar xfC - "${NHOPKG_BUILDIR}" &> /dev/null ;;
 				xz)
 					tar xJf "${srcfile}" -C "${NHOPKG_BUILDIR}" &> /dev/null ;;
 				bz2)
@@ -2021,7 +2028,7 @@ build_make_binary_package()
 		fi
 	# Package and compress files.
 	echog " --- Compressing package."
-		tar cpP --zstd --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" > "${NHOPKG_TMPDIR}/data.tar.zst"
+		tar cpP --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" | zstd > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled (via libnhopkg_crypto)
 		crypto_sign_package
 		# Go to the temp directory and package.
@@ -2419,8 +2426,8 @@ update_repositories()
 		fi
 		
 		# Extract files
-		zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
-		zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+		zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
 		
 		# Compress .zst files in /files
 		for filedb in "${REPO_FILE_DIR}"/*; do
@@ -3104,10 +3111,10 @@ case "${NHOPKG_OPTION}" in
 			zstd -d "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 			# Check that files begin with /.
 			if [[ $(grep -m 1 "^/" "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}") ]]; then
-				tar --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" -c -p --zstd > "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null
+				tar --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" -c -p | zstd > "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null
 			else
 				cd /
-				tar --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" -c -p --zstd > "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null
+				tar --files-from="${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" -c -p | zstd > "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null
 				cd ${PWD}
 			fi
 			zstd --rm "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}" 2> /dev/null
@@ -3583,9 +3590,9 @@ case "${NHOPKG_OPTION}" in
 			echogn " :: Checking for:"
 			echo " ${pkgname}-${pkgversion}-${pkgrevision}"
 			# Set the 100% percent.
-			LISTED_FILES_NUM=$(zstdgrep -vc '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null)
+			LISTED_FILES_NUM=$(zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null | grep -vc '^#')
 			CHECKED_FILES_NUM=0
-			for checked_file in $(zstdgrep -v '^#' "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null);
+			for checked_file in $(zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null | grep -v '^#');
 			do
 				if [[ -e "${checked_file}" ]]; then
 					((CHECKED_FILES_NUM++))
@@ -3666,8 +3673,8 @@ case "${NHOPKG_OPTION}" in
 			nhoget_url "${NHOPKG_REPO}/core.packages.tar.zst" "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst"
 			check_if_ok " *** Unable to download files from repository."
 			mv "${ROOT_PKG_STATE_DIR}/cache/content.db.zst" "${ROOT_PKG_STATE_DIR}/repo/content.db.zst"
-			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/packages" 2> /dev/null
-			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/files" 2> /dev/null
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/packages" 2> /dev/null
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${ROOT_PKG_STATE_DIR}/repo/files" 2> /dev/null
 			for i in $(ls "${ROOT_PKG_STATE_DIR}/repo/files" 2>/dev/null); do
 				zstd --rm "${ROOT_PKG_STATE_DIR}/repo/files/${i}" 2> /dev/null
 			done
@@ -3736,8 +3743,8 @@ case "${NHOPKG_OPTION}" in
 			check_if_ok " *** Failed to download files DB for ${repo}."
 
 			# Extract to the repo subdirectory
-			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
-			zstdcat "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.packages.tar.zst" | tar xfC - "${REPO_PKG_DIR}" 2>/dev/null
+			zstd -dc "${ROOT_PKG_STATE_DIR}/cache/core.files.tar.zst" | tar xfC - "${REPO_FILE_DIR}" 2>/dev/null
 
 			# Compress .zst files in /files (like the original does)
 			for filedb in "${REPO_FILE_DIR}"/*; do
@@ -4383,13 +4390,13 @@ case "${NHOPKG_OPTION}" in
 			## 3. Shows package files.
 			if [[ -f "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}" ]]; then
 				get_basic_data "${NHOPKG_LOCALSTATEDIR}/packages/${CASEPACKAGE}"
-				if [[ ! $(zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
+				if [[ ! $(zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
 					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
 					exit 1
 				fi
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
+					zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4398,17 +4405,17 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					zstdcat "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
+					zstd -dc "${NHOPKG_LOCALSTATEDIR}/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 				fi
 			elif [[ -f "${ROOT_PKG_STATE_DIR}/repo/packages/${CASEPACKAGE}" ]]; then
 				get_basic_data "${ROOT_PKG_STATE_DIR}/repo/packages/${CASEPACKAGE}"
-				if [[ ! $(zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
+				if [[ ! $(zstd -dc "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" 2> /dev/null) ]]; then
 					echog " * Muah Muah Muah!! Seems that maintainer of this package don't know how to create a good package or had a problem during installation." >&2
 					exit 1
 				fi
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
+					zstd -dc "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst" >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4417,13 +4424,13 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					zstdcat "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
+					zstd -dc "${ROOT_PKG_STATE_DIR}/repo/files/${pkgname}-${pkgversion}-${pkgrevision}.zst"
 				fi
 			# For local .nho packages.
 			elif [[ -f "${CASEPACKAGE}" ]] && [[ $(basename "${CASEPACKAGE}" .nho) != "${CASEPACKAGE}" ]]; then
 				if [[ "${USE_OUTPUT_COMMAND}" = "yes" ]]; then
 					LOG_FILE="${OUTPUT_COMMAND}/${CASEPACKAGE}-$(date).log"
-					zstdcat "${CASEPACKAGE}" | tar --extract --to-stdout | zstd -d -q -c 2> /dev/null >> "${LOG_FILE}"
+					zstd -dc "${CASEPACKAGE}" | tar --extract --to-stdout | zstd -d -q -c 2> /dev/null >> "${LOG_FILE}"
 					if [[ -f "${LOG_FILE}" ]]; then
 						echogn " --- You can see the log on"
 						echo " ${LOG_FILE}"
@@ -4432,7 +4439,7 @@ case "${NHOPKG_OPTION}" in
 						exit 1
 					fi
 				else
-					zstdcat "${CASEPACKAGE}" | tar --extract --to-stdout | zstd -d -q -c 2> /dev/null | tar --list
+					zstd -dc "${CASEPACKAGE}" | tar --extract --to-stdout | zstd -d -q -c 2> /dev/null | tar --list
 
 				fi
 			else
