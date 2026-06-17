@@ -155,7 +155,7 @@ check_if_root_uid()
 # ---------------------------------------------------------
 make_tmp_dir()
 {
-	NHOPKG_TMPDIR=$(mktemp -dt "${TEMPLATE_TMPDIR}" -p "${TMPDIR}")
+	NHOPKG_TMPDIR=$(mktemp -u -d -t "${TEMPLATE_TMPDIR}" -p "${TMPDIR}")
 	mkdir -p "${NHOPKG_TMPDIR}"
 	check_if_ok " * Unable to create temporary directory."
 	return 0
