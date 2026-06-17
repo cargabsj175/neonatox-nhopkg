@@ -92,6 +92,8 @@ nhoget_url_wget_bb() {
 	local output="$2"
 	local attempt=0
 	local wget_opts="-q -O $output -T $NHOGET_TIMEOUT"
+	# Set explicit User-Agent to avoid server blocks on BusyBox's generic UA
+	[[ -n "$NHOGET_USER_AGENT" ]] && wget_opts="$wget_opts -U $NHOGET_USER_AGENT"
 	# BusyBox wget lacks TLS validation; suppress warning and attempt anyway
 	[[ "$url" =~ ^https:// ]] && wget_opts="$wget_opts --no-check-certificate"
 	while (( attempt < NHOGET_RETRIES )); do
