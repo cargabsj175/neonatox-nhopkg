@@ -920,6 +920,20 @@ bin_install_progress()
 	local TAR_FILE="${3}"
 	local FILE_NAME="${4}"
 	local INSTALLED_SIZE="${5}"
+
+	# Resolve glob to actual file and detect compression format
+	local data_file decompress_cmd
+	for _np_f in ${TAR_FILE}; do
+		[[ -f "$_np_f" ]] && { data_file="$_np_f"; break; }
+	done
+	[[ -z "$data_file" ]] && return 1
+	case "$data_file" in
+		*.zst)  decompress_cmd="zstd -dc" ;;
+		*.xz)   decompress_cmd="xz -dc" ;;
+		*.bz2)  decompress_cmd="bzip2 -dc" ;;
+		*)      decompress_cmd="cat" ;;
+	esac
+
 	SHELL_COLUMS=$(tput cols 2>/dev/null || echo 80)
 	UNTAR_SIZE=0
 	BAR_WIDTH=$((${SHELL_COLUMS}-$(echo "${pkgname}-${pkgversion}-${pkgrevision}:" | wc -m)-$(echo "${INSTALLED_SIZE}" | wc -m)-25))
@@ -928,7 +942,7 @@ bin_install_progress()
 		BAR_WIDTH="${MIN_BAR_WIDTH}"
 	fi
 	START_TIME=$(date -u +%s)
-	(zstd -dc ${TAR_FILE}) | (
+	($decompress_cmd "$data_file") | (
 	while (( ${UNTAR_SIZE} < ${INSTALLED_SIZE} ));
 	do
 		dd bs=512 count=2048 2>/dev/null # || return 1
@@ -1026,7 +1040,7 @@ bin_install()
 			export NHOPKG_NO_EXEC_HOOKS=1
 			export NHOPKG_ROOT="${INSTALL_ROOT}"
 			
-			bin_install_progress "tar xvfC - ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			bin_install_progress "tar xvf - -C ${INSTALL_ROOT}" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 			# Checks if all is good.
 			check_if_ok " *** Failed to install package."
 		else
@@ -1036,7 +1050,7 @@ bin_install()
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			else
-				bin_install_progress "tar xvfC - /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+				bin_install_progress "tar xvf - -C /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
 				# Checks if all is good.
 				check_if_ok " *** Failed to install package."
 			fi
