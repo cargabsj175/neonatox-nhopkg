@@ -1044,16 +1044,9 @@ bin_install()
 			# Checks if all is good.
 			check_if_ok " *** Failed to install package."
 		else
-			# Checks if data.tar.zst is preceded by / or not.
-			if [[ $(zstd -dc "${NHOPKG_TMPDIR}/data.tar.zst" 2> /dev/null | tar tfP - | head -1 | grep '^/') ]] || [[ $(tar JtfP "${NHOPKG_TMPDIR}/data.tar.xz" 2> /dev/null | head -1 | grep '^/') ]] || [[ $(tar jtfP "${NHOPKG_TMPDIR}/data.tar.bz2" 2> /dev/null | head -1 | grep '^/') ]]; then
-				bin_install_progress "tar xvfP -" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
-				# Checks if all is good.
-				check_if_ok " *** Failed to install package."
-			else
-				bin_install_progress "tar xvf - -C /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
-				# Checks if all is good.
-				check_if_ok " *** Failed to install package."
-			fi
+			bin_install_progress "tar xvf - -C /" "${NHOPKG_TMPDIR}/.${pkgname}-${pkgversion}-${pkgrevision}-installed.log" "${NHOPKG_TMPDIR}/data.tar.*" "${pkgname}-${pkgversion}-${pkgrevision}" "${pkginstalledsize}"
+			# Checks if all is good.
+			check_if_ok " *** Failed to install package."
 		fi
 	else
 		echog " * The selected package is not valid." >&2
@@ -2061,7 +2054,7 @@ build_make_binary_package()
 		fi
 	# Package and compress files.
 	echog " --- Compressing package."
-		tar cpP --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" | zstd > "${NHOPKG_TMPDIR}/data.tar.zst"
+		tar cp --files-from="${NHOPKG_TMPDIR}/.${PKG_DISPLAY_NAME}-${pkgversion}-${pkgrevision}-installed.log" | zstd > "${NHOPKG_TMPDIR}/data.tar.zst"
 		# Sign data.tar.zst if enabled (via libnhopkg_crypto)
 		crypto_sign_package
 		# Go to the temp directory and package.
