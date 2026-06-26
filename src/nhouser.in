@@ -46,6 +46,13 @@ else
 	echog " * Unable to locate Nhopkg core common functions file!"
 fi
 
+NHOPKG_LIB_NHOUSER="${NHOPKG_LIB%/*}/libnhopkg_nhouser"
+if [[ -e "${NHOPKG_LIB_NHOUSER}" ]]; then
+	source "${NHOPKG_LIB_NHOUSER}" 2> /dev/null
+else
+	echog " * Unable to locate Nhopkg nhouser library file!"
+fi
+
 usage() {
 	echog "Usage:"
 	echo "	nhouser --check|--create --user NAME [options]"

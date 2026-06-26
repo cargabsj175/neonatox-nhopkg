@@ -58,6 +58,13 @@ libnhopkg_crypto = configure_file(
   configuration: conf
 )
 
+# Configurar librería de usuarios/grupos (nhouser) en /usr/lib/nhopkg
+libnhopkg_nhouser = configure_file(
+  input: 'libnhopkg_nhouser.in',
+  output: 'libnhopkg_nhouser',
+  configuration: conf
+)
+
 # Configurar nhoget CLI
 nhoget = configure_file(
   input: 'nhoget.in',
@@ -74,7 +81,7 @@ install_data(
 
 # Instalar librería en libdir/nhopkg (/usr/lib/nhopkg)
 install_data(
-  [libnhopkg, libnhopkg_udepsys, libnhopkg_download, libnhopkg_crypto],
+  [libnhopkg, libnhopkg_udepsys, libnhopkg_download, libnhopkg_crypto, libnhopkg_nhouser],
   install_dir: join_paths(get_option('libdir'), 'nhopkg'),
   install_mode: 'rw-r--r--'
 )
