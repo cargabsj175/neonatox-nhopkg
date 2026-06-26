@@ -1,7 +1,7 @@
 option('binlocate',
   type: 'combo',
   choices: ['plocate', 'locate'],
-  value: 'plocate',
+  value: 'locate',
   description: 'File search tool'
 )
 
@@ -27,4 +27,10 @@ option('git-url',
   type: 'string',
   value: 'https://gitlab.com/neonatox-sources',
   description: 'Default GIT source repository URL'
+)
+
+option('git-branch',
+  type: 'string',
+  value: '',
+  description: 'Default Git branch/tag for super-build (e.g. glibc, musl)'
 )

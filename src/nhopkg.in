@@ -3406,7 +3406,7 @@ case "${NHOPKG_OPTION}" in
 			# 2. Clone repo to temporary directory
 			build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
 			echog " - Cloning ${git_url}..."
-			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
+			NHOGET_REF="${NHOPKG_GIT_BRANCH:-master}" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
 				echog " * Failed to clone ${git_url}" >&2
 				cleanup_tmp_dir
 				exit 1
@@ -3526,7 +3526,7 @@ case "${NHOPKG_OPTION}" in
 					git_url="${NHOPKG_GIT_SOURCES}/${pkg_base_name}.git"
 
 					build_clone_dir="${NHOPKG_TMPDIR}/.gitclone"
-			NHOGET_REF="" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
+			NHOGET_REF="${NHOPKG_GIT_BRANCH:-master}" nhoget_vcs git "${git_url}" "${build_clone_dir}" || {
 						echog " * Failed to clone ${git_url}" >&2
 						cleanup_tmp_dir
 						exit 1

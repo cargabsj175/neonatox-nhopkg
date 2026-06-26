@@ -9,12 +9,8 @@ NHOID_VERSION="0.5"
 # Get default IFS variable.
 OLDIFS="${IFS}"
 
-# Configuration of the "locate" binary, preferably "mlocate" if available.
-if command -v mlocate &>/dev/null; then
-	export BINLOCATE=$(command -v mlocate | grep -o '[^/]*$')
-elif command -v locate &>/dev/null; then
-	export BINLOCATE=$(command -v locate | grep -o '[^/]*$' )
-fi
+# Binary locate tool, set at build time via -D binlocate= (locate/plocate)
+export BINLOCATE="@BINLOCATE@"
 #==============================================================================
 # Section: Nhopkg colorized script.
 #==============================================================================

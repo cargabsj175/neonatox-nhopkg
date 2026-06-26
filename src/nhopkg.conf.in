@@ -211,6 +211,9 @@ NHOPKG_REPO_MULTILIB="@NHOPKG_REPO_MULTILIB@"
 
 NHOPKG_GIT_SOURCES=https://gitlab.com/neonatox-sources
 
+# Default Git branch/tag for --super-build (e.g., "glibc" or "musl")
+NHOPKG_GIT_BRANCH="@NHOPKG_GIT_BRANCH@"
+
 
 #==============================================================================
 # Section: Language Support

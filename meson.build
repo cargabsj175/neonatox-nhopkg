@@ -37,6 +37,8 @@ conf.set('NHOPKG_REPO_CORE', repo_url_core)
 conf.set('NHOPKG_REPO_EXTRA', repo_url_extra)
 conf.set('NHOPKG_REPO_MULTILIB', repo_url_multilib)
 conf.set('NHOPKG_GIT_SOURCES', git_url)
+conf.set('NHOPKG_GIT_BRANCH', get_option('git-branch'))
+conf.set('BINLOCATE', binlocate)
 
 # Variables para nhopkg.in
 conf.set('PACKAGE_NAME', meson.project_name())
