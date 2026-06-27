@@ -30,8 +30,20 @@ nhouser()
 
 	log() { [ "${VERBOSE}" = 1 ] && echog "$*"; }
 
+	_getent() {
+		local db="$1" key="$2"
+		if command -v getent >/dev/null 2>&1; then
+			getent "$db" "$key"
+		else
+			case "$db" in
+				passwd) awk -F: -v k="$key" '$1==k || $3==k {print; exit}' /etc/passwd ;;
+				group)  awk -F: -v k="$key" '$1==k || $3==k {print; exit}' /etc/group ;;
+			esac
+		fi
+	}
+
 	user_exists() { id "$1" >/dev/null 2>&1; }
-	group_exists() { getent group "$1" >/dev/null 2>&1; }
+	group_exists() { _getent group "$1" >/dev/null 2>&1; }
 
 	find_free_id() {
 		local type="$1"
@@ -40,9 +52,9 @@ nhouser()
 
 		while [ "$i" -le "$max" ]; do
 			if [ "$type" = "uid" ]; then
-				getent passwd "$i" >/dev/null 2>&1 || { echo "$i"; return; }
+				_getent passwd "$i" >/dev/null 2>&1 || { echo "$i"; return; }
 			else
-				getent group "$i" >/dev/null 2>&1 || { echo "$i"; return; }
+				_getent group "$i" >/dev/null 2>&1 || { echo "$i"; return; }
 			fi
 			i=$((i+1))
 		done
@@ -75,7 +87,7 @@ nhouser()
 	if [ -n "$GNAME" ]; then
 		if group_exists "$GNAME"; then
 			if [ -n "$G_ID" ]; then
-				EXIST_GID=$(getent group "$GNAME" | cut -d: -f3)
+				EXIST_GID=$(_getent group "$GNAME" | cut -d: -f3)
 				if [ "$EXIST_GID" != "$G_ID" ]; then
 					log "GID mismatch for group $GNAME (have $EXIST_GID, expected $G_ID)"
 				fi
@@ -92,7 +104,7 @@ nhouser()
 					G_ID=$(find_free_id gid 100)
 					[ -z "$G_ID" ] && { echog " * No free GID available below 999" >&2; return 1; }
 				else
-					EXIST_NAME=$(getent group "$G_ID" | cut -d: -f1)
+					EXIST_NAME=$(_getent group "$G_ID" | cut -d: -f1)
 					if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$GNAME" ]; then
 						log "GID $G_ID in use by $EXIST_NAME, searching free GID..."
 						G_ID=$(find_free_id gid)
@@ -112,7 +124,7 @@ nhouser()
 	if [ -n "$USER" ]; then
 		if user_exists "$USER"; then
 			if [ -n "$U_ID" ]; then
-				EXIST_UID=$(getent passwd "$USER" | cut -d: -f3)
+				EXIST_UID=$(_getent passwd "$USER" | cut -d: -f3)
 				if [ "$EXIST_UID" != "$U_ID" ]; then
 					log "UID mismatch for $USER (have $EXIST_UID, expected $U_ID)"
 				fi
@@ -133,7 +145,7 @@ nhouser()
 					U_ID=$(find_free_id uid 100)
 					[ -z "$U_ID" ] && { echog " * No free UID available below 999" >&2; return 1; }
 				else
-					EXIST_NAME=$(getent passwd "$U_ID" | cut -d: -f1)
+					EXIST_NAME=$(_getent passwd "$U_ID" | cut -d: -f1)
 					if [ -n "$EXIST_NAME" ] && [ "$EXIST_NAME" != "$USER" ]; then
 						log "UID $U_ID in use by $EXIST_NAME, searching free UID..."
 						U_ID=$(find_free_id uid)
